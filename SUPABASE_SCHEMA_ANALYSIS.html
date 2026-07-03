@@ -1,0 +1,1030 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<title>Ma Zone — Analyse Supabase</title>
+<style>
+  @page { margin: 14mm 12mm; }
+  body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Helvetica, Arial, sans-serif; font-size: 9.5pt; line-height: 1.4; color: #1a1a1a; }
+  h1 { font-size: 19pt; border-bottom: 2px solid #0f2d5c; padding-bottom: 6px; color: #0f2d5c; page-break-after: avoid; }
+  h2 { font-size: 13pt; margin-top: 18px; color: #0f2d5c; border-bottom: 1px solid #e5e7eb; padding-bottom: 3px; page-break-after: avoid; }
+  h3 { font-size: 11pt; margin-top: 12px; color: #1a4a8a; page-break-after: avoid; }
+  table { border-collapse: collapse; width: 100%; margin: 8px 0; font-size: 8pt; page-break-inside: avoid; }
+  th, td { border: 1px solid #d1d5db; padding: 4px 6px; text-align: left; vertical-align: top; }
+  th { background: #f3f4f6; font-weight: 600; }
+  code { background: #f3f4f6; padding: 1px 3px; border-radius: 3px; font-size: 8pt; }
+  pre { background: #f8fafc; border: 1px solid #e5e7eb; border-radius: 4px; padding: 8px; font-size: 7.5pt; white-space: pre-wrap; word-break: break-word; }
+  hr { border: none; border-top: 1px solid #e5e7eb; margin: 14px 0; }
+  ul, ol { padding-left: 20px; margin: 6px 0; }
+  li { margin-bottom: 2px; }
+  em { color: #64748b; }
+</style>
+</head>
+<body>
+<h1>Ma Zone — Analyse intégrale de la base Supabase</h1>
+<p><strong>Document technique — Équipe de développement Ma Zone</strong></p>
+<table>
+<thead>
+<tr>
+<th></th>
+<th></th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><strong>Version</strong></td>
+<td>1.0</td>
+</tr>
+<tr>
+<td><strong>Date</strong></td>
+<td>juin 2026</td>
+</tr>
+<tr>
+<td><strong>Source</strong></td>
+<td><code>supabase/migrations/0001_init.sql</code>, <code>supabase/seed.sql</code>, <code>src/lib/data.ts</code></td>
+</tr>
+<tr>
+<td><strong>Périmètre</strong></td>
+<td>Schéma PostgreSQL Supabase (version web Next.js)</td>
+</tr>
+</tbody>
+</table>
+<hr />
+<h2>Contexte architectural</h2>
+<p>Ma Zone possède <strong>deux couches de données distinctes</strong> dans ce dépôt :</p>
+<table>
+<thead>
+<tr>
+<th>Couche</th>
+<th>Technologie</th>
+<th>Usage actuel</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><strong>MVP mobile</strong></td>
+<td>SQLite (<code>backend/data/mazone.db</code>)</td>
+<td>Application Expo/React Native — <strong>production locale</strong></td>
+</tr>
+<tr>
+<td><strong>Web Next.js</strong></td>
+<td>Supabase PostgreSQL</td>
+<td>Maquette web optionnelle — <strong>mode démo si non configuré</strong></td>
+</tr>
+</tbody>
+</table>
+<p>Ce rapport analyse <strong>exclusivement la base Supabase</strong> définie dans <code>supabase/migrations/0001_init.sql</code>.</p>
+<hr />
+<h2>1. Schéma relationnel complet</h2>
+<p><em>[Diagramme ER — voir version Markdown]</em></p>
+<hr />
+<h2>2. Extensions et types énumérés</h2>
+<h3>Extension</h3>
+<table>
+<thead>
+<tr>
+<th>Extension</th>
+<th>Usage</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>pgcrypto</code></td>
+<td><code>gen_random_uuid()</code> pour les clés primaires</td>
+</tr>
+</tbody>
+</table>
+<h3>Enums</h3>
+<table>
+<thead>
+<tr>
+<th>Enum</th>
+<th>Valeurs</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>user_role</code></td>
+<td><code>consumer</code>, <code>merchant</code>, <code>driver</code></td>
+</tr>
+<tr>
+<td><code>order_status</code></td>
+<td><code>pending</code>, <code>preparing</code>, <code>ready</code>, <code>assigned</code>, <code>picked_up</code>, <code>delivering</code>, <code>delivered</code>, <code>cancelled</code></td>
+</tr>
+<tr>
+<td><code>fulfillment_type</code></td>
+<td><code>delivery</code>, <code>pickup</code></td>
+</tr>
+</tbody>
+</table>
+<hr />
+<h2>3. Tables détaillées</h2>
+<h3>3.1 <code>auth.users</code> (schéma Supabase Auth — géré par Supabase)</h3>
+<p>Non créée par la migration Ma Zone, mais <strong>référencée</strong> par <code>profiles.id</code>.</p>
+<table>
+<thead>
+<tr>
+<th>Colonne clé</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>id</code></td>
+<td>UUID — identité authentifiée</td>
+</tr>
+<tr>
+<td><code>email</code></td>
+<td>Email de connexion</td>
+</tr>
+<tr>
+<td><code>raw_user_meta_data</code></td>
+<td>JSON — rôle et nom passés à l'inscription</td>
+</tr>
+</tbody>
+</table>
+<p><strong>Trigger Ma Zone :</strong> <code>on_auth_user_created</code> → crée automatiquement une ligne <code>profiles</code>.</p>
+<hr />
+<h3>3.2 <code>profiles</code></h3>
+<p>Étend <code>auth.users</code> avec le rôle et les informations publiques.</p>
+<table>
+<thead>
+<tr>
+<th>Colonne</th>
+<th>Type</th>
+<th>Contraintes</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>id</code></td>
+<td><code>uuid</code></td>
+<td><strong>PK</strong>, FK → <code>auth.users(id)</code> ON DELETE CASCADE</td>
+<td>Identité</td>
+</tr>
+<tr>
+<td><code>role</code></td>
+<td><code>user_role</code></td>
+<td>NOT NULL, DEFAULT <code>consumer</code></td>
+<td>Rôle applicatif</td>
+</tr>
+<tr>
+<td><code>full_name</code></td>
+<td><code>text</code></td>
+<td>nullable</td>
+<td>Nom affiché</td>
+</tr>
+<tr>
+<td><code>phone</code></td>
+<td><code>text</code></td>
+<td>nullable</td>
+<td>Téléphone</td>
+</tr>
+<tr>
+<td><code>rating</code></td>
+<td><code>numeric(2,1)</code></td>
+<td>DEFAULT 5.0</td>
+<td>Note utilisateur</td>
+</tr>
+<tr>
+<td><code>created_at</code></td>
+<td><code>timestamptz</code></td>
+<td>NOT NULL, DEFAULT now()</td>
+<td>Date création</td>
+</tr>
+</tbody>
+</table>
+<p><strong>RLS :</strong> activé — lecture/écriture de son propre profil uniquement.</p>
+<p><strong>Données seed :</strong> aucune (créées à l'inscription via trigger).</p>
+<hr />
+<h3>3.3 <code>stores</code></h3>
+<p>Commerces de la zone de livraison.</p>
+<table>
+<thead>
+<tr>
+<th>Colonne</th>
+<th>Type</th>
+<th>Contraintes</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>id</code></td>
+<td><code>uuid</code></td>
+<td><strong>PK</strong>, DEFAULT gen_random_uuid()</td>
+<td>Identifiant</td>
+</tr>
+<tr>
+<td><code>merchant_id</code></td>
+<td><code>uuid</code></td>
+<td>FK → <code>profiles(id)</code> ON DELETE SET NULL</td>
+<td>Commerçant propriétaire</td>
+</tr>
+<tr>
+<td><code>name</code></td>
+<td><code>text</code></td>
+<td>NOT NULL</td>
+<td>Nom du commerce</td>
+</tr>
+<tr>
+<td><code>store_type</code></td>
+<td><code>text</code></td>
+<td>nullable</td>
+<td>Catégorie (ex. High-tech)</td>
+</tr>
+<tr>
+<td><code>address</code></td>
+<td><code>text</code></td>
+<td>NOT NULL</td>
+<td>Adresse postale</td>
+</tr>
+<tr>
+<td><code>lat</code></td>
+<td><code>double precision</code></td>
+<td>NOT NULL</td>
+<td>Latitude</td>
+</tr>
+<tr>
+<td><code>lng</code></td>
+<td><code>double precision</code></td>
+<td>NOT NULL</td>
+<td>Longitude</td>
+</tr>
+<tr>
+<td><code>created_at</code></td>
+<td><code>timestamptz</code></td>
+<td>NOT NULL, DEFAULT now()</td>
+<td>Date création</td>
+</tr>
+</tbody>
+</table>
+<p><strong>Index :</strong> aucun dédié (hors PK).</p>
+<p><strong>RLS :</strong> lecture publique (<code>select using (true)</code>).</p>
+<p><strong>Données seed :</strong> 5 commerces (Paris 1er–4e) — Gaming, Fnac, Carrefour, Apple Store, Boulanger.</p>
+<p><strong>Écart code :</strong> <code>data.ts</code> référence <code>store.delivery_minutes</code> — <strong>colonne absente du schéma</strong>.</p>
+<hr />
+<h3>3.4 <code>products</code></h3>
+<p>Catalogue produit global (indépendant des commerces).</p>
+<table>
+<thead>
+<tr>
+<th>Colonne</th>
+<th>Type</th>
+<th>Contraintes</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>id</code></td>
+<td><code>uuid</code></td>
+<td><strong>PK</strong>, DEFAULT gen_random_uuid()</td>
+<td>Identifiant</td>
+</tr>
+<tr>
+<td><code>name</code></td>
+<td><code>text</code></td>
+<td>NOT NULL</td>
+<td>Nom produit</td>
+</tr>
+<tr>
+<td><code>category</code></td>
+<td><code>text</code></td>
+<td>nullable</td>
+<td>Catégorie</td>
+</tr>
+<tr>
+<td><code>image_url</code></td>
+<td><code>text</code></td>
+<td>nullable</td>
+<td>URL image</td>
+</tr>
+<tr>
+<td><code>sku</code></td>
+<td><code>text</code></td>
+<td>nullable</td>
+<td>Référence SKU</td>
+</tr>
+<tr>
+<td><code>created_at</code></td>
+<td><code>timestamptz</code></td>
+<td>NOT NULL, DEFAULT now()</td>
+<td>Date création</td>
+</tr>
+</tbody>
+</table>
+<p><strong>RLS :</strong> lecture publique.</p>
+<p><strong>Données seed :</strong> 6 produits (Switch, chargeur, casque, HDMI, perceuse, livre).</p>
+<p><strong>Manquant vs MVP SQLite :</strong> <code>description</code>, <code>barcode</code>, <code>active</code>, lien direct <code>store_id</code>.</p>
+<hr />
+<h3>3.5 <code>inventory</code></h3>
+<p>Lien commerce ↔ produit avec prix et stock local.</p>
+<table>
+<thead>
+<tr>
+<th>Colonne</th>
+<th>Type</th>
+<th>Contraintes</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>id</code></td>
+<td><code>uuid</code></td>
+<td><strong>PK</strong>, DEFAULT gen_random_uuid()</td>
+<td>Identifiant</td>
+</tr>
+<tr>
+<td><code>store_id</code></td>
+<td><code>uuid</code></td>
+<td>NOT NULL, FK → <code>stores(id)</code> ON DELETE CASCADE</td>
+<td>Commerce</td>
+</tr>
+<tr>
+<td><code>product_id</code></td>
+<td><code>uuid</code></td>
+<td>NOT NULL, FK → <code>products(id)</code> ON DELETE CASCADE</td>
+<td>Produit</td>
+</tr>
+<tr>
+<td><code>price</code></td>
+<td><code>numeric(10,2)</code></td>
+<td>NOT NULL</td>
+<td>Prix unitaire</td>
+</tr>
+<tr>
+<td><code>stock</code></td>
+<td><code>integer</code></td>
+<td>NOT NULL, DEFAULT 0</td>
+<td>Stock disponible</td>
+</tr>
+<tr>
+<td><code>available</code></td>
+<td><code>boolean</code></td>
+<td>NOT NULL, DEFAULT true</td>
+<td>Disponible à la vente</td>
+</tr>
+<tr>
+<td><code>updated_at</code></td>
+<td><code>timestamptz</code></td>
+<td>NOT NULL, DEFAULT now()</td>
+<td>Dernière MAJ</td>
+</tr>
+<tr>
+<td>—</td>
+<td>—</td>
+<td><strong>UNIQUE (store_id, product_id)</strong></td>
+<td>Un seul prix/stock par paire</td>
+</tr>
+</tbody>
+</table>
+<p><strong>Index :</strong> <code>idx_inventory_product</code> sur <code>product_id</code>.</p>
+<p><strong>RLS :</strong> lecture publique ; écriture réservée au commerçant propriétaire du store.</p>
+<p><strong>Données seed :</strong> 11 lignes d'inventaire (prix + stock par commerce).</p>
+<hr />
+<h3>3.6 <code>orders</code></h3>
+<p>Commandes clients.</p>
+<table>
+<thead>
+<tr>
+<th>Colonne</th>
+<th>Type</th>
+<th>Contraintes</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>id</code></td>
+<td><code>uuid</code></td>
+<td><strong>PK</strong>, DEFAULT gen_random_uuid()</td>
+<td>Identifiant</td>
+</tr>
+<tr>
+<td><code>consumer_id</code></td>
+<td><code>uuid</code></td>
+<td>FK → <code>profiles(id)</code> ON DELETE SET NULL</td>
+<td>Client</td>
+</tr>
+<tr>
+<td><code>store_id</code></td>
+<td><code>uuid</code></td>
+<td>NOT NULL, FK → <code>stores(id)</code> ON DELETE CASCADE</td>
+<td>Commerce</td>
+</tr>
+<tr>
+<td><code>product_id</code></td>
+<td><code>uuid</code></td>
+<td>NOT NULL, FK → <code>products(id)</code> ON DELETE CASCADE</td>
+<td>Produit</td>
+</tr>
+<tr>
+<td><code>driver_id</code></td>
+<td><code>uuid</code></td>
+<td>FK → <code>profiles(id)</code> ON DELETE SET NULL</td>
+<td>Livreur assigné</td>
+</tr>
+<tr>
+<td><code>status</code></td>
+<td><code>order_status</code></td>
+<td>NOT NULL, DEFAULT <code>pending</code></td>
+<td>Statut commande</td>
+</tr>
+<tr>
+<td><code>fulfillment</code></td>
+<td><code>fulfillment_type</code></td>
+<td>NOT NULL, DEFAULT <code>delivery</code></td>
+<td>Livraison ou retrait</td>
+</tr>
+<tr>
+<td><code>price</code></td>
+<td><code>numeric(10,2)</code></td>
+<td>NOT NULL</td>
+<td>Montant</td>
+</tr>
+<tr>
+<td><code>delivery_address</code></td>
+<td><code>text</code></td>
+<td>nullable</td>
+<td>Adresse livraison</td>
+</tr>
+<tr>
+<td><code>eta_minutes</code></td>
+<td><code>integer</code></td>
+<td>nullable</td>
+<td>ETA estimée</td>
+</tr>
+<tr>
+<td><code>customer_name</code></td>
+<td><code>text</code></td>
+<td>nullable</td>
+<td>Nom client (affichage)</td>
+</tr>
+<tr>
+<td><code>created_at</code></td>
+<td><code>timestamptz</code></td>
+<td>NOT NULL, DEFAULT now()</td>
+<td>Création</td>
+</tr>
+<tr>
+<td><code>updated_at</code></td>
+<td><code>timestamptz</code></td>
+<td>NOT NULL, DEFAULT now()</td>
+<td>MAJ</td>
+</tr>
+</tbody>
+</table>
+<p><strong>Index :</strong> <code>idx_orders_store</code>, <code>idx_orders_driver</code>, <code>idx_orders_status</code>.</p>
+<p><strong>RLS :</strong> lecture/écriture pour consommateur, livreur assigné, ou commerçant du store.</p>
+<p><strong>Données seed :</strong> aucune commande en seed.</p>
+<p><strong>Manquant vs MVP SQLite :</strong>
+- Pas de <code>quantity</code> (toujours 1 produit implicite)
+- Pas de table <code>missions</code> séparée
+- Statuts différents du MVP mobile (<code>pending_driver</code>, <code>driver_assigned</code>, etc.)
+- Pas de <code>total_price</code> distinct du <code>price</code></p>
+<hr />
+<h3>3.7 <code>driver_sessions</code></h3>
+<p>Session en ligne du livreur et position GPS.</p>
+<table>
+<thead>
+<tr>
+<th>Colonne</th>
+<th>Type</th>
+<th>Contraintes</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>driver_id</code></td>
+<td><code>uuid</code></td>
+<td><strong>PK</strong>, FK → <code>profiles(id)</code> ON DELETE CASCADE</td>
+<td>Livreur</td>
+</tr>
+<tr>
+<td><code>is_online</code></td>
+<td><code>boolean</code></td>
+<td>NOT NULL, DEFAULT false</td>
+<td>Disponible</td>
+</tr>
+<tr>
+<td><code>lat</code></td>
+<td><code>double precision</code></td>
+<td>nullable</td>
+<td>Position</td>
+</tr>
+<tr>
+<td><code>lng</code></td>
+<td><code>double precision</code></td>
+<td>nullable</td>
+<td>Position</td>
+</tr>
+<tr>
+<td><code>updated_at</code></td>
+<td><code>timestamptz</code></td>
+<td>NOT NULL, DEFAULT now()</td>
+<td>Dernière MAJ</td>
+</tr>
+</tbody>
+</table>
+<p><strong>RLS :</strong> le livreur gère uniquement sa propre session.</p>
+<p><strong>Données seed :</strong> aucune.</p>
+<p><strong>Écart MVP SQLite :</strong> en SQLite, <code>driver_online</code> est une colonne sur <code>users</code> ; en Supabase, table dédiée (meilleure séparation).</p>
+<hr />
+<h2>4. Sécurité (RLS) et triggers</h2>
+<h3>Row Level Security</h3>
+<table>
+<thead>
+<tr>
+<th>Table</th>
+<th>Politique</th>
+<th>Règle</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>products</code></td>
+<td><code>read products</code></td>
+<td>SELECT public</td>
+</tr>
+<tr>
+<td><code>stores</code></td>
+<td><code>read stores</code></td>
+<td>SELECT public</td>
+</tr>
+<tr>
+<td><code>inventory</code></td>
+<td><code>read inventory</code></td>
+<td>SELECT public</td>
+</tr>
+<tr>
+<td><code>inventory</code></td>
+<td><code>merchant writes inventory</code></td>
+<td>ALL si merchant du store</td>
+</tr>
+<tr>
+<td><code>profiles</code></td>
+<td><code>read/update own profile</code></td>
+<td>auth.uid() = id</td>
+</tr>
+<tr>
+<td><code>orders</code></td>
+<td><code>read/update related orders</code></td>
+<td>consumer, driver, ou merchant du store</td>
+</tr>
+<tr>
+<td><code>orders</code></td>
+<td><code>consumer creates order</code></td>
+<td>INSERT si consumer_id = auth.uid()</td>
+</tr>
+<tr>
+<td><code>driver_sessions</code></td>
+<td><code>driver manages session</code></td>
+<td>ALL si driver_id = auth.uid()</td>
+</tr>
+</tbody>
+</table>
+<h3>Trigger</h3>
+<table>
+<thead>
+<tr>
+<th>Nom</th>
+<th>Événement</th>
+<th>Action</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>on_auth_user_created</code></td>
+<td>AFTER INSERT on <code>auth.users</code></td>
+<td>Crée <code>profiles</code> avec rôle et nom depuis metadata</td>
+</tr>
+</tbody>
+</table>
+<hr />
+<h2>5. Données déjà stockées (seed)</h2>
+<table>
+<thead>
+<tr>
+<th>Table</th>
+<th>Volume seed</th>
+<th>Contenu</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>stores</code></td>
+<td>5 lignes</td>
+<td>Commerces zone pilote Paris</td>
+</tr>
+<tr>
+<td><code>products</code></td>
+<td>6 lignes</td>
+<td>Catalogue produits</td>
+</tr>
+<tr>
+<td><code>inventory</code></td>
+<td>11 lignes</td>
+<td>Prix et stocks par commerce</td>
+</tr>
+<tr>
+<td><code>profiles</code></td>
+<td>0</td>
+<td>Créés à l'inscription Auth</td>
+</tr>
+<tr>
+<td><code>orders</code></td>
+<td>0</td>
+<td>Créés à la commande runtime</td>
+</tr>
+<tr>
+<td><code>driver_sessions</code></td>
+<td>0</td>
+<td>Créés par le livreur</td>
+</tr>
+</tbody>
+</table>
+<p><strong>Total seed :</strong> catalogue uniquement, pas de données transactionnelles.</p>
+<hr />
+<h2>6. Comparaison Supabase vs MVP SQLite (mobile)</h2>
+<p>Le MVP mobile actif utilise <strong>17+ tables SQLite</strong> absentes ou incomplètes dans Supabase :</p>
+<table>
+<thead>
+<tr>
+<th>Fonctionnalité MVP mobile</th>
+<th>SQLite</th>
+<th>Supabase</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Utilisateurs + auth</td>
+<td><code>users</code> (email/password)</td>
+<td><code>auth.users</code> + <code>profiles</code></td>
+</tr>
+<tr>
+<td>Missions livreur</td>
+<td><code>missions</code> (table dédiée)</td>
+<td><code>orders.driver_id</code> seulement</td>
+</tr>
+<tr>
+<td>Messagerie commande</td>
+<td><code>conversations</code> + <code>messages</code></td>
+<td><strong>Absent</strong></td>
+</tr>
+<tr>
+<td>Adresses client</td>
+<td><code>client_addresses</code></td>
+<td><strong>Absent</strong></td>
+</tr>
+<tr>
+<td>Panier</td>
+<td><code>cart_items</code></td>
+<td><strong>Absent</strong></td>
+</tr>
+<tr>
+<td>Favoris</td>
+<td><code>store_favorites</code></td>
+<td><strong>Absent</strong></td>
+</tr>
+<tr>
+<td>Promotions</td>
+<td><code>promotions</code></td>
+<td><strong>Absent</strong></td>
+</tr>
+<tr>
+<td>Broadcast livreur</td>
+<td><code>driver_broadcast</code></td>
+<td><strong>Absent</strong></td>
+</tr>
+<tr>
+<td>Notifications</td>
+<td><code>driver_notifications</code>, <code>merchant_notifications</code></td>
+<td><strong>Absent</strong></td>
+</tr>
+<tr>
+<td>Support</td>
+<td><code>support_threads</code>, <code>support_messages</code></td>
+<td><strong>Absent</strong></td>
+</tr>
+<tr>
+<td>Statuts commande</td>
+<td>7+ statuts dispatch</td>
+<td>8 statuts enum différents</td>
+</tr>
+<tr>
+<td>Quantité commande</td>
+<td><code>quantity</code></td>
+<td><strong>Absent</strong></td>
+</tr>
+<tr>
+<td>En ligne livreur</td>
+<td><code>users.driver_online</code></td>
+<td><code>driver_sessions</code></td>
+</tr>
+<tr>
+<td>Temps réel</td>
+<td>Socket.io</td>
+<td>Supabase Realtime (orders only)</td>
+</tr>
+</tbody>
+</table>
+<hr />
+<h2>7. Données manquantes pour la vision long terme</h2>
+<h3>7.1 Déjà partiellement couvert</h3>
+<ul>
+<li>Catalogue multi-commerces (<code>stores</code>, <code>products</code>, <code>inventory</code>)</li>
+<li>Commandes mono-produit (<code>orders</code>)</li>
+<li>Auth multi-rôles (<code>profiles</code> + RLS)</li>
+<li>Session livreur (<code>driver_sessions</code>)</li>
+<li>Temps réel basique (Realtime sur <code>orders</code>)</li>
+</ul>
+<h3>7.2 Manquant — critique pour parité MVP mobile</h3>
+<table>
+<thead>
+<tr>
+<th>Besoin</th>
+<th>Impact</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Table <code>missions</code></td>
+<td>Dispatch, workflow livreur, missions fantômes</td>
+</tr>
+<tr>
+<td><code>conversations</code> + <code>messages</code></td>
+<td>Chat client/commerçant/livreur</td>
+</tr>
+<tr>
+<td><code>cart_items</code></td>
+<td>Panier multi-articles</td>
+</tr>
+<tr>
+<td><code>promotions</code></td>
+<td>Offres flash, réductions</td>
+</tr>
+<tr>
+<td><code>client_addresses</code></td>
+<td>Carnet d'adresses</td>
+</tr>
+<tr>
+<td><code>store_favorites</code></td>
+<td>Favoris client</td>
+</tr>
+<tr>
+<td>Alignement statuts <code>order_status</code></td>
+<td>Cohérence mobile ↔ web</td>
+</tr>
+<tr>
+<td><code>quantity</code> sur commandes</td>
+<td>Commandes multi-quantité</td>
+</tr>
+</tbody>
+</table>
+<h3>7.3 Manquant — vision long terme Ma Zone</h3>
+<table>
+<thead>
+<tr>
+<th>Domaine</th>
+<th>Données absentes</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><strong>Paiements</strong></td>
+<td>transactions, refunds, commissions livreur, facturation commerçant</td>
+</tr>
+<tr>
+<td><strong>Géolocalisation</strong></td>
+<td>historique positions livreur, zones de livraison, géofencing</td>
+</tr>
+<tr>
+<td><strong>Dispatch avancé</strong></td>
+<td>file d'attente, logs dispatch, offres courses</td>
+</tr>
+<tr>
+<td><strong>Évaluations</strong></td>
+<td>reviews commande, notes livreur/commerçant (rating existe mais non alimenté)</td>
+</tr>
+<tr>
+<td><strong>Admin / ops</strong></td>
+<td>audit logs, config plateforme, modération</td>
+</tr>
+<tr>
+<td><strong>Marketing</strong></td>
+<td>campagnes, coupons, parrainage</td>
+</tr>
+<tr>
+<td><strong>Stock avancé</strong></td>
+<td>mouvements stock, alertes rupture, sync ERP</td>
+</tr>
+<tr>
+<td><strong>Légal / conformité</strong></td>
+<td>consentements RGPD, documents livreur (permis, assurance)</td>
+</tr>
+<tr>
+<td><strong>Analytics</strong></td>
+<td>événements, KPIs, rapports commerçant</td>
+</tr>
+<tr>
+<td><strong>Notifications push</strong></td>
+<td>tokens device, préférences notification</td>
+</tr>
+</tbody>
+</table>
+<hr />
+<h2>8. Nouvelles tables recommandées</h2>
+<h3>Phase 1 — Parité MVP mobile (priorité haute)</h3>
+<table>
+<thead>
+<tr>
+<th>Table</th>
+<th>Description</th>
+<th>Relations clés</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>missions</code></td>
+<td>Course livreur liée à une commande</td>
+<td><code>order_id</code> → orders, <code>driver_id</code> → profiles</td>
+</tr>
+<tr>
+<td><code>conversations</code></td>
+<td>Fils de chat par commande et paire d'acteurs</td>
+<td><code>order_id</code>, <code>user_a</code>, <code>user_b</code>, <code>kind</code></td>
+</tr>
+<tr>
+<td><code>messages</code></td>
+<td>Messages dans une conversation</td>
+<td><code>conversation_id</code>, <code>sender_id</code></td>
+</tr>
+<tr>
+<td><code>cart_items</code></td>
+<td>Panier client</td>
+<td><code>consumer_id</code>, <code>product_id</code>, <code>store_id</code>, <code>quantity</code></td>
+</tr>
+<tr>
+<td><code>promotions</code></td>
+<td>Promotions par produit/commerce</td>
+<td><code>store_id</code>, <code>product_id</code>, type, prix promo</td>
+</tr>
+<tr>
+<td><code>client_addresses</code></td>
+<td>Adresses enregistrées</td>
+<td><code>consumer_id</code>, address, lat, lng</td>
+</tr>
+<tr>
+<td><code>store_favorites</code></td>
+<td>Commerces favoris</td>
+<td><code>consumer_id</code>, <code>store_id</code></td>
+</tr>
+</tbody>
+</table>
+<h3>Phase 2 — Opérations et notifications</h3>
+<table>
+<thead>
+<tr>
+<th>Table</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>driver_broadcast</code></td>
+<td>Messages globaux plateforme → livreurs</td>
+</tr>
+<tr>
+<td><code>notifications</code></td>
+<td>Notifications unifiées (user_id, type, read, payload JSON)</td>
+</tr>
+<tr>
+<td><code>support_threads</code></td>
+<td>Fils assistance Ma Zone</td>
+</tr>
+<tr>
+<td><code>support_messages</code></td>
+<td>Messages support</td>
+</tr>
+</tbody>
+</table>
+<h3>Phase 3 — Monétisation et scale</h3>
+<table>
+<thead>
+<tr>
+<th>Table</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>payments</code></td>
+<td>Paiements Stripe/similaire liés aux commandes</td>
+</tr>
+<tr>
+<td><code>driver_earnings</code></td>
+<td>Gains par mission, commissions</td>
+</tr>
+<tr>
+<td><code>delivery_zones</code></td>
+<td>Zones géographiques et tarifs</td>
+</tr>
+<tr>
+<td><code>dispatch_logs</code></td>
+<td>Traçabilité attributions livreur</td>
+</tr>
+<tr>
+<td><code>order_events</code></td>
+<td>Historique statuts (audit trail)</td>
+</tr>
+<tr>
+<td><code>reviews</code></td>
+<td>Avis post-livraison</td>
+</tr>
+<tr>
+<td><code>driver_documents</code></td>
+<td>KYC livreur (permis, assurance)</td>
+</tr>
+</tbody>
+</table>
+<h3>Colonnes à ajouter aux tables existantes</h3>
+<table>
+<thead>
+<tr>
+<th>Table</th>
+<th>Colonnes suggérées</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>stores</code></td>
+<td><code>description</code>, <code>photo_url</code>, <code>category</code>, <code>story</code>, <code>delivery_minutes</code>, <code>phone</code>, <code>email</code></td>
+</tr>
+<tr>
+<td><code>products</code></td>
+<td><code>description</code>, <code>barcode</code>, <code>active</code></td>
+</tr>
+<tr>
+<td><code>orders</code></td>
+<td><code>quantity</code>, <code>total_price</code>, aligner enum <code>order_status</code></td>
+</tr>
+<tr>
+<td><code>profiles</code></td>
+<td><code>address</code>, <code>lat</code>, <code>lng</code>, <code>photo_url</code>, <code>transport</code>, <code>vehicle_plate</code>, <code>first_name</code>, <code>last_name</code></td>
+</tr>
+</tbody>
+</table>
+<hr />
+<h2>9. Écarts schéma / code applicatif</h2>
+<table>
+<thead>
+<tr>
+<th>Problème</th>
+<th>Détail</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>delivery_minutes</code> sur stores</td>
+<td>Utilisé dans <code>data.ts</code> L94, L204 — <strong>non défini en SQL</strong></td>
+</tr>
+<tr>
+<td>Statuts commande</td>
+<td>Web : <code>pending→preparing→ready→assigned</code> ; Mobile : <code>pending_driver→driver_assigned→...</code></td>
+</tr>
+<tr>
+<td>Pas de missions</td>
+<td><code>acceptMission()</code> met <code>driver_id</code> sur <code>orders</code> directement</td>
+</tr>
+<tr>
+<td>Mode démo par défaut</td>
+<td>Sans <code>.env.local</code>, Supabase n'est pas utilisé — données en mémoire</td>
+</tr>
+<tr>
+<td><code>merchant_id</code> nullable</td>
+<td>Stores seed sans commerçant associé</td>
+</tr>
+</tbody>
+</table>
+<hr />
+<h2>10. Synthèse exécutive</h2>
+<p>La base Supabase Ma Zone est un <strong>schéma initial minimal</strong> (7 tables public + auth) conçu pour la maquette web Next.js. Elle couvre le <strong>catalogue</strong> (stores, products, inventory) et les <strong>commandes basiques</strong>, mais est <strong>loin de la richesse du MVP mobile SQLite</strong> qui fait tourner l'application Expo en production locale.</p>
+<p><strong>Points forts actuels :</strong>
+- Modèle catalogue normalisé (produit global + inventaire par commerce)
+- RLS et Auth Supabase intégrés
+- Realtime sur les commandes
+- Seed zone pilote Paris opérationnel</p>
+<p><strong>Lacunes principales :</strong>
+- Pas de missions, messagerie, panier, promotions, favoris, support
+- Statuts et modèle dispatch non alignés avec le mobile
+- Aucune table paiement, analytics, ou conformité
+- Écart code/schéma (<code>delivery_minutes</code>)</p>
+<p><strong>Recommandation :</strong> avant toute convergence mobile ↔ Supabase, exécuter une <strong>migration Phase 1</strong> (7 tables) et harmoniser l'enum <code>order_status</code> avec le moteur de commandes documenté dans <code>CURRENT_ARCHITECTURE.md</code>.</p>
+<hr />
+<p><em>Rapport généré par analyse statique du dépôt Ma Zone — juin 2026</em></p>
+</body>
+</html>

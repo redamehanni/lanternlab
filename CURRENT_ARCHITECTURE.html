@@ -1,0 +1,927 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<title>Ma Zone — Architecture actuelle du MVP</title>
+<style>
+  @page { margin: 18mm 15mm; }
+  body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Helvetica, Arial, sans-serif; font-size: 11pt; line-height: 1.5; color: #1a1a1a; max-width: 100%; }
+  h1 { font-size: 22pt; border-bottom: 2px solid #0f2d5c; padding-bottom: 8px; color: #0f2d5c; }
+  h2 { font-size: 15pt; margin-top: 24px; color: #0f2d5c; border-bottom: 1px solid #e5e7eb; padding-bottom: 4px; }
+  h3 { font-size: 12pt; margin-top: 16px; color: #1a4a8a; }
+  table { border-collapse: collapse; width: 100%; margin: 12px 0; font-size: 9.5pt; }
+  th, td { border: 1px solid #d1d5db; padding: 6px 8px; text-align: left; }
+  th { background: #f3f4f6; font-weight: 600; }
+  code { background: #f3f4f6; padding: 1px 4px; border-radius: 3px; font-size: 9pt; }
+  pre { background: #f8fafc; border: 1px solid #e5e7eb; border-radius: 6px; padding: 12px; overflow-x: auto; font-size: 8.5pt; line-height: 1.4; white-space: pre-wrap; word-break: break-word; }
+  pre code { background: none; padding: 0; }
+  blockquote { border-left: 4px solid #f59e0b; margin: 12px 0; padding: 8px 16px; background: #fffbeb; color: #92400e; }
+  hr { border: none; border-top: 1px solid #e5e7eb; margin: 20px 0; }
+  ul, ol { padding-left: 24px; }
+</style>
+</head>
+<body>
+<h1 id="ma-zone-architecture-actuelle-du-mvp">Ma Zone — Architecture actuelle du MVP</h1>
+<blockquote>
+<p>Document de référence décrivant <strong>l'état réel du code</strong> (juin 2026), pas l'architecture cible.
+Stack : <strong>Expo / React Native</strong> (<code>mobile/</code>) + <strong>Node.js / Express / SQLite</strong> (<code>backend/</code>).</p>
+</blockquote>
+<hr />
+<h2 id="1-vue-densemble">1. Vue d'ensemble</h2>
+<pre><code>┌─────────────────┐     HTTP REST + JWT      ┌──────────────────────────────┐
+│  App mobile     │ ◄──────────────────────► │  backend/src/index.js        │
+│  (3 rôles)      │     Socket.io (JWT auth) │  Express + Socket.io :4000   │
+└─────────────────┘                          └──────────────┬───────────────┘
+                                                            │
+                                                            ▼
+                                               ┌──────────────────────────────┐
+                                               │  SQLite  backend/data/mazone.db │
+                                               └──────────────────────────────┘
+</code></pre>
+<table>
+<thead>
+<tr>
+<th>Couche</th>
+<th>Technologie</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Mobile</td>
+<td>Expo, React Navigation (tabs + stacks), Axios, socket.io-client</td>
+</tr>
+<tr>
+<td>API</td>
+<td>Express, better-sqlite3, JWT, Socket.io</td>
+</tr>
+<tr>
+<td>Persistance</td>
+<td>SQLite WAL, migrations incrémentales au démarrage</td>
+</tr>
+<tr>
+<td>Temps réel</td>
+<td>Socket.io avec rooms par utilisateur / commande / conversation</td>
+</tr>
+</tbody>
+</table>
+<p><strong>Rôles utilisateur</strong> : <code>client</code> | <code>merchant</code> | <code>driver</code> (table <code>users.role</code>).</p>
+<hr />
+<h2 id="2-modeles-de-donnees">2. Modèles de données</h2>
+<h3 id="21-user-users">2.1 User (<code>users</code>)</h3>
+<table>
+<thead>
+<tr>
+<th>Colonne</th>
+<th>Type</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>id</code></td>
+<td>TEXT PK</td>
+<td>UUID</td>
+</tr>
+<tr>
+<td><code>name</code>, <code>email</code>, <code>password</code></td>
+<td>TEXT</td>
+<td>Identité + auth</td>
+</tr>
+<tr>
+<td><code>phone</code>, <code>address</code></td>
+<td>TEXT</td>
+<td>Contact</td>
+</tr>
+<tr>
+<td><code>role</code></td>
+<td>TEXT</td>
+<td><code>client</code> | <code>merchant</code> | <code>driver</code></td>
+</tr>
+<tr>
+<td><code>lat</code>, <code>lng</code></td>
+<td>REAL</td>
+<td>Position (livreur notamment)</td>
+</tr>
+<tr>
+<td><code>transport</code></td>
+<td>TEXT</td>
+<td>Moyen de transport livreur</td>
+</tr>
+<tr>
+<td><code>photo_url</code></td>
+<td>TEXT</td>
+<td>Avatar</td>
+</tr>
+<tr>
+<td><code>driver_online</code></td>
+<td>INTEGER</td>
+<td><code>0</code> / <code>1</code> — livreur disponible pour dispatch</td>
+</tr>
+<tr>
+<td><code>first_name</code>, <code>last_name</code>, <code>vehicle_plate</code></td>
+<td>TEXT</td>
+<td>Migrations optionnelles</td>
+</tr>
+<tr>
+<td><code>created_at</code></td>
+<td>TEXT</td>
+<td>datetime SQLite</td>
+</tr>
+</tbody>
+</table>
+<p><strong>Relations</strong> : un commerçant possède un <code>store</code> ; un client passe des <code>orders</code> ; un livreur reçoit des <code>missions</code>.</p>
+<h3 id="22-order-orders">2.2 Order (<code>orders</code>)</h3>
+<table>
+<thead>
+<tr>
+<th>Colonne</th>
+<th>Type</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>id</code></td>
+<td>TEXT PK</td>
+<td>UUID</td>
+</tr>
+<tr>
+<td><code>client_id</code></td>
+<td>TEXT FK → users</td>
+<td>Client</td>
+</tr>
+<tr>
+<td><code>product_id</code></td>
+<td>TEXT FK → products</td>
+<td>Produit commandé</td>
+</tr>
+<tr>
+<td><code>store_id</code></td>
+<td>TEXT FK → stores</td>
+<td>Boutique</td>
+</tr>
+<tr>
+<td><code>quantity</code></td>
+<td>INTEGER</td>
+<td>Quantité</td>
+</tr>
+<tr>
+<td><code>total_price</code></td>
+<td>REAL</td>
+<td>Montant TTC</td>
+</tr>
+<tr>
+<td><code>status</code></td>
+<td>TEXT</td>
+<td>Voir § 3.1</td>
+</tr>
+<tr>
+<td><code>delivery_address</code></td>
+<td>TEXT</td>
+<td>Adresse de livraison</td>
+</tr>
+<tr>
+<td><code>estimated_minutes</code></td>
+<td>INTEGER</td>
+<td>ETA calculée (<code>lib/geo.js</code>)</td>
+</tr>
+<tr>
+<td><code>created_at</code>, <code>updated_at</code></td>
+<td>TEXT</td>
+<td>Horodatage</td>
+</tr>
+</tbody>
+</table>
+<p><strong>Relation 1:1</strong> avec <code>missions</code> (une mission par commande, créée à la commande).</p>
+<p><strong>Vue enrichie</strong> : <code>getFullOrder()</code> (<code>backend/src/lib/orders.js</code>) joint client, produit, store, mission, livreur.</p>
+<h3 id="23-mission-missions">2.3 Mission (<code>missions</code>)</h3>
+<table>
+<thead>
+<tr>
+<th>Colonne</th>
+<th>Type</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>id</code></td>
+<td>TEXT PK</td>
+<td>UUID</td>
+</tr>
+<tr>
+<td><code>order_id</code></td>
+<td>TEXT FK → orders</td>
+<td>Commande liée</td>
+</tr>
+<tr>
+<td><code>driver_id</code></td>
+<td>TEXT FK → users</td>
+<td>Livreur (null tant que non attribuée)</td>
+</tr>
+<tr>
+<td><code>status</code></td>
+<td>TEXT</td>
+<td>Voir § 3.2</td>
+</tr>
+<tr>
+<td><code>accepted_at</code></td>
+<td>TEXT</td>
+<td>Date d'attribution</td>
+</tr>
+<tr>
+<td><code>created_at</code>, <code>updated_at</code></td>
+<td>TEXT</td>
+<td>Horodatage</td>
+</tr>
+</tbody>
+</table>
+<p><strong>Vue enrichie</strong> : <code>getFullMission()</code> (<code>backend/src/lib/dispatch.js</code>) joint commande, produit, store, client, livreur.</p>
+<h3 id="24-modeles-connexes-mvp">2.4 Modèles connexes (MVP)</h3>
+<table>
+<thead>
+<tr>
+<th>Table</th>
+<th>Rôle</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>stores</code></td>
+<td>Boutique du commerçant</td>
+</tr>
+<tr>
+<td><code>products</code></td>
+<td>Catalogue + stock</td>
+</tr>
+<tr>
+<td><code>conversations</code></td>
+<td>Messagerie par paire (<code>client_merchant</code>, <code>client_driver</code>, <code>merchant_driver</code>)</td>
+</tr>
+<tr>
+<td><code>cart_items</code></td>
+<td>Panier client</td>
+</tr>
+<tr>
+<td><code>promotions</code></td>
+<td>Promos commerçant</td>
+</tr>
+<tr>
+<td><code>driver_broadcast</code></td>
+<td>Message global affiché aux livreurs</td>
+</tr>
+<tr>
+<td><code>driver_notifications</code></td>
+<td>Notifications système livreur</td>
+</tr>
+</tbody>
+</table>
+<hr />
+<h2 id="3-statuts-existants">3. Statuts existants</h2>
+<h3 id="31-statuts-commande-ordersstatus">3.1 Statuts commande (<code>orders.status</code>)</h3>
+<p><strong>Canoniques</strong> (définis dans <code>backend/src/lib/orderStatus.js</code>) :</p>
+<table>
+<thead>
+<tr>
+<th>Statut</th>
+<th>Label UI (<code>mobile/src/config.js</code>)</th>
+<th>Signification</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>placed</code></td>
+<td>Commande passée</td>
+<td>Rarement utilisé ; création utilise <code>pending_driver</code></td>
+</tr>
+<tr>
+<td><code>pending_driver</code></td>
+<td>En attente de livreur</td>
+<td>Commande créée, pas encore attribuée</td>
+</tr>
+<tr>
+<td><code>driver_assigned</code></td>
+<td>Livreur assigné</td>
+<td>Livreur attribué automatiquement</td>
+</tr>
+<tr>
+<td><code>picking_up</code></td>
+<td>En route vers le commerce</td>
+<td>Mission en cours</td>
+</tr>
+<tr>
+<td><code>picked_up</code></td>
+<td>Produit récupéré</td>
+<td>Colis pris au commerçant</td>
+</tr>
+<tr>
+<td><code>delivering</code></td>
+<td>En route vers vous</td>
+<td>Livraison en cours</td>
+</tr>
+<tr>
+<td><code>delivered</code></td>
+<td>Livré</td>
+<td>Terminé</td>
+</tr>
+<tr>
+<td><code>cancelled</code></td>
+<td>Annulée</td>
+<td>Annulation client</td>
+</tr>
+</tbody>
+</table>
+<p><strong>Alias legacy</strong> encore présents en base / normalisés côté backend :</p>
+<table>
+<thead>
+<tr>
+<th>Alias</th>
+<th>Mappé vers</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>pending</code></td>
+<td><code>pending_driver</code></td>
+</tr>
+<tr>
+<td><code>searching_driver</code></td>
+<td><code>pending_driver</code></td>
+</tr>
+<tr>
+<td><code>offered</code></td>
+<td><code>pending_driver</code></td>
+</tr>
+<tr>
+<td><code>accepted</code></td>
+<td><code>driver_assigned</code></td>
+</tr>
+<tr>
+<td><code>accepted_by_driver</code></td>
+<td><code>driver_assigned</code></td>
+</tr>
+</tbody>
+</table>
+<blockquote>
+<p>Au démarrage du serveur, <code>backend/src/db/index.js</code> exécute des <code>UPDATE</code> pour ramener les anciens statuts vers <code>pending_driver</code> / <code>driver_assigned</code> et libérer les missions <code>offered</code>.</p>
+</blockquote>
+<h3 id="32-statuts-mission-missionsstatus">3.2 Statuts mission (<code>missions.status</code>)</h3>
+<table>
+<thead>
+<tr>
+<th>Statut</th>
+<th>Signification</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>available</code></td>
+<td>Mission créée, en attente d'attribution</td>
+</tr>
+<tr>
+<td><code>accepted</code></td>
+<td>Livreur attribué (équivalent « course active »)</td>
+</tr>
+<tr>
+<td><code>picking_up</code></td>
+<td>En route vers le commerçant</td>
+</tr>
+<tr>
+<td><code>picked_up</code></td>
+<td>Produit récupéré</td>
+</tr>
+<tr>
+<td><code>delivering</code></td>
+<td>En route vers le client</td>
+</tr>
+<tr>
+<td><code>delivered</code></td>
+<td>Livraison terminée</td>
+</tr>
+<tr>
+<td><code>cancelled</code></td>
+<td>Commande annulée</td>
+</tr>
+</tbody>
+</table>
+<p><strong>Mission active</strong> (bloque le dispatch) : <code>accepted</code>, <code>picking_up</code>, <code>picked_up</code>, <code>delivering</code>.</p>
+<hr />
+<h2 id="4-flux-complet-dune-commande">4. Flux complet d'une commande</h2>
+<h3 id="41-diagramme">4.1 Diagramme</h3>
+<pre><code>CLIENT                          BACKEND                           LIVREUR (en ligne)
+  │                                │                                    │
+  │ POST /api/orders               │                                    │
+  ├──────────────────────────────►│ createOrderWithDispatch()          │
+  │                                │  → order: pending_driver           │
+  │                                │  → mission: available              │
+  │                                │                                    │
+  │                                │ tryDispatchNewOrder()              │
+  │                                │  → findAvailableDriver()           │
+  │                                │     (driver_online=1, pas de       │
+  │                                │      mission active)               │
+  │                                │  → assignOrderToDriver()           │
+  │                                │     order → driver_assigned        │
+  │                                │     mission → accepted             │
+  │                                │                                    │
+  │                                │ Socket mission:assigned ──────────►│ DriverContext
+  │                                │                                    │ → activeMission
+  │                                │                                    │ → DriverHomeScreen
+  │                                │                                    │   fullscreen + MissionDrawer
+  │                                │                                    │
+  │◄── order:status_updated ───────│ emitOrderUpdate()                  │
+  │                                │                                    │
+COMMERÇANT ◄── order:new ──────────│ notifyMerchantNewOrder()           │
+  │                                │                                    │
+  │                                │         PATCH mission/status       │
+  │                                │◄───────────────────────────────────┤
+  │                                │  picked_up → delivering → delivered│
+  │                                │                                    │
+  │                                │ Si delivered:                      │
+  │                                │  assignPendingOrdersToDriver()     │
+  │                                │  (file d'attente suivante)         │
+</code></pre>
+<h3 id="42-etapes-detaillees">4.2 Étapes détaillées</h3>
+<table>
+<thead>
+<tr>
+<th>#</th>
+<th>Étape</th>
+<th>Fichier / fonction</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>1</td>
+<td>Client passe commande</td>
+<td><code>POST /api/orders</code> ou <code>POST /api/orders/cart</code> → <code>routes/orders.js</code></td>
+</tr>
+<tr>
+<td>2</td>
+<td>Création commande + mission</td>
+<td><code>createOrderWithDispatch()</code> → <code>lib/dispatch.js</code></td>
+</tr>
+<tr>
+<td>3</td>
+<td>Notification commerçant</td>
+<td><code>notifyMerchantNewOrder()</code> → socket <code>order:new</code></td>
+</tr>
+<tr>
+<td>4</td>
+<td>Dispatch automatique</td>
+<td><code>tryDispatchNewOrder()</code> → <code>findAvailableDriver()</code> → <code>assignOrderToDriver()</code></td>
+</tr>
+<tr>
+<td>5</td>
+<td>Si aucun livreur libre</td>
+<td>Commande reste <code>pending_driver</code>, mission <code>available</code> (file d'attente)</td>
+</tr>
+<tr>
+<td>6</td>
+<td>Livreur repasse en ligne</td>
+<td><code>PUT /api/drivers/online</code> ou socket <code>driver:online</code> → <code>assignPendingOrdersToDriver()</code></td>
+</tr>
+<tr>
+<td>7</td>
+<td>Réception livreur</td>
+<td>Socket <code>mission:assigned</code> → <code>DriverContext</code> → <code>DriverHomeScreen</code></td>
+</tr>
+<tr>
+<td>8</td>
+<td>Workflow livraison</td>
+<td><code>PATCH /api/missions/:id/status</code> → <code>MissionDrawer</code> + <code>SlideConfirm</code></td>
+</tr>
+<tr>
+<td>9</td>
+<td>Fin de course</td>
+<td><code>delivered</code> → libère le livreur → dispatch de la prochaine commande en file</td>
+</tr>
+</tbody>
+</table>
+<h3 id="43-conditions-du-dispatch-findavailabledriver">4.3 Conditions du dispatch (<code>findAvailableDriver</code>)</h3>
+<p>Un livreur est éligible si <strong>toutes</strong> ces conditions sont vraies :</p>
+<ol>
+<li><code>users.role = 'driver'</code></li>
+<li><code>users.driver_online = 1</code></li>
+<li>Aucune mission en statut <code>accepted</code> | <code>picking_up</code> | <code>picked_up</code> | <code>delivering</code></li>
+</ol>
+<p>Sinon <code>tryDispatchNewOrder()</code> retourne <code>null</code> et la commande reste en attente.</p>
+<hr />
+<h2 id="5-socketio">5. Socket.io</h2>
+<h3 id="51-authentification-et-rooms">5.1 Authentification et rooms</h3>
+<p>Fichier : <code>backend/src/socket/handlers.js</code></p>
+<p>À la connexion (JWT dans <code>handshake.auth.token</code>) :</p>
+<table>
+<thead>
+<tr>
+<th>Room</th>
+<th>Qui rejoint</th>
+<th>Usage</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>user_{id}</code></td>
+<td>Tous les rôles</td>
+<td>Événements personnels (ex. <code>mission:assigned</code>)</td>
+</tr>
+<tr>
+<td><code>merchant_{id}</code></td>
+<td>Commerçants</td>
+<td>Commandes boutique</td>
+</tr>
+<tr>
+<td><code>drivers_available</code></td>
+<td>Livreurs en ligne</td>
+<td>Broadcast missions prises</td>
+</tr>
+<tr>
+<td><code>order_{orderId}</code></td>
+<td>Sur demande (<code>join:order</code>)</td>
+<td>Suivi commande</td>
+</tr>
+<tr>
+<td><code>conv_{conversationId}</code></td>
+<td>Sur demande (<code>join:conversation</code>)</td>
+<td>Chat</td>
+</tr>
+</tbody>
+</table>
+<h3 id="52-evenements-emis-par-le-client-mobile">5.2 Événements émis par le client mobile</h3>
+<table>
+<thead>
+<tr>
+<th>Événement</th>
+<th>Émetteur</th>
+<th>Action serveur</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>join:order</code></td>
+<td>Client / commerçant / livreur</td>
+<td>Rejoint <code>order_{id}</code></td>
+</tr>
+<tr>
+<td><code>leave:order</code></td>
+<td>Idem</td>
+<td>Quitte la room</td>
+</tr>
+<tr>
+<td><code>join:conversation</code></td>
+<td>Chat</td>
+<td>Rejoint <code>conv_{id}</code></td>
+</tr>
+<tr>
+<td><code>leave:conversation</code></td>
+<td>Chat</td>
+<td>Quitte la room</td>
+</tr>
+<tr>
+<td><code>driver:online</code></td>
+<td>Livreur</td>
+<td><code>driver_online=1</code>, join <code>drivers_available</code>, dispatch file</td>
+</tr>
+<tr>
+<td><code>driver:offline</code></td>
+<td>Livreur</td>
+<td><code>driver_online=0</code>, leave <code>drivers_available</code></td>
+</tr>
+<tr>
+<td><code>chat:typing</code></td>
+<td>Chat</td>
+<td>Relay vers la conversation</td>
+</tr>
+</tbody>
+</table>
+<h3 id="53-evenements-emis-par-le-serveur">5.3 Événements émis par le serveur</h3>
+<table>
+<thead>
+<tr>
+<th>Événement</th>
+<th>Room cible</th>
+<th>Déclencheur</th>
+<th>Listeners mobile</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>order:new</code></td>
+<td><code>merchant_{id}</code></td>
+<td>Nouvelle commande</td>
+<td><code>DashboardScreen</code>, <code>MerchantOrdersScreen</code></td>
+</tr>
+<tr>
+<td><code>order:status_updated</code></td>
+<td><code>order_*</code>, <code>merchant_*</code>, <code>user_client</code></td>
+<td>Changement statut commande</td>
+<td>Client, commerçant, suivi</td>
+</tr>
+<tr>
+<td><code>order:cancelled</code></td>
+<td><code>order_*</code>, <code>merchant_*</code></td>
+<td>Annulation</td>
+<td>Client, commerçant</td>
+</tr>
+<tr>
+<td><code>mission:assigned</code></td>
+<td><code>user_{driverId}</code></td>
+<td>Attribution livreur</td>
+<td><strong><code>DriverContext</code></strong> → tiroir mission</td>
+</tr>
+<tr>
+<td><code>mission:accepted</code></td>
+<td><code>order_*</code>, <code>merchant_*</code></td>
+<td>Idem (notif client/commerçant)</td>
+<td>Client, commerçant</td>
+</tr>
+<tr>
+<td><code>mission:status_updated</code></td>
+<td><code>order_*</code>, <code>merchant_*</code>, <code>user_driver</code></td>
+<td>MAJ statut mission</td>
+<td>Suivi, commerçant</td>
+</tr>
+<tr>
+<td><code>mission:taken</code></td>
+<td><code>drivers_available</code></td>
+<td>Mission plus disponible</td>
+<td>(peu utilisé côté mobile)</td>
+</tr>
+<tr>
+<td><code>mission:cancelled</code></td>
+<td><code>user_{driverId}</code></td>
+<td>Annulation commande</td>
+<td><code>DriverContext</code></td>
+</tr>
+<tr>
+<td><code>message:new</code></td>
+<td><code>conv_*</code> ou <code>order_*</code></td>
+<td>Nouveau message</td>
+<td>Chat</td>
+</tr>
+<tr>
+<td><code>chat:typing</code></td>
+<td><code>conv_*</code></td>
+<td>Frappe en cours</td>
+<td>Chat</td>
+</tr>
+<tr>
+<td><code>product:stock_updated</code></td>
+<td>Broadcast global</td>
+<td>Stock modifié</td>
+<td>Client, commerçant</td>
+</tr>
+<tr>
+<td><code>promotion:*</code></td>
+<td>Broadcast global</td>
+<td>Promos</td>
+<td>Client, commerçant</td>
+</tr>
+</tbody>
+</table>
+<h3 id="54-listener-critique-livreur">5.4 Listener critique livreur</h3>
+<pre><code>Socket mission:assigned
+    → DriverContext.js (onAssigned)
+        → setActiveMission(mission)
+        → assignedHandlerRef → DriverHomeScreen.startActiveMission()
+            → fullscreen = true
+            → MissionDrawer expanded
+</code></pre>
+<p><strong>Pas de filtre de statut</strong> sur cet événement : toute mission assignée déclenche l'UI.</p>
+<hr />
+<h2 id="6-api-rest-critique-commandes-livreur">6. API REST critique (commandes / livreur)</h2>
+<table>
+<thead>
+<tr>
+<th>Méthode</th>
+<th>Route</th>
+<th>Rôle</th>
+<th>Rôle métier</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>POST</td>
+<td><code>/api/orders</code></td>
+<td>client</td>
+<td>Créer commande + dispatch</td>
+</tr>
+<tr>
+<td>POST</td>
+<td><code>/api/orders/cart</code></td>
+<td>client</td>
+<td>Valider panier</td>
+</tr>
+<tr>
+<td>POST</td>
+<td><code>/api/orders/:id/cancel</code></td>
+<td>client</td>
+<td>Annuler</td>
+</tr>
+<tr>
+<td>GET</td>
+<td><code>/api/orders/mine</code></td>
+<td>client</td>
+<td>Historique</td>
+</tr>
+<tr>
+<td>GET</td>
+<td><code>/api/orders/merchant</code></td>
+<td>merchant</td>
+<td>Commandes boutique</td>
+</tr>
+<tr>
+<td>PUT</td>
+<td><code>/api/drivers/online</code></td>
+<td>driver</td>
+<td>En ligne / hors ligne + dispatch file</td>
+</tr>
+<tr>
+<td>GET</td>
+<td><code>/api/missions/mine</code></td>
+<td>driver</td>
+<td>Missions + <code>active</code></td>
+</tr>
+<tr>
+<td>PATCH</td>
+<td><code>/api/missions/:id/status</code></td>
+<td>driver</td>
+<td>Workflow livraison</td>
+</tr>
+<tr>
+<td>POST</td>
+<td><code>/api/missions/:id/accept</code></td>
+<td>driver</td>
+<td>Acceptation manuelle (file legacy)</td>
+</tr>
+</tbody>
+</table>
+<hr />
+<h2 id="7-mobile-structure-par-role">7. Mobile — structure par rôle</h2>
+<h3 id="client">Client</h3>
+<ul>
+<li>Tabs : Accueil, Panier, Commandes, Menu</li>
+<li>Écrans clés : <code>HomeScreen</code>, <code>OrderConfirmScreen</code>, <code>OrderTrackingScreen</code>, <code>ClientOrdersScreen</code></li>
+</ul>
+<h3 id="commercant">Commerçant</h3>
+<ul>
+<li>Tabs : Boutique, Commandes, Boîte de réception, Profil</li>
+<li>Écrans clés : <code>DashboardScreen</code>, <code>MerchantOrdersScreen</code></li>
+</ul>
+<h3 id="livreur">Livreur</h3>
+<ul>
+<li>Tabs : <strong>Accueil</strong>, <strong>Revenu</strong>, <strong>Boîte de réception</strong>, <strong>Menu</strong></li>
+<li>Écran principal : <code>DriverHomeScreen</code> (carte premium + bouton en ligne + <code>MissionDrawer</code>)</li>
+<li>Contexte : <code>DriverContext</code> (online, <code>activeMission</code>, socket)</li>
+<li>Carte : <code>DriverMap</code> → <code>PremiumMap.native.js</code> / <code>.web.js</code></li>
+</ul>
+<hr />
+<h2 id="8-fichiers-critiques">8. Fichiers critiques</h2>
+<h3 id="backend">Backend</h3>
+<table>
+<thead>
+<tr>
+<th>Fichier</th>
+<th>Responsabilité</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>backend/src/index.js</code></td>
+<td>Point d'entrée, montage routes, Socket.io</td>
+</tr>
+<tr>
+<td><code>backend/src/db/index.js</code></td>
+<td>Schéma SQLite + migrations statuts au boot</td>
+</tr>
+<tr>
+<td><code>backend/src/lib/dispatch.js</code></td>
+<td><strong>Moteur d'attribution</strong> (cœur du flux commande)</td>
+</tr>
+<tr>
+<td><code>backend/src/lib/orderStatus.js</code></td>
+<td>Constantes et règles statuts commande</td>
+</tr>
+<tr>
+<td><code>backend/src/lib/orders.js</code></td>
+<td><code>getFullOrder()</code></td>
+</tr>
+<tr>
+<td><code>backend/src/lib/missions.js</code></td>
+<td>Liste missions disponibles (file)</td>
+</tr>
+<tr>
+<td><code>backend/src/routes/orders.js</code></td>
+<td>Création commande</td>
+</tr>
+<tr>
+<td><code>backend/src/routes/missions.js</code></td>
+<td>Workflow livreur, stats revenus</td>
+</tr>
+<tr>
+<td><code>backend/src/routes/drivers.js</code></td>
+<td>Online/offline, broadcast</td>
+</tr>
+<tr>
+<td><code>backend/src/socket/handlers.js</code></td>
+<td>Rooms, <code>driver:online</code>, join order/conv</td>
+</tr>
+</tbody>
+</table>
+<h3 id="mobile">Mobile</h3>
+<table>
+<thead>
+<tr>
+<th>Fichier</th>
+<th>Responsabilité</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>mobile/src/context/AppContext.js</code></td>
+<td>Auth, token, connexion socket</td>
+</tr>
+<tr>
+<td><code>mobile/src/context/DriverContext.js</code></td>
+<td><strong>État livreur</strong>, listener <code>mission:assigned</code></td>
+</tr>
+<tr>
+<td><code>mobile/src/screens/driver/DriverHomeScreen.js</code></td>
+<td>UI principale livreur, plein écran, tiroir</td>
+</tr>
+<tr>
+<td><code>mobile/src/components/driver/MissionDrawer.js</code></td>
+<td>Workflow course (slide confirm, chat, nav)</td>
+</tr>
+<tr>
+<td><code>mobile/src/components/maps/PremiumMap.native.js</code></td>
+<td>Carte interactive iOS/Android</td>
+</tr>
+<tr>
+<td><code>mobile/src/config.js</code></td>
+<td>URLs API, labels statuts</td>
+</tr>
+<tr>
+<td><code>mobile/src/api/index.js</code></td>
+<td>Client HTTP Axios</td>
+</tr>
+<tr>
+<td><code>mobile/src/navigation/index.js</code></td>
+<td>Navigation 3 rôles</td>
+</tr>
+</tbody>
+</table>
+<h3 id="fichiers-presents-mais-non-branches-au-flux-actuel">Fichiers présents mais non branchés au flux actuel</h3>
+<table>
+<thead>
+<tr>
+<th>Fichier</th>
+<th>Note</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>mobile/src/components/driver/NewCourseOfferModal.js</code></td>
+<td>Popup OUI/NON — <strong>non utilisée</strong> (flux direct)</td>
+</tr>
+<tr>
+<td><code>mobile/src/screens/driver/MissionsScreen.js</code></td>
+<td>Ancien écran missions</td>
+</tr>
+<tr>
+<td><code>mobile/src/screens/driver/ActiveMissionScreen.js</code></td>
+<td>Ancien écran mission active</td>
+</tr>
+</tbody>
+</table>
+<hr />
+<h2 id="9-points-dattention-connus-etat-reel">9. Points d'attention connus (état réel)</h2>
+<ol>
+<li>
+<p><strong>File d'attente silencieuse</strong> : si le livreur est hors ligne (<code>driver_online=0</code>) ou a une mission active non terminée, les nouvelles commandes restent en <code>pending_driver</code> sans erreur visible côté client.</p>
+</li>
+<li>
+<p><strong>Mission fantôme</strong> : une mission <code>accepted</code> en base bloque <code>findAvailableDriver()</code> même si l'UI livreur semble « libre » (ex. tiroir fermé via bouton Maison).</p>
+</li>
+<li>
+<p><strong>Migrations au boot</strong> : chaque démarrage backend normalise les statuts legacy ; ne pas s'appuyer sur <code>searching_driver</code> / <code>offered</code> comme statuts stables.</p>
+</li>
+<li>
+<p><strong>Commission livreur</strong> : 5 % du <code>total_price</code> (calculée dans <code>missionToBroadcast</code> et <code>/api/missions/stats</code>).</p>
+</li>
+<li>
+<p><strong>Réseau mobile</strong> : <code>mobile/src/config.js</code> utilise <code>localhost</code> (iOS Simulator) ou <code>10.0.2.2</code> (Android Emulator) ; téléphone physique nécessite <code>EXPO_PUBLIC_API_URL</code>.</p>
+</li>
+</ol>
+<hr />
+<h2 id="10-demarrage-local">10. Démarrage local</h2>
+<pre><code class="language-bash"># Terminal 1 — API
+cd backend &amp;&amp; node src/index.js
+# → http://localhost:4000
+
+# Terminal 2 — Mobile
+cd mobile &amp;&amp; npm run ios
+# → Expo :4000/8081
+</code></pre>
+<p>Base de données : <code>backend/data/mazone.db</code> (créée automatiquement).</p>
+</body>
+</html>

@@ -1,0 +1,241 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<title>Ma Zone — Phase 1 Étape 1 — Rapport</title>
+<style>
+  @page { margin: 16mm 14mm; }
+  body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Helvetica, Arial, sans-serif; font-size: 10.5pt; line-height: 1.45; color: #1a1a1a; }
+  h1 { font-size: 20pt; border-bottom: 2px solid #0f2d5c; padding-bottom: 8px; color: #0f2d5c; }
+  h2 { font-size: 14pt; margin-top: 22px; color: #0f2d5c; border-bottom: 1px solid #e5e7eb; padding-bottom: 4px; }
+  h3 { font-size: 11.5pt; margin-top: 14px; color: #1a4a8a; }
+  table { border-collapse: collapse; width: 100%; margin: 10px 0; font-size: 9pt; }
+  th, td { border: 1px solid #d1d5db; padding: 5px 7px; text-align: left; }
+  th { background: #f3f4f6; font-weight: 600; }
+  code { background: #f3f4f6; padding: 1px 4px; border-radius: 3px; font-size: 8.5pt; }
+  pre { background: #f8fafc; border: 1px solid #e5e7eb; border-radius: 6px; padding: 10px; font-size: 8pt; white-space: pre-wrap; word-break: break-word; }
+  pre code { background: none; padding: 0; }
+  hr { border: none; border-top: 1px solid #e5e7eb; margin: 18px 0; }
+</style>
+</head>
+<body>
+<h1>Ma Zone — Phase 1 Étape 1 — Rapport d'implémentation</h1>
+<p><strong>Correctif 3A — Replay handler dans DriverContext</strong></p>
+<table>
+<thead>
+<tr>
+<th></th>
+<th></th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><strong>Date</strong></td>
+<td>juin 2026</td>
+</tr>
+<tr>
+<td><strong>Périmètre</strong></td>
+<td>Étape 1 uniquement — race condition <code>onMissionAssigned</code></td>
+</tr>
+<tr>
+<td><strong>Référence</strong></td>
+<td>PLAN_STABILISATION_MVP_PHASE_1.md — Correctif 3A</td>
+</tr>
+<tr>
+<td><strong>Statut</strong></td>
+<td>Implémenté</td>
+</tr>
+</tbody>
+</table>
+<hr />
+<h2>1. Cause du bug</h2>
+<h3>Contexte</h3>
+<p>Lors du démarrage de l'application livreur, <code>DriverContext.load()</code> appelle <code>GET /api/missions/mine</code> et, si une mission active existe en base, exécute :</p>
+<pre><code class="language-javascript">setActiveMission(active);
+if (active) assignedHandlerRef.current?.(active);
+</code></pre>
+<p>Parallèlement, <code>DriverHomeScreen</code> enregistre le handler d'ouverture du tiroir via <code>onMissionAssigned(startActiveMission)</code> dans un <code>useEffect</code> séparé.</p>
+<h3>Race condition</h3>
+<p>L'ordre d'exécution des <code>useEffect</code> n'est pas garanti. Si <code>load()</code> se termine <strong>avant</strong> que <code>DriverHomeScreen</code> n'enregistre son handler :</p>
+<ol>
+<li><code>activeMission</code> est correctement mis en mémoire ;</li>
+<li><code>assignedHandlerRef.current</code> est encore <code>null</code> ;</li>
+<li>l'appel <code>assignedHandlerRef.current?.(active)</code> est ignoré ;</li>
+<li>quand le handler est enfin enregistré, aucun rappel n'était effectué.</li>
+</ol>
+<p><strong>Conséquence :</strong> mission active en mémoire et en base, mais tiroir (<code>MissionDrawer</code>) et plein écran non ouverts.</p>
+<h3>Scénarios affectés</h3>
+<ul>
+<li>Cold start avec mission active en base ;</li>
+<li>Login rapide avant montage complet de <code>DriverHomeScreen</code> ;</li>
+<li>Toute situation où <code>load()</code> précède l'enregistrement du handler.</li>
+</ul>
+<hr />
+<h2>2. Modification effectuée</h2>
+<h3>Fichier modifié</h3>
+<p><code>mobile/src/context/DriverContext.js</code> — fonction <code>onMissionAssigned</code> uniquement.</p>
+<h3>Avant</h3>
+<pre><code class="language-javascript">const onMissionAssigned = useCallback((handler) =&gt; {
+  assignedHandlerRef.current = handler;
+}, []);
+</code></pre>
+<h3>Après</h3>
+<pre><code class="language-javascript">const onMissionAssigned = useCallback((handler) =&gt; {
+  assignedHandlerRef.current = handler;
+  if (handler &amp;&amp; activeMission) {
+    handler(activeMission);
+  }
+}, [activeMission]);
+</code></pre>
+<h3>Comportement</h3>
+<p>Lorsque <code>DriverHomeScreen</code> enregistre son handler :</p>
+<ol>
+<li>le handler est stocké dans <code>assignedHandlerRef</code> ;</li>
+<li>si <code>activeMission</code> existe déjà en mémoire (chargée par <code>load()</code>), le handler est <strong>rejoué immédiatement</strong> avec cette mission ;</li>
+<li><code>startActiveMission</code> ouvre le plein écran et le tiroir comme prévu.</li>
+</ol>
+<p>La dépendance <code>[activeMission]</code> assure que si le handler est enregistré avant la fin de <code>load()</code>, le <code>useEffect</code> de <code>DriverHomeScreen</code> se réexécute quand <code>activeMission</code> arrive — et rejoue le handler à l'enregistrement.</p>
+<h3>Ce qui n'a PAS été modifié</h3>
+<ul>
+<li>Aucun changement dans <code>dispatch.js</code>, <code>handlers.js</code>, routes backend ;</li>
+<li>Aucun changement dans <code>DriverHomeScreen.js</code>, <code>MissionDrawer.js</code>, cartes, navigation, fullscreen ;</li>
+<li>Aucun nouveau socket, aucun refactoring ;</li>
+<li>Aucun autre fichier touché.</li>
+</ul>
+<hr />
+<h2>3. Diff précis</h2>
+<pre><code class="language-diff">--- a/mobile/src/context/DriverContext.js
++++ b/mobile/src/context/DriverContext.js
+@@ -36,8 +36,11 @@ export function DriverProvider({ children }) {
+   }, [socket]);
+
+   const onMissionAssigned = useCallback((handler) =&gt; {
+     assignedHandlerRef.current = handler;
+-  }, []);
++    if (handler &amp;&amp; activeMission) {
++      handler(activeMission);
++    }
++  }, [activeMission]);
+
+   const load = useCallback(async () =&gt; {
+</code></pre>
+<p><strong>Lignes ajoutées :</strong> 3<br />
+<strong>Lignes supprimées :</strong> 1 (remplacement de <code>}, []);</code> par le bloc avec replay)<br />
+<strong>Fichiers modifiés :</strong> 1</p>
+<hr />
+<h2>4. Risques</h2>
+<table>
+<thead>
+<tr>
+<th>Risque</th>
+<th>Niveau</th>
+<th>Détail</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Double ouverture tiroir</td>
+<td><strong>Faible</strong></td>
+<td><code>startActiveMission</code> contient <code>if (!mission) return</code> ; même <code>mission.id</code> = état idempotent</td>
+</tr>
+<tr>
+<td>Appel handler à la déconnexion</td>
+<td><strong>Nul</strong></td>
+<td><code>onMissionAssigned(null)</code> passe <code>handler=null</code> → condition <code>if (handler &amp;&amp; ...)</code> non exécutée</td>
+</tr>
+<tr>
+<td>Re-render supplémentaire</td>
+<td><strong>Faible</strong></td>
+<td><code>onMissionAssigned</code> change d'identité quand <code>activeMission</code> change → <code>useEffect</code> HomeScreen se réexécute (comportement souhaité)</td>
+</tr>
+<tr>
+<td>Régression dispatch / socket</td>
+<td><strong>Nul</strong></td>
+<td>Aucun fichier backend ou socket modifié</td>
+</tr>
+<tr>
+<td>Régression navigation / carte</td>
+<td><strong>Nul</strong></td>
+<td>Aucun fichier UI hors DriverContext modifié</td>
+</tr>
+</tbody>
+</table>
+<p><strong>Risque global : Faible</strong></p>
+<hr />
+<h2>5. Procédure de test</h2>
+<h3>Prérequis</h3>
+<ul>
+<li>Backend démarré sur <code>http://localhost:4000</code></li>
+<li>Compte livreur avec mission active en base (<code>missions.status IN accepted, picking_up, picked_up, delivering</code>)</li>
+<li>Ou : créer une commande client, l'attribuer au livreur, ne pas terminer la course</li>
+</ul>
+<h3>Test T3.1 — Cold start avec mission active</h3>
+<ol>
+<li>S'assurer qu'une mission active existe pour le livreur en base.</li>
+<li>Fermer complètement l'app livreur (kill process).</li>
+<li>Relancer l'app et se connecter en tant que livreur.</li>
+<li><strong>Résultat attendu :</strong> le tiroir <code>MissionDrawer</code> s'ouvre automatiquement en plein écran avec la mission active.</li>
+</ol>
+<h3>Test T3.3 — Login rapide / race handler</h3>
+<ol>
+<li>Se déconnecter du compte livreur.</li>
+<li>Se reconnecter rapidement.</li>
+<li><strong>Résultat attendu :</strong> si une mission active existe, le tiroir s'ouvre sans action manuelle.</li>
+</ol>
+<h3>Test NR4 — Livreur sans mission active</h3>
+<ol>
+<li>Livreur sans mission en cours, en ligne.</li>
+<li>Cold start ou login.</li>
+<li><strong>Résultat attendu :</strong> écran normal (carte + bouton en ligne), pas de tiroir fantôme.</li>
+</ol>
+<h3>Test NR1 — Flux nominal inchangé</h3>
+<ol>
+<li>Livreur en ligne, pas de mission active.</li>
+<li>Client passe commande.</li>
+<li><strong>Résultat attendu :</strong> <code>mission:assigned</code> reçu → tiroir s'ouvre (comportement existant, non régressé).</li>
+</ol>
+<h3>Test de non-régression dispatch</h3>
+<ol>
+<li>Vérifier qu'une nouvelle commande client est toujours attribuée à un livreur en ligne libre.</li>
+<li><strong>Résultat attendu :</strong> aucun changement de comportement dispatch.</li>
+</ol>
+<hr />
+<h2>6. Confirmation</h2>
+<table>
+<thead>
+<tr>
+<th>Élément</th>
+<th>Statut</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Correctif 3A implémenté</td>
+<td>Oui</td>
+</tr>
+<tr>
+<td>Fichiers modifiés</td>
+<td><code>mobile/src/context/DriverContext.js</code> uniquement</td>
+</tr>
+<tr>
+<td>Dispatch modifié</td>
+<td>Non</td>
+</tr>
+<tr>
+<td>Sockets modifiés</td>
+<td>Non</td>
+</tr>
+<tr>
+<td>Navigation / cartes / fullscreen modifiés</td>
+<td>Non</td>
+</tr>
+<tr>
+<td>Autres fichiers touchés</td>
+<td>Aucun</td>
+</tr>
+</tbody>
+</table>
+<hr />
+<p><em>Rapport Phase 1 Étape 1 — Ma Zone — juin 2026</em></p>
+</body>
+</html>

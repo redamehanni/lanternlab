@@ -1,0 +1,170 @@
+<!DOCTYPE html><html lang="fr"><head><meta charset="utf-8"><title>Map Height Fix</title>
+<style>@page{margin:16mm 14mm}body{font-family:-apple-system,sans-serif;font-size:10.5pt;line-height:1.45;color:#1a1a1a}
+h1{font-size:20pt;border-bottom:2px solid #0f2d5c;color:#0f2d5c}h2{font-size:14pt;color:#0f2d5c;border-bottom:1px solid #e5e7eb}
+table{border-collapse:collapse;width:100%;font-size:9pt}th,td{border:1px solid #d1d5db;padding:5px 7px}th{background:#f3f4f6}
+pre{background:#f8fafc;border:1px solid #e5e7eb;padding:10px;font-size:8pt;white-space:pre-wrap}</style></head><body><h1>Ma Zone — MVP 0.8.1 — Correctif hauteur carte livreur</h1>
+<p><strong>Date :</strong> juin 2026 · <strong>Type :</strong> Layout uniquement (aucun impact fonctionnel)</p>
+<hr />
+<h2>1. Fichier modifié</h2>
+<table>
+<thead>
+<tr>
+<th>Fichier</th>
+<th>Modifié</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>mobile/src/screens/driver/DriverHomeScreen.js</code></td>
+<td>Oui</td>
+</tr>
+<tr>
+<td>Tout autre fichier (dispatch, sockets, DriverContext, PremiumMap, backend…)</td>
+<td>Non</td>
+</tr>
+</tbody>
+</table>
+<hr />
+<h2>2. Ancienne hauteur vs nouvelle hauteur</h2>
+<h3>Cause du problème</h3>
+<p>Le conteneur <code>mapFrame</code> avait bien <code>height: SCREEN_H * 0.5</code>, mais le composant <code>DriverMap</code> → <code>PremiumMap</code> utilise une <strong>hauteur par défaut de 180 px</strong> lorsqu'aucune prop <code>height</code> n'est passée.</p>
+<p>Résultat : le cadre faisait 50 % de l'écran, mais la carte affichée restait à <strong>180 px</strong> — d'où l'impression d'une petite carte avec espace vide en dessous dans le cadre.</p>
+<h3>Hauteurs</h3>
+<table>
+<thead>
+<tr>
+<th></th>
+<th>Valeur</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><strong>Ancienne hauteur carte (réelle)</strong></td>
+<td><strong>180 px</strong> (défaut <code>PremiumMap</code>)</td>
+</tr>
+<tr>
+<td><strong>Nouvelle hauteur carte</strong></td>
+<td><strong><code>Math.round(SCREEN_H * 0.5)</code></strong> — 50 % de la hauteur totale de l'écran</td>
+</tr>
+</tbody>
+</table>
+<h3>Exemples selon appareil</h3>
+<table>
+<thead>
+<tr>
+<th>Écran</th>
+<th>SCREEN_H</th>
+<th>MAP_HEIGHT (nouveau)</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>iPhone 15/16 (~844 pt)</td>
+<td>844</td>
+<td><strong>422 px</strong></td>
+</tr>
+<tr>
+<td>iPhone 17 Pro (~874 pt)</td>
+<td>874</td>
+<td><strong>437 px</strong></td>
+</tr>
+<tr>
+<td>Web Cursor (~800 px)</td>
+<td>800</td>
+<td><strong>400 px</strong></td>
+</tr>
+</tbody>
+</table>
+<p><strong>Gain typique :</strong> de 180 px → ~400–440 px (<strong>+120 à +150 %</strong> de surface cartographique).</p>
+<hr />
+<h2>3. Modifications appliquées</h2>
+<pre><code class="language-javascript">const MAP_HEIGHT = Math.round(SCREEN_H * 0.5);
+
+&lt;DriverMap
+  lat={lat}
+  lng={lng}
+  zoom={14}
+  height={MAP_HEIGHT}
+  style={styles.mapStretch}
+/&gt;
+</code></pre>
+<p>Styles :
+- <code>mapFrame.height</code> → <code>MAP_HEIGHT</code> (aligné sur la carte)
+- <code>mapStretch</code> → <code>{ width: '100%', height: MAP_HEIGHT }</code>
+- <code>content</code> → padding horizontal/bas uniquement (carte en haut de l'écran)</p>
+<hr />
+<h2>4. Nouveau layout obtenu</h2>
+<pre><code>┌─────────────────────────────┐
+│                             │
+│         CARTE               │  ← ~50 % SCREEN_H (interactive)
+│      (MAP_HEIGHT)           │
+│                             │
+├─────────────────────────────┤
+│   Message broadcast Ma Zone │
+├─────────────────────────────┤
+│      Bouton EN LIGNE        │
+└─────────────────────────────┘
+│        Tab bar              │
+</code></pre>
+<ul>
+<li>Carte commence en haut de la zone contenu (sans padding top)</li>
+<li>Moitié supérieure de l'écran = surface cartographique réelle</li>
+<li>Style premium conservé (borderRadius, ombre, bordure)</li>
+<li>Mode plein écran inchangé (<code>fullScreen</code> sur branche séparée)</li>
+</ul>
+<hr />
+<h2>5. Risques éventuels</h2>
+<table>
+<thead>
+<tr>
+<th>Risque</th>
+<th>Niveau</th>
+<th>Détail</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Dispatch / missions / sockets</td>
+<td><strong>Nul</strong></td>
+<td>Aucun fichier métier touché</td>
+</tr>
+<tr>
+<td>Carte non interactive</td>
+<td><strong>Nul</strong></td>
+<td>PanResponder / MapView inchangés dans PremiumMap</td>
+</tr>
+<tr>
+<td>Plein écran cassé</td>
+<td><strong>Nul</strong></td>
+<td>Branche <code>fullscreen</code> non modifiée</td>
+</tr>
+<tr>
+<td>Bouton en ligne</td>
+<td><strong>Nul</strong></td>
+<td>Styles et <code>toggleOnline</code> inchangés</td>
+</tr>
+<tr>
+<td>Rotation écran</td>
+<td><strong>Faible</strong></td>
+<td><code>Dimensions.get</code> au mount — hauteur fixée au chargement (comportement existant)</td>
+</tr>
+<tr>
+<td>Très petits écrans</td>
+<td><strong>Faible</strong></td>
+<td>50 % reste proportionnel</td>
+</tr>
+</tbody>
+</table>
+<p><strong>Risque global : Faible</strong> — correction strictement visuelle, 1 fichier.</p>
+<hr />
+<h2>6. Validation</h2>
+<ul>
+<li>[ ] Carte occupe visuellement ~50 % de l'écran (hors mission active)</li>
+<li>[ ] Carte interactive (pan, zoom)</li>
+<li>[ ] Bouton « Plein écran » fonctionne</li>
+<li>[ ] Bouton en ligne / hors ligne fonctionne</li>
+<li>[ ] Aucun impact sur réception de commandes</li>
+</ul>
+<p><strong>Note :</strong> si une mission est active, l'écran passe automatiquement en mode plein écran — le layout accueil n'est pas visible (comportement existant).</p>
+<hr />
+<p><em>Rapport MVP 0.8.1 — Correctif hauteur carte livreur — Ma Zone</em></p></body></html>

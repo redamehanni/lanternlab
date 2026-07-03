@@ -1,0 +1,753 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<title>Ma Zone — Plan de stabilisation MVP Phase 1</title>
+<style>
+  @page { margin: 16mm 14mm; }
+  body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Helvetica, Arial, sans-serif; font-size: 10.5pt; line-height: 1.45; color: #1a1a1a; max-width: 100%; }
+  h1 { font-size: 20pt; border-bottom: 2px solid #0f2d5c; padding-bottom: 8px; color: #0f2d5c; page-break-after: avoid; }
+  h2 { font-size: 14pt; margin-top: 22px; color: #0f2d5c; border-bottom: 1px solid #e5e7eb; padding-bottom: 4px; page-break-after: avoid; }
+  h3 { font-size: 11.5pt; margin-top: 14px; color: #1a4a8a; page-break-after: avoid; }
+  h4 { font-size: 10.5pt; margin-top: 12px; color: #374151; }
+  table { border-collapse: collapse; width: 100%; margin: 10px 0; font-size: 9pt; page-break-inside: avoid; }
+  th, td { border: 1px solid #d1d5db; padding: 5px 7px; text-align: left; vertical-align: top; }
+  th { background: #f3f4f6; font-weight: 600; }
+  code { background: #f3f4f6; padding: 1px 4px; border-radius: 3px; font-size: 8.5pt; }
+  pre { background: #f8fafc; border: 1px solid #e5e7eb; border-radius: 6px; padding: 10px; overflow-x: auto; font-size: 8pt; line-height: 1.35; white-space: pre-wrap; word-break: break-word; page-break-inside: avoid; }
+  pre code { background: none; padding: 0; }
+  blockquote { border-left: 4px solid #0f2d5c; margin: 10px 0; padding: 6px 14px; background: #f0f4f8; color: #1e3a5f; }
+  hr { border: none; border-top: 1px solid #e5e7eb; margin: 18px 0; }
+  ul, ol { padding-left: 22px; }
+  li { margin-bottom: 3px; }
+  p { margin: 8px 0; }
+</style>
+</head>
+<body>
+<h1 id="ma-zone-plan-de-stabilisation-mvp-phase-1">Ma Zone — Plan de stabilisation MVP Phase 1</h1>
+<p><strong>Document technique — Équipe de développement Ma Zone</strong></p>
+<table>
+<thead>
+<tr>
+<th></th>
+<th></th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><strong>Version</strong></td>
+<td>1.0</td>
+</tr>
+<tr>
+<td><strong>Date</strong></td>
+<td>juin 2026</td>
+</tr>
+<tr>
+<td><strong>Périmètre</strong></td>
+<td>Stabilisation du moteur de commandes — 3 problèmes critiques</td>
+</tr>
+<tr>
+<td><strong>Statut</strong></td>
+<td>Plan de correction (aucune implémentation)</td>
+</tr>
+<tr>
+<td><strong>Références</strong></td>
+<td>AUDIT_MOTEUR_COMMANDES_RESUME.md, CURRENT_ARCHITECTURE.md</td>
+</tr>
+</tbody>
+</table>
+<hr />
+<h2 id="1-resume-executif">1. Résumé exécutif</h2>
+<p>L'audit du moteur de commandes Ma Zone a identifié un flux fonctionnel en théorie correct (création commande → dispatch automatique → attribution → socket → tiroir livreur → livraison), mais fragile en conditions réelles. Les commandes restent fréquemment bloquées en <code>pending_driver</code> alors que le livreur semble disponible côté interface.</p>
+<p><strong>Diagnostic consolidé :</strong> la rupture se produit le plus souvent <strong>avant</strong> l'émission du socket <code>mission:assigned</code>, dans la fonction <code>findAvailableDriver()</code> — typiquement parce qu'une <strong>mission fantôme</strong> en base bloque le livreur (<code>driverHasActiveMission</code> retourne <code>true</code>), ou parce que le livreur est marqué hors ligne en SQLite.</p>
+<p>Ce plan Phase 1 se concentre exclusivement sur <strong>trois problèmes critiques</strong> à fort impact, sans refactoring majeur ni changement d'architecture :</p>
+<table>
+<thead>
+<tr>
+<th>#</th>
+<th>Problème</th>
+<th>Impact</th>
+<th>Risque correction</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><strong>P1</strong></td>
+<td>Missions fantômes bloquant le dispatch</td>
+<td>File d'attente figée, commandes jamais attribuées</td>
+<td>Moyen</td>
+</tr>
+<tr>
+<td><strong>P2</strong></td>
+<td>Socket <code>mission:assigned</code> perdu à la reconnexion</td>
+<td>Mission en DB, livreur sans tiroir</td>
+<td>Faible</td>
+</tr>
+<tr>
+<td><strong>P3</strong></td>
+<td><code>DriverContext</code> ne rouvre pas le tiroir si mission active en base</td>
+<td>Course invisible, blocage prolongé</td>
+<td>Faible</td>
+</tr>
+</tbody>
+</table>
+<p><strong>Objectif Phase 1 :</strong> rendre le flux actuel <strong>résilient</strong> en comblant les trous de synchronisation entre SQLite, Socket.io et l'état React Native — sans réintroduire le flux « offre OUI/NON » ni modifier le modèle de statuts.</p>
+<p><strong>Principe directeur :</strong> la base de données reste la source de vérité ; l'UI livreur doit se réaligner sur la base à chaque connexion, reconnexion et focus écran.</p>
+<hr />
+<h2 id="2-les-trois-problemes-critiques-identifies">2. Les trois problèmes critiques identifiés</h2>
+<h3 id="p1-missions-fantomes-bloquant-le-dispatch">P1 — Missions fantômes bloquant le dispatch</h3>
+<p><strong>Définition opérationnelle :</strong> mission où <code>missions.status IN ('accepted', 'picking_up', 'picked_up', 'delivering')</code> ET <code>missions.driver_id IS NOT NULL</code>, alors que le livreur ne mène pas activement la course dans <code>MissionDrawer</code>.</p>
+<p><strong>Symptôme :</strong> nouvelles commandes en attente indéfiniment ; logs serveur silencieux (<code>tryDispatchNewOrder</code> retourne <code>null</code>).</p>
+<h3 id="p2-socket-missionassigned-perdu-lors-dune-reconnexion">P2 — Socket <code>mission:assigned</code> perdu lors d'une reconnexion</h3>
+<p><strong>Définition :</strong> le serveur émet <code>mission:assigned</code> une seule fois au moment de l'attribution ; si le livreur n'est pas connecté à la room <code>user_{driverId}</code>, l'événement est perdu sans mécanisme de rattrapage.</p>
+<p><strong>Symptôme :</strong> commande <code>driver_assigned</code> en base, livreur sans notification ni tiroir.</p>
+<h3 id="p3-drivercontext-ne-rouvre-pas-le-tiroir-lorsquune-mission-active-existe-en-base">P3 — DriverContext ne rouvre pas le tiroir lorsqu'une mission active existe en base</h3>
+<p><strong>Définition :</strong> <code>GET /api/missions/mine</code> retourne <code>active</code>, mais l'UI livreur n'ouvre pas le plein écran / <code>MissionDrawer</code> de manière fiable.</p>
+<p><strong>Symptôme :</strong> livreur voit l'écran « libre » (bouton en ligne) alors qu'une mission active existe ; le dispatch reste bloqué pour ce livreur.</p>
+<hr />
+<h2 id="3-cause-technique-detaillee-de-chaque-probleme">3. Cause technique détaillée de chaque problème</h2>
+<h3 id="p1-missions-fantomes">P1 — Missions fantômes</h3>
+<h4 id="mecanisme-de-blocage-backend">Mécanisme de blocage backend</h4>
+<p>La fonction <code>driverHasActiveMission(driverId)</code> dans <code>backend/src/lib/dispatch.js</code> (L29-36) interroge :</p>
+<pre><code class="language-sql">SELECT id FROM missions
+WHERE driver_id = ?
+  AND status IN ('accepted', 'picking_up', 'picked_up', 'delivering')
+</code></pre>
+<p>Cette garde est utilisée par :</p>
+<ul>
+<li><code>findAvailableDriver()</code> (L50-54) — exclut le livreur du pool dispatch</li>
+<li><code>assignOrderToDriver()</code> (L95) — refuse une double attribution</li>
+<li><code>assignPendingOrdersToDriver()</code> (L128) — skip le vidage de file</li>
+</ul>
+<p><strong>Conséquence :</strong> toute mission active non terminée en base <strong>fige le livreur</strong> pour le dispatch, indépendamment de l'état UI.</p>
+<h4 id="causes-racines-identifiees">Causes racines identifiées</h4>
+<table>
+<thead>
+<tr>
+<th>Cause</th>
+<th>Mécanisme</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><strong>Bouton Maison</strong></td>
+<td><code>DriverHomeScreen.js</code> L112 : <code>setFullscreen(false)</code> sans toucher <code>activeMission</code> → UI « libre », DB occupée</td>
+</tr>
+<tr>
+<td><strong>Course abandonnée</strong></td>
+<td>Mission reste <code>accepted</code> si le livreur ferme l'app sans passer par <code>delivered</code></td>
+</tr>
+<tr>
+<td><strong>Pas de timeout</strong></td>
+<td>Aucune expiration automatique des missions actives stale</td>
+</tr>
+<tr>
+<td><strong>Dispatch silencieux</strong></td>
+<td><code>tryDispatchNewOrder()</code> retourne <code>null</code> sans log (L134-137) — masque la cause</td>
+</tr>
+</tbody>
+</table>
+<h4 id="chaine-de-causalite">Chaîne de causalité</h4>
+<pre><code>Livreur ferme le tiroir (Maison) ou perd l'UI
+  → activeMission reste en DriverContext + mission active en SQLite
+  → driverHasActiveMission() = true
+  → findAvailableDriver() exclut ce livreur
+  → nouvelles commandes restent pending_driver
+</code></pre>
+<hr />
+<h3 id="p2-socket-perdu-a-la-reconnexion">P2 — Socket perdu à la reconnexion</h3>
+<h4 id="mecanisme-demission-unique">Mécanisme d'émission unique</h4>
+<p>Dans <code>assignOrderToDriver()</code> (<code>dispatch.js</code> L115-121), après la transaction DB :</p>
+<pre><code class="language-javascript">io.to(`user_${driverId}`).emit('mission:assigned', { mission: result });
+</code></pre>
+<p>Socket.io délivre uniquement aux sockets <strong>actuellement connectés</strong> dans la room <code>user_{driverId}</code>.</p>
+<h4 id="absence-de-rattrapage-a-la-reconnexion">Absence de rattrapage à la reconnexion</h4>
+<p>Dans <code>backend/src/socket/handlers.js</code>, à la connexion (L19-40) :</p>
+<ul>
+<li>Le livreur rejoint <code>user_{id}</code> ✓</li>
+<li>Si <code>driver_online = 1</code>, il rejoint <code>drivers_available</code> ✓</li>
+<li><strong>Aucune</strong> réémission de <code>mission:assigned</code> si une mission active existe ✗</li>
+</ul>
+<p>L'événement <code>driver:online</code> (L63-68) appelle <code>assignPendingOrdersToDriver()</code>, qui <strong>skip</strong> si <code>driverHasActiveMission</code> — donc ne rattrape pas la mission déjà attribuée.</p>
+<h4 id="cote-mobile">Côté mobile</h4>
+<p><code>AppContext.js</code> (L28-33) configure <code>reconnection: true</code>, mais aucun listener <code>connect</code> ne déclenche de resynchronisation mission dans <code>DriverContext</code>.</p>
+<p><strong>Fenêtre de perte typique :</strong> attribution pendant coupure réseau, changement d'onglet web, mise en arrière-plan prolongée, ou redémarrage app entre attribution et connexion socket.</p>
+<hr />
+<h3 id="p3-tiroir-non-rouvert">P3 — Tiroir non rouvert</h3>
+<h4 id="trois-defaillances-distinctes-dans-le-code-actuel">Trois défaillances distinctes dans le code actuel</h4>
+<p><strong>Défaillance A — Race condition au boot</strong></p>
+<p><code>DriverContext.load()</code> (L57-59) :</p>
+<pre><code class="language-javascript">setActiveMission(active);
+if (active) assignedHandlerRef.current?.(active);
+</code></pre>
+<p><code>assignedHandlerRef</code> est enregistré par <code>DriverHomeScreen</code> dans un <code>useEffect</code> (L47-50) qui peut s'exécuter <strong>après</strong> <code>load()</code>. Si le handler est <code>null</code>, le tiroir ne s'ouvre pas via le callback — même si <code>activeMission</code> est bien en mémoire.</p>
+<p><strong>Défaillance B — Écran non monté</strong></p>
+<p>Si le livreur est sur un autre onglet (Messages, Revenus), <code>DriverHomeScreen</code> n'est pas monté → pas de handler, pas de <code>useEffect</code> sur <code>activeMission?.id</code>.</p>
+<p><strong>Défaillance C — Bouton Maison</strong></p>
+<p>Après <code>setFullscreen(false)</code> (L112), <code>activeMission</code> persiste. Le <code>useEffect</code> sur <code>activeMission?.id</code> (L52-57) ne se re-déclenche pas (l'id n'a pas changé) → pas de réouverture automatique.</p>
+<h4 id="effet-compose-avec-p1">Effet composé avec P1</h4>
+<p>Le livreur croit être libre, peut rester « en ligne », mais le dispatch le considère occupé → <strong>double incohérence</strong> UI/DB.</p>
+<hr />
+<h2 id="4-fichiers-concernes">4. Fichiers concernés</h2>
+<h3 id="p1-missions-fantomes_1">P1 — Missions fantômes</h3>
+<table>
+<thead>
+<tr>
+<th>Fichier</th>
+<th>Rôle</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>backend/src/lib/dispatch.js</code></td>
+<td><code>driverHasActiveMission</code>, <code>findAvailableDriver</code>, <code>assignPendingOrdersToDriver</code></td>
+</tr>
+<tr>
+<td><code>backend/src/routes/missions.js</code></td>
+<td><code>GET /mine</code>, <code>PATCH /:id/status</code> (seule voie de clôture mission)</td>
+</tr>
+<tr>
+<td><code>mobile/src/screens/driver/DriverHomeScreen.js</code></td>
+<td>Bouton Maison L112, gestion <code>fullscreen</code> / <code>activeMission</code></td>
+</tr>
+<tr>
+<td><code>mobile/src/context/DriverContext.js</code></td>
+<td>État <code>activeMission</code>, pas de garde « occupé »</td>
+</tr>
+<tr>
+<td><code>mobile/src/components/driver/MissionDrawer.js</code></td>
+<td>Workflow jusqu'à <code>delivered</code></td>
+</tr>
+</tbody>
+</table>
+<h3 id="p2-socket-perdu">P2 — Socket perdu</h3>
+<table>
+<thead>
+<tr>
+<th>Fichier</th>
+<th>Rôle</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>backend/src/lib/dispatch.js</code></td>
+<td>Émission unique <code>mission:assigned</code> L118</td>
+</tr>
+<tr>
+<td><code>backend/src/socket/handlers.js</code></td>
+<td>Connexion socket, <code>driver:online</code> — point d'accroche rattrapage</td>
+</tr>
+<tr>
+<td><code>backend/src/routes/drivers.js</code></td>
+<td><code>PUT /online</code> — retourne <code>mission</code> si attribution file</td>
+</tr>
+<tr>
+<td><code>mobile/src/context/AppContext.js</code></td>
+<td>Connexion / reconnexion socket</td>
+</tr>
+<tr>
+<td><code>mobile/src/context/DriverContext.js</code></td>
+<td>Listeners <code>mission:assigned</code>, <code>load()</code></td>
+</tr>
+</tbody>
+</table>
+<h3 id="p3-tiroir-non-rouvert_1">P3 — Tiroir non rouvert</h3>
+<table>
+<thead>
+<tr>
+<th>Fichier</th>
+<th>Rôle</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>mobile/src/context/DriverContext.js</code></td>
+<td><code>load()</code>, <code>assignedHandlerRef</code>, <code>onMissionAssigned</code></td>
+</tr>
+<tr>
+<td><code>mobile/src/screens/driver/DriverHomeScreen.js</code></td>
+<td><code>startActiveMission</code>, <code>useEffect</code> activeMission, <code>useFocusEffect</code></td>
+</tr>
+<tr>
+<td><code>backend/src/routes/missions.js</code></td>
+<td><code>GET /mine</code> — source <code>active</code></td>
+</tr>
+</tbody>
+</table>
+<hr />
+<h2 id="5-correctifs-minimaux-recommandes">5. Correctifs minimaux recommandés</h2>
+<h3 id="p1-missions-fantomes-bloquant-le-dispatch_1">P1 — Missions fantômes bloquant le dispatch</h3>
+<h4 id="correctif-1a-empecher-letat-ui-libre-avec-mission-active-mobile">Correctif 1A — Empêcher l'état UI « libre » avec mission active (mobile)</h4>
+<p><strong>Fichier :</strong> <code>DriverHomeScreen.js</code></p>
+<p><strong>Changement :</strong> le bouton Maison (L112) ne doit plus laisser l'impression que le livreur est libre.</p>
+<p><strong>Option minimale recommandée :</strong> remplacer la fermeture totale par une <strong>minimisation</strong> du tiroir (<code>drawerExpanded = false</code>, <code>fullscreen = false</code>) tout en affichant une <strong>bannière persistante</strong> « Course en cours » avec bouton « Reprendre » qui rouvre le plein écran.</p>
+<p><strong>Alternative plus simple :</strong> désactiver le bouton Maison tant que <code>activeMission</code> existe ; forcer le livreur à terminer ou contacter le support.</p>
+<h4 id="correctif-1b-resynchronisation-mission-au-focus-ecran-mobile">Correctif 1B — Resynchronisation mission au focus écran (mobile)</h4>
+<p><strong>Fichier :</strong> <code>DriverHomeScreen.js</code></p>
+<p><strong>Changement :</strong> dans <code>useFocusEffect</code>, si <code>activeMission</code> existe → <code>setFullscreen(true)</code> et <code>setDrawerExpanded(true)</code>.</p>
+<p>Couvre le cas onglet Messages / Revenus puis retour carte.</p>
+<h4 id="correctif-1c-logs-dispatch-structures-backend">Correctif 1C — Logs dispatch structurés (backend)</h4>
+<p><strong>Fichier :</strong> <code>dispatch.js</code></p>
+<p><strong>Changement :</strong> dans <code>tryDispatchNewOrder()</code> et <code>assignPendingOrdersToDriver()</code>, logger la raison du <code>null</code> :</p>
+<ul>
+<li><code>no_driver_online</code></li>
+<li><code>all_drivers_busy</code> (avec id livreur bloqué + mission_id)</li>
+<li><code>order_already_assigned</code></li>
+</ul>
+<p><strong>Impact :</strong> diagnostic immédiat en dev/staging, sans changer la logique métier.</p>
+<h4 id="correctif-1d-optionnel-phase-11-endpoint-admin-stale-missions">Correctif 1D — (Optionnel Phase 1.1) Endpoint admin stale missions</h4>
+<p>Hors scope minimal strict, mais documenté pour la suite : script ou endpoint interne listant les missions actives &gt; N heures sans <code>updated_at</code> récent.</p>
+<hr />
+<h3 id="p2-socket-missionassigned-perdu">P2 — Socket <code>mission:assigned</code> perdu</h3>
+<h4 id="correctif-2a-rattrapage-serveur-a-la-connexion-socket-recommande">Correctif 2A — Rattrapage serveur à la connexion socket (recommandé)</h4>
+<p><strong>Fichier :</strong> <code>backend/src/socket/handlers.js</code></p>
+<p><strong>Changement :</strong> après <code>socket.join('user_{id}')</code> pour un livreur, si <code>driverHasActiveMission(id)</code> :</p>
+<ol>
+<li>Charger la mission via <code>getFullMission(missionId)</code></li>
+<li>Émettre <code>socket.emit('mission:assigned', { mission })</code> <strong>au socket connecté uniquement</strong> (pas broadcast)</li>
+</ol>
+<p><strong>Pourquoi côté serveur :</strong> source de vérité unique, fonctionne même si le mobile n'a pas encore appelé <code>GET /mine</code>.</p>
+<h4 id="correctif-2b-rattrapage-mobile-sur-evenement-connect-complement">Correctif 2B — Rattrapage mobile sur événement <code>connect</code> (complément)</h4>
+<p><strong>Fichier :</strong> <code>DriverContext.js</code></p>
+<p><strong>Changement :</strong> écouter <code>socket.on('connect', ...)</code> → appeler <code>load()</code> ou <code>getMyMissions()</code> ; si <code>active</code> → <code>setActiveMission</code> + invoquer handler.</p>
+<p><strong>Redondance intentionnelle</strong> avec 2A : défense en profondeur.</p>
+<h4 id="correctif-2c-enrichir-put-driversonline-deja-partiel">Correctif 2C — Enrichir <code>PUT /drivers/online</code> (déjà partiel)</h4>
+<p><strong>Fichier :</strong> <code>drivers.js</code> L29-34</p>
+<p><strong>Constat :</strong> retourne déjà <code>mission</code> si <code>assignPendingOrdersToDriver</code> attribue une nouvelle course, mais <strong>pas</strong> si le livreur a déjà une mission active.</p>
+<p><strong>Changement minimal :</strong> si <code>online=true</code> et mission active existe, inclure <code>activeMission</code> dans la réponse JSON (même sans nouvelle attribution).</p>
+<hr />
+<h3 id="p3-drivercontext-tiroir">P3 — DriverContext / tiroir</h3>
+<h4 id="correctif-3a-file-dattente-du-handler-mobile">Correctif 3A — File d'attente du handler (mobile)</h4>
+<p><strong>Fichier :</strong> <code>DriverContext.js</code></p>
+<p><strong>Changement :</strong> dans <code>onMissionAssigned(handler)</code> :</p>
+<pre><code class="language-javascript">assignedHandlerRef.current = handler;
+if (handler &amp;&amp; activeMission) handler(activeMission); // rejouer immédiatement
+</code></pre>
+<p>Élimine la race au boot sans refactor.</p>
+<h4 id="correctif-3b-usefocuseffect-resync-mobile">Correctif 3B — <code>useFocusEffect</code> resync (mobile)</h4>
+<p><strong>Fichier :</strong> <code>DriverHomeScreen.js</code></p>
+<p><strong>Changement :</strong> au focus, appeler <code>refresh()</code> du DriverContext puis ouvrir le tiroir si <code>activeMission</code>.</p>
+<h4 id="correctif-3c-conserver-leffet-existant-sur-activemissionid">Correctif 3C — Conserver l'effet existant sur <code>activeMission?.id</code></h4>
+<p><strong>Fichier :</strong> <code>DriverHomeScreen.js</code> L52-57</p>
+<p><strong>Constat :</strong> déjà présent et correct pour le premier montage. Ne pas supprimer ; compléter avec 3A et 3B.</p>
+<hr />
+<h2 id="6-risques-associes">6. Risques associés</h2>
+<h3 id="risques-par-correctif">Risques par correctif</h3>
+<table>
+<thead>
+<tr>
+<th>Correctif</th>
+<th>Risque</th>
+<th>Mitigation</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>1A Bannière / Maison</td>
+<td>UX : livreur frustré si ne peut pas « minimiser »</td>
+<td>Offrir minimisation + reprise, pas blocage total</td>
+</tr>
+<tr>
+<td>1B Focus resync</td>
+<td>Réouverture intempestive du tiroir</td>
+<td>Ne rouvrir que si <code>activeMission</code> non null</td>
+</tr>
+<tr>
+<td>1C Logs</td>
+<td>Bruit console en production</td>
+<td>Niveau <code>debug</code> ou flag <code>DISPATCH_DEBUG</code></td>
+</tr>
+<tr>
+<td>2A Re-emit socket</td>
+<td>Double ouverture tiroir si mobile reçoit aussi via <code>load()</code></td>
+<td>Idempotent : <code>setActiveMission</code> même id = no-op UI</td>
+</tr>
+<tr>
+<td>2B Connect + load</td>
+<td>Appels API redondants à chaque reconnect</td>
+<td>Debounce 500ms sur <code>connect</code></td>
+</tr>
+<tr>
+<td>3A Replay handler</td>
+<td>Appel double <code>startActiveMission</code> au boot</td>
+<td>Guard <code>if (!mission) return</code> déjà présent L41</td>
+</tr>
+<tr>
+<td>3B refresh au focus</td>
+<td>Latence perceptible</td>
+<td>Spinner léger ou sync silencieuse</td>
+</tr>
+</tbody>
+</table>
+<h3 id="risques-de-regression-globaux">Risques de régression globaux</h3>
+<table>
+<thead>
+<tr>
+<th>Domaine</th>
+<th>Risque</th>
+<th>Niveau</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><strong>Dispatch</strong></td>
+<td>Réémission socket pourrait déclencher une fausse « nouvelle course » côté livreur</td>
+<td>Faible — même mission_id</td>
+</tr>
+<tr>
+<td><strong>Socket.io</strong></td>
+<td>Événements supplémentaires à la connexion augmentent légèrement le trafic</td>
+<td>Négligeable</td>
+</tr>
+<tr>
+<td><strong>DriverContext</strong></td>
+<td><code>load()</code> plus fréquent → plus d'appels API par session</td>
+<td>Faible</td>
+</tr>
+<tr>
+<td><strong>UX livreur</strong></td>
+<td>Impossibilité de masquer le tiroir peut déranger</td>
+<td>Moyen — prévoir minimisation</td>
+</tr>
+<tr>
+<td><strong>Client / commerçant</strong></td>
+<td>Aucun changement direct prévu Phase 1</td>
+<td>Nul</td>
+</tr>
+<tr>
+<td><strong>Missions manuelles</strong></td>
+<td><code>POST /missions/:id/accept</code> rarement utilisé — même chemin socket</td>
+<td>Faible</td>
+</tr>
+</tbody>
+</table>
+<hr />
+<h2 id="7-tests-fonctionnels-apres-implementation">7. Tests fonctionnels après implémentation</h2>
+<h3 id="suite-p1-missions-fantomes">Suite P1 — Missions fantômes</h3>
+<table>
+<thead>
+<tr>
+<th>ID</th>
+<th>Scénario</th>
+<th>Étapes</th>
+<th>Résultat attendu</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>T1.1</td>
+<td>Maison avec mission active</td>
+<td>Attribuer course → appuyer Maison</td>
+<td>Bannière « Course en cours » visible OU tiroir non dismissable ; dispatch bloqué pour ce livreur (comportement cohérent)</td>
+</tr>
+<tr>
+<td>T1.2</td>
+<td>Nouvelle commande après <code>delivered</code></td>
+<td>Terminer course → nouvelle commande client</td>
+<td>Attribution immédiate au livreur libéré</td>
+</tr>
+<tr>
+<td>T1.3</td>
+<td>Mission fantôme existante en DB</td>
+<td>Insérer manuellement mission <code>accepted</code> orpheline → commande client</td>
+<td>Logs indiquent <code>all_drivers_busy</code> ; après clôture mission, dispatch reprend</td>
+</tr>
+<tr>
+<td>T1.4</td>
+<td>Un seul livreur occupé</td>
+<td>2 commandes, 1 livreur</td>
+<td>1ère attribuée, 2ème en file ; après delivered, 2ème attribuée</td>
+</tr>
+</tbody>
+</table>
+<h3 id="suite-p2-socket-reconnexion">Suite P2 — Socket reconnexion</h3>
+<table>
+<thead>
+<tr>
+<th>ID</th>
+<th>Scénario</th>
+<th>Étapes</th>
+<th>Résultat attendu</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>T2.1</td>
+<td>Attribution pendant offline socket</td>
+<td>Couper réseau mobile → créer commande → rétablir réseau</td>
+<td>Tiroir s'ouvre avec mission active (via reconnect)</td>
+</tr>
+<tr>
+<td>T2.2</td>
+<td>Reconnexion avec mission en cours</td>
+<td>Mission active → kill app → relancer</td>
+<td><code>GET /mine</code> + socket reconnect → tiroir ouvert</td>
+</tr>
+<tr>
+<td>T2.3</td>
+<td>Pas de double mission</td>
+<td>Reconnect multiple fois</td>
+<td>Une seule mission active, pas de duplication DB</td>
+</tr>
+<tr>
+<td>T2.4</td>
+<td>Nouvelle attribution normale</td>
+<td>Livreur en ligne, socket OK</td>
+<td><code>mission:assigned</code> reçu une fois, tiroir OK</td>
+</tr>
+</tbody>
+</table>
+<h3 id="suite-p3-tiroir-drivercontext">Suite P3 — Tiroir / DriverContext</h3>
+<table>
+<thead>
+<tr>
+<th>ID</th>
+<th>Scénario</th>
+<th>Étapes</th>
+<th>Résultat attendu</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>T3.1</td>
+<td>Boot avec mission active</td>
+<td>Mission en DB → cold start app livreur</td>
+<td>Tiroir ouvert automatiquement</td>
+</tr>
+<tr>
+<td>T3.2</td>
+<td>Retour onglet Carte</td>
+<td>Mission active → onglet Messages → retour Carte</td>
+<td>Tiroir réouvert</td>
+</tr>
+<tr>
+<td>T3.3</td>
+<td>Race handler</td>
+<td>Login rapide, navigation immédiate</td>
+<td>Handler rejoué, pas de course manquée</td>
+</tr>
+<tr>
+<td>T3.4</td>
+<td>Mission terminée</td>
+<td>Slide livraison → <code>delivered</code></td>
+<td><code>activeMission</code> null, écran libre, dispatch débloqué</td>
+</tr>
+</tbody>
+</table>
+<h3 id="tests-de-non-regression">Tests de non-régression</h3>
+<table>
+<thead>
+<tr>
+<th>ID</th>
+<th>Scénario</th>
+<th>Résultat attendu</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>NR1</td>
+<td>Flux client complet</td>
+<td>Commande → suivi → livré</td>
+</tr>
+<tr>
+<td>NR2</td>
+<td>Flux commerçant</td>
+<td><code>order:new</code> reçu, statuts cohérents</td>
+</tr>
+<tr>
+<td>NR3</td>
+<td>Annulation client avant pickup</td>
+<td><code>mission:cancelled</code> livreur, dispatch débloqué</td>
+</tr>
+<tr>
+<td>NR4</td>
+<td>Livreur hors ligne</td>
+<td>Commande reste <code>pending_driver</code> (comportement inchangé)</td>
+</tr>
+<tr>
+<td>NR5</td>
+<td>Panier multi-articles</td>
+<td>File traitée séquentiellement après chaque <code>delivered</code></td>
+</tr>
+</tbody>
+</table>
+<hr />
+<h2 id="8-ordre-exact-recommande-dimplementation">8. Ordre exact recommandé d'implémentation</h2>
+<pre><code>Étape 1 — P3 Correctif 3A (replay handler)
+    ↓ Corrige la race la plus simple, zéro impact backend
+Étape 2 — P3 Correctif 3B + P1 Correctif 1B (focus resync)
+    ↓ Garantit tiroir au retour sur l'écran carte
+Étape 3 — P2 Correctif 2A (re-emit socket à la connexion)
+    ↓ Rattrapage fiable côté serveur
+Étape 4 — P2 Correctif 2B (connect → load mobile)
+    ↓ Filet de sécurité mobile
+Étape 5 — P1 Correctif 1A (bouton Maison / bannière)
+    ↓ Empêche la création de nouvelles missions fantômes
+Étape 6 — P1 Correctif 1C (logs dispatch)
+    ↓ Observabilité pour valider en staging
+Étape 7 — P2 Correctif 2C (enrichir PUT /online) [optionnel]
+    ↓ Cohérence API REST
+</code></pre>
+<p><strong>Justification de l'ordre :</strong></p>
+<ol>
+<li><strong>P3 d'abord</strong> — corrige l'affichage sans toucher au dispatch ; débloque les livreurs qui ont déjà une mission en base.</li>
+<li><strong>P2 ensuite</strong> — assure le rattrapage réseau une fois que l'UI sait afficher la mission.</li>
+<li><strong>P1 en dernier</strong> — prévient la <strong>recréation</strong> de fantômes ; inutile si P3/P2 ne montrent pas la mission existante.</li>
+</ol>
+<p>Chaque étape doit être <strong>déployée et testée isolément</strong> avant la suivante.</p>
+<hr />
+<h2 id="9-estimation-du-niveau-de-risque-par-correction">9. Estimation du niveau de risque par correction</h2>
+<table>
+<thead>
+<tr>
+<th>Correctif</th>
+<th>Description</th>
+<th>Risque</th>
+<th>Effort</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><strong>3A</strong></td>
+<td>Replay handler à l'enregistrement</td>
+<td><strong>Faible</strong></td>
+<td>~15 min</td>
+</tr>
+<tr>
+<td><strong>3B</strong></td>
+<td>Focus resync + refresh</td>
+<td><strong>Faible</strong></td>
+<td>~30 min</td>
+</tr>
+<tr>
+<td><strong>1B</strong></td>
+<td>Focus → ouvrir tiroir si active</td>
+<td><strong>Faible</strong></td>
+<td>~20 min</td>
+</tr>
+<tr>
+<td><strong>2A</strong></td>
+<td>Re-emit <code>mission:assigned</code> à la connexion</td>
+<td><strong>Faible</strong></td>
+<td>~45 min</td>
+</tr>
+<tr>
+<td><strong>2B</strong></td>
+<td><code>connect</code> → <code>load()</code> mobile</td>
+<td><strong>Faible</strong></td>
+<td>~30 min</td>
+</tr>
+<tr>
+<td><strong>2C</strong></td>
+<td>Enrichir réponse <code>PUT /online</code></td>
+<td><strong>Faible</strong></td>
+<td>~20 min</td>
+</tr>
+<tr>
+<td><strong>1A</strong></td>
+<td>Bannière / comportement Maison</td>
+<td><strong>Moyen</strong></td>
+<td>~1-2 h</td>
+</tr>
+<tr>
+<td><strong>1C</strong></td>
+<td>Logs dispatch structurés</td>
+<td><strong>Faible</strong></td>
+<td>~30 min</td>
+</tr>
+<tr>
+<td><strong>1D</strong></td>
+<td>Endpoint stale missions (optionnel)</td>
+<td><strong>Moyen</strong></td>
+<td>~2 h</td>
+</tr>
+</tbody>
+</table>
+<p><strong>Risque global Phase 1 : Faible à Moyen</strong> — aucun changement de schéma DB, aucun nouveau flux métier, modifications localisées.</p>
+<hr />
+<h2 id="10-impacts-transverses">10. Impacts transverses</h2>
+<h3 id="impact-sur-le-dispatch">Impact sur le dispatch</h3>
+<ul>
+<li><strong>Positif :</strong> moins de livreurs « bloqués silencieusement » ; file d'attente se vide après <code>delivered</code> comme prévu.</li>
+<li><strong>Ne change pas :</strong> algorithme FIFO, <code>findAvailableDriver</code>, statuts canoniques.</li>
+<li><strong>Attention :</strong> tant qu'une mission fantôme <strong>existe déjà</strong> en DB, le dispatch restera bloqué jusqu'à clôture manuelle ou script de nettoyage — Phase 1 ne supprime pas les données historiques corrompues.</li>
+</ul>
+<h3 id="impact-sur-socketio">Impact sur Socket.io</h3>
+<ul>
+<li>Un événement <code>mission:assigned</code> supplémentaire par reconnexion livreur avec mission active.</li>
+<li>Pas de nouvelle room, pas de nouvel événement nommé.</li>
+<li>Compatible avec l'architecture rooms actuelle (<code>user_{id}</code>).</li>
+</ul>
+<h3 id="impact-sur-drivercontext">Impact sur DriverContext</h3>
+<ul>
+<li><code>load()</code> potentiellement appelé plus souvent (reconnect, focus).</li>
+<li><code>onMissionAssigned</code> devient idempotent avec replay.</li>
+<li>Pas de nouveau state global requis ; <code>activeMission</code> reste la source UI.</li>
+</ul>
+<h3 id="impact-sur-lexperience-livreur">Impact sur l'expérience livreur</h3>
+<ul>
+<li><strong>Amélioration majeure :</strong> plus de courses « invisibles ».</li>
+<li><strong>Changement UX :</strong> le bouton Maison ne pourra plus simuler un état libre (1A) — le livreur verra toujours qu'une course est en cours.</li>
+<li><strong>Workflow MissionDrawer :</strong> inchangé (slides, chat, navigation).</li>
+</ul>
+<h3 id="risques-de-regression">Risques de régression</h3>
+<table>
+<thead>
+<tr>
+<th>Zone</th>
+<th>Probabilité</th>
+<th>Gravité</th>
+<th>Mitigation</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Double ouverture tiroir</td>
+<td>Moyenne</td>
+<td>Faible</td>
+<td>Guards sur mission.id</td>
+</tr>
+<tr>
+<td>Appels API excessifs</td>
+<td>Faible</td>
+<td>Faible</td>
+<td>Debounce reconnect</td>
+</tr>
+<tr>
+<td>Régression tab bar / fullscreen</td>
+<td>Faible</td>
+<td>Moyenne</td>
+<td>Tester iOS + web</td>
+</tr>
+<tr>
+<td>Réintroduction flux offre</td>
+<td>Nulle</td>
+<td>—</td>
+<td>Ne pas toucher NewCourseOfferModal</td>
+</tr>
+</tbody>
+</table>
+<hr />
+<h2 id="11-conclusion-et-recommandations-pour-la-suite">11. Conclusion et recommandations pour la suite</h2>
+<h3 id="bilan-phase-1">Bilan Phase 1</h3>
+<p>Les trois problèmes critiques partagent une cause commune : <strong>désynchronisation entre l'état SQLite (source de vérité métier) et l'état React Native (source de vérité UI)</strong>. Le dispatch backend fonctionne ; c'est la boucle de retour livreur qui est incomplète.</p>
+<p>La Phase 1 comble cette boucle avec des correctifs <strong>minimalistes et localisés</strong>, sans remettre en cause l'architecture MVP documentée dans <code>CURRENT_ARCHITECTURE.md</code>.</p>
+<h3 id="recommandations-post-phase-1-phase-2-hors-scope-immediat">Recommandations post-Phase 1 (Phase 2 — hors scope immédiat)</h3>
+<ol>
+<li><strong>Script de nettoyage</strong> des missions fantômes existantes en base (one-shot avant déploiement).</li>
+<li><strong>Unification statut en ligne</strong> — AsyncStorage ne doit pas primer sur l'API si divergent.</li>
+<li><strong>Timeout missions stale</strong> — auto-annulation ou alerte admin après N heures.</li>
+<li><strong>Tests E2E automatisés</strong> — scénario client → dispatch → livreur → delivered.</li>
+<li><strong>Ne pas réactiver</strong> le flux <code>mission:offered</code> / <code>NewCourseOfferModal</code> tant que le dispatch direct n'est pas stable en production.</li>
+</ol>
+<h3 id="critere-de-succes-phase-1">Critère de succès Phase 1</h3>
+<ul>
+<li>[ ] Zéro commande bloquée <code>pending_driver</code> avec livreur en ligne et sans mission active réelle</li>
+<li>[ ] Reconnexion livreur restaure le tiroir en &lt; 3 secondes</li>
+<li>[ ] Cold start app livreur avec mission active ouvre le tiroir systématiquement</li>
+<li>[ ] Bouton Maison ne crée plus de mission fantôme nouvelle</li>
+</ul>
+<hr />
+<p><em>Document généré à partir de l'audit moteur de commandes Ma Zone — juin 2026. Aucune modification de code applicatif n'a été effectuée.</em></p>
+</body>
+</html>

@@ -1,0 +1,57 @@
+@import "tailwindcss";
+
+@theme {
+  --color-brand: #0f2d5c;
+  --color-brand-light: #1a4a8a;
+  --color-brand-muted: #e8eef6;
+  --color-accent: #0f2d5c;
+  --color-success: #059669;
+  --color-success-light: #ecfdf5;
+  --color-success-muted: #d1fae5;
+  --color-surface: #ffffff;
+  --color-surface-secondary: #f8f9fb;
+  --color-surface-tertiary: #f1f3f6;
+  --color-border: #e5e7eb;
+  --color-border-light: #f0f1f3;
+  --color-text: #0a0a0a;
+  --color-text-secondary: #6b7280;
+  --color-text-tertiary: #9ca3af;
+  --font-sans: var(--font-inter), ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, sans-serif;
+}
+
+@layer base {
+  html {
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+  }
+
+  body {
+    @apply bg-surface-secondary text-text font-sans;
+  }
+}
+
+@layer utilities {
+  .glass {
+    @apply bg-white/80 backdrop-blur-xl;
+  }
+
+  .delivery-badge {
+    @apply inline-flex items-center gap-1.5 rounded-full bg-success-light px-3 py-1 text-sm font-semibold text-success;
+  }
+
+  .card-premium {
+    @apply rounded-2xl bg-white border border-border-light;
+  }
+
+  .btn-primary {
+    @apply inline-flex items-center justify-center gap-2 rounded-xl bg-brand px-6 py-3.5 text-sm font-semibold text-white transition-all hover:bg-brand-light active:scale-[0.98];
+  }
+
+  .btn-secondary {
+    @apply inline-flex items-center justify-center gap-2 rounded-xl border border-border bg-white px-6 py-3.5 text-sm font-semibold text-text transition-all hover:bg-surface-tertiary active:scale-[0.98];
+  }
+
+  .input-search {
+    @apply w-full rounded-2xl border border-border bg-white px-5 py-4 text-base text-text placeholder:text-text-tertiary focus:border-brand focus:outline-none focus:ring-2 focus:ring-brand/10 transition-all;
+  }
+}

@@ -1,0 +1,110 @@
+import axios from 'axios';
+import { appStorage } from '../utils/storage';
+import { API_URL } from '../config';
+
+const api = axios.create({ baseURL: API_URL, timeout: 15000 });
+
+api.interceptors.request.use(async (config) => {
+  const token = await appStorage.getItem('token');
+  if (token) config.headers.Authorization = `Bearer ${token}`;
+  return config;
+});
+
+const MULTIPART = { headers: { 'Content-Type': 'multipart/form-data' } };
+
+// ── Auth ──────────────────────────────────────────────────────────────────────
+export const register = (data) => api.post('/api/auth/register', data);
+export const login    = (data) => api.post('/api/auth/login', data);
+
+// ── Utilisateur / profil ───────────────────────────────────────────────────────
+export const getMe         = () => api.get('/api/users/me');
+export const updateProfile = (formData) => api.put('/api/users/me', formData, MULTIPART);
+export const getAddresses  = () => api.get('/api/users/addresses');
+export const addAddress    = (data) => api.post('/api/users/addresses', data);
+export const deleteAddress = (id) => api.delete(`/api/users/addresses/${id}`);
+
+// ── Boutiques ─────────────────────────────────────────────────────────────────
+export const getMyStore   = () => api.get('/api/stores/mine');
+export const getStores    = () => api.get('/api/stores');
+export const getStoreById = (id) => api.get(`/api/stores/${id}`);
+export const createStore  = (formData) => api.post('/api/stores', formData, MULTIPART);
+export const updateStore  = (id, formData) => api.put(`/api/stores/${id}`, formData, MULTIPART);
+
+// ── Produits ──────────────────────────────────────────────────────────────────
+export const searchProducts   = (q) => api.get(`/api/products/search?q=${encodeURIComponent(q)}`);
+export const getStoreProducts = (storeId) => api.get(`/api/products?storeId=${storeId}`);
+export const getProductById   = (id) => api.get(`/api/products/${id}`);
+
+export const createProduct = (formData) =>
+  api.post('/api/products', formData, { headers: { 'Content-Type': 'multipart/form-data' } });
+
+export const updateProductStock = (id, delta) =>
+  api.patch(`/api/products/${id}/stock`, { delta });
+
+export const setProductStock = (id, quantity) =>
+  api.patch(`/api/products/${id}/stock`, { quantity });
+
+export const updateProduct = (id, formData) =>
+  api.put(`/api/products/${id}`, formData, MULTIPART);
+
+export const deleteProduct = (id) => api.delete(`/api/products/${id}`);
+
+// ── Panier ────────────────────────────────────────────────────────────────────
+export const getCart = () => api.get('/api/cart');
+export const addToCart = (product_id, quantity = 1) => api.post('/api/cart', { product_id, quantity });
+export const updateCartItem = (id, quantity) => api.patch(`/api/cart/${id}`, { quantity });
+export const removeCartItem = (id) => api.delete(`/api/cart/${id}`);
+export const clearCart = () => api.delete('/api/cart');
+export const checkoutCart = (data) => api.post('/api/orders/cart', data);
+
+// ── Favoris ───────────────────────────────────────────────────────────────────
+export const getFavoriteStores = () => api.get('/api/favorites');
+export const getFavoriteIds = () => api.get('/api/favorites/ids');
+export const toggleFavoriteStore = (store_id) => api.post('/api/favorites/toggle', { store_id });
+
+// ── Promotions ────────────────────────────────────────────────────────────────
+export const getFlashPromotions = () => api.get('/api/promotions/flash');
+export const getMyPromotions = () => api.get('/api/promotions/mine');
+export const createPromotion = (data) => api.post('/api/promotions', data);
+export const updatePromotion = (id, data) => api.patch(`/api/promotions/${id}`, data);
+export const deletePromotion = (id) => api.delete(`/api/promotions/${id}`);
+
+// ── Commandes ─────────────────────────────────────────────────────────────────
+export const createOrder       = (data) => api.post('/api/orders', data);
+export const cancelOrder       = (id) => api.post(`/api/orders/${id}/cancel`);
+export const getMyOrders       = () => api.get('/api/orders/mine');
+export const getMerchantOrders = () => api.get('/api/orders/merchant');
+export const getOrderById      = (id) => api.get(`/api/orders/${id}`);
+
+// ── Livreur ───────────────────────────────────────────────────────────────────
+export const getDriverBroadcast = () => api.get('/api/drivers/broadcast');
+export const getDriverOnline = () => api.get('/api/drivers/online');
+export const setDriverOnline = (online) => api.put('/api/drivers/online', { online });
+export const getDriverNotifications = () => api.get('/api/drivers/notifications');
+export const resolveDriverSupport = () => api.post('/api/drivers/support/resolve');
+export const getSupportMessages = (threadId) => api.get(`/api/drivers/support/${threadId}/messages`);
+export const sendSupportMessage = (threadId, content) => api.post(`/api/drivers/support/${threadId}/messages`, { content });
+
+// ── Commerçant ────────────────────────────────────────────────────────────────
+export const resolveMerchantSupport = () => api.post('/api/merchants/support/resolve');
+export const getMerchantNotifications = () => api.get('/api/merchants/notifications');
+export const getMerchantSupportMessages = (threadId) => api.get(`/api/merchants/support/${threadId}/messages`);
+export const sendMerchantSupportMessage = (threadId, content) => api.post(`/api/merchants/support/${threadId}/messages`, { content });
+
+export const getAvailableMissions = () => api.get('/api/missions/available');
+export const getMyMissions        = () => api.get('/api/missions/mine');
+export const getDriverStats       = () => api.get('/api/missions/stats');
+export const acceptMission        = (id) => api.post(`/api/missions/${id}/accept`);
+export const acceptMissionOffer   = (id) => api.post(`/api/missions/${id}/accept-offer`);
+export const declineMissionOffer  = (id) => api.post(`/api/missions/${id}/decline-offer`);
+export const getOfferedMission    = () => api.get('/api/missions/offered');
+export const refuseMission        = (id) => api.post(`/api/missions/${id}/refuse`);
+export const updateMissionStatus  = (id, status) => api.patch(`/api/missions/${id}/status`, { status });
+
+// ── Conversations (messageries séparées, issue #8) ─────────────────────────────
+export const getConversations     = () => api.get('/api/conversations');
+export const resolveConversation  = (order_id, target_role) =>
+  api.post('/api/conversations/resolve', { order_id, target_role });
+export const getConversationMessages = (id) => api.get(`/api/conversations/${id}/messages`);
+export const sendConversationMessage = (id, content) =>
+  api.post(`/api/conversations/${id}/messages`, { content });
