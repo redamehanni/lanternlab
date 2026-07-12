@@ -151,10 +151,12 @@ router.post('/', verifyToken, requireRole('client'), (req, res) => {
     storeId: product.store_id,
   });
 
+  const dispatchStatus = assigned?.offer ? 'offered' : (assigned?.mission ? 'assigned' : 'pending_driver');
+
   res.status(201).json({
     order: getFullOrder(orderId),
-    mission: assigned || mission,
-    dispatch: assigned ? 'assigned' : 'pending_driver',
+    mission: assigned?.mission || mission,
+    dispatch: dispatchStatus,
   });
 });
 

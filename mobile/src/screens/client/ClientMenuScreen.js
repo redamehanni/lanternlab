@@ -5,6 +5,7 @@ import FadeIn from '../../components/ui/FadeIn';
 import { THEME } from '../../theme';
 
 const MENU_ITEMS = [
+  { id: 'stores', icon: 'storefront-outline', label: 'Mes commerces', screen: 'MesCommerces', color: '#059669' },
   { id: 'orders', icon: 'receipt-outline', label: 'Vos commandes', screen: 'OrderHistory', color: '#2563EB' },
   { id: 'info', icon: 'person-outline', label: 'Vos informations', screen: 'ClientInfo', color: '#7C3AED' },
   { id: 'help', icon: 'help-circle-outline', label: 'Centre d\'aide', screen: 'HelpCenter', color: '#059669' },

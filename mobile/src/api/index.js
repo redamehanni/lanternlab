@@ -101,7 +101,24 @@ export const getOfferedMission    = () => api.get('/api/missions/offered');
 export const refuseMission        = (id) => api.post(`/api/missions/${id}/refuse`);
 export const updateMissionStatus  = (id, status) => api.patch(`/api/missions/${id}/status`, { status });
 
-// ── Conversations (messageries séparées, issue #8) ─────────────────────────────
+// ── Communication (organe unifié) ─────────────────────────────────────────────
+export const getCommunicationThreads = (params = {}) => {
+  const q = Object.entries(params)
+    .filter(([, v]) => v != null && v !== '')
+    .map(([k, v]) => `${encodeURIComponent(k)}=${encodeURIComponent(v)}`)
+    .join('&');
+  return api.get(`/api/communication/threads${q ? `?${q}` : ''}`);
+};
+export const resolveCommunicationThread = (data) =>
+  api.post('/api/communication/resolve', data);
+export const getCommunicationMessages = (id) =>
+  api.get(`/api/communication/threads/${id}/messages`);
+export const sendCommunicationMessage = (id, content, context_order_id) =>
+  api.post(`/api/communication/threads/${id}/messages`, { content, context_order_id });
+export const markCommunicationRead = (id) =>
+  api.post(`/api/communication/threads/${id}/read`);
+
+// ── Conversations (legacy alias) ───────────────────────────────────────────────
 export const getConversations     = () => api.get('/api/conversations');
 export const resolveConversation  = (order_id, target_role) =>
   api.post('/api/conversations/resolve', { order_id, target_role });

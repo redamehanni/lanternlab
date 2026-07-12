@@ -27,11 +27,22 @@ router.put('/online', verifyToken, requireRole('driver'), (req, res) => {
   db.prepare('UPDATE users SET driver_online = ? WHERE id = ?').run(online ? 1 : 0, req.user.id);
 
   let assigned = null;
+  let offered = null;
   if (online) {
-    assigned = assignPendingOrdersToDriver(req.user.id, io);
+    const result = assignPendingOrdersToDriver(req.user.id, io);
+    if (result?.offer) {
+      offered = result;
+    } else {
+      assigned = result;
+    }
   }
 
-  res.json({ online, assigned, mission: assigned?.mission || null });
+  res.json({
+    online,
+    assigned,
+    offered,
+    mission: assigned?.mission || null,
+  });
 });
 
 // GET /api/drivers/notifications — notifications système

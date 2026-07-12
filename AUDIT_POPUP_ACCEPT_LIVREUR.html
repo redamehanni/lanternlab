@@ -1,0 +1,562 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Ma Zone — Audit popup Accept livreur</title>
+<style>
+  @page { margin: 16mm 14mm; }
+  body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Helvetica, Arial, sans-serif; font-size: 10.5pt; line-height: 1.45; color: #1a1a1a; max-width: 100%; }
+  h1 { font-size: 20pt; border-bottom: 2px solid #0f2d5c; padding-bottom: 8px; color: #0f2d5c; page-break-after: avoid; }
+  h2 { font-size: 14pt; margin-top: 22px; color: #0f2d5c; border-bottom: 1px solid #e5e7eb; padding-bottom: 4px; page-break-after: avoid; }
+  h3 { font-size: 11.5pt; margin-top: 14px; color: #1a4a8a; page-break-after: avoid; }
+  table { border-collapse: collapse; width: 100%; margin: 10px 0; font-size: 9pt; page-break-inside: avoid; }
+  th, td { border: 1px solid #d1d5db; padding: 5px 7px; text-align: left; vertical-align: top; }
+  th { background: #f3f4f6; font-weight: 600; }
+  code { background: #f3f4f6; padding: 1px 4px; border-radius: 3px; font-size: 8.5pt; }
+  pre { background: #f8fafc; border: 1px solid #e5e7eb; border-radius: 6px; padding: 10px; overflow-x: auto; font-size: 8pt; line-height: 1.35; white-space: pre-wrap; word-break: break-word; page-break-inside: avoid; }
+  pre code { background: none; padding: 0; }
+  blockquote { border-left: 4px solid #0f2d5c; margin: 10px 0; padding: 6px 14px; background: #f0f4f8; color: #1e3a5f; }
+  hr { border: none; border-top: 1px solid #e5e7eb; margin: 18px 0; }
+  ul, ol { padding-left: 22px; }
+  li { margin-bottom: 3px; }
+  p { margin: 8px 0; }
+  .pdf-note { display: none; }
+  @media screen {
+    .pdf-note { display: block; background: #eff6ff; border: 1px solid #bfdbfe; border-radius: 8px; padding: 12px 16px; margin-bottom: 24px; color: #1e3a8a; }
+  }
+</style>
+</head>
+<body>
+<div class="pdf-note">
+  <strong>Lecture dans Cursor / navigateur :</strong> ce fichier HTML est la version lisible du plan.
+  Pour le PDF, ouvrez <code>AUDIT_POPUP_ACCEPT_LIVREUR.pdf</code> depuis le Finder (clic droit → Ouvrir avec Aperçu)
+  ou double-cliquez le fichier <code>Ouvrir_*_PDF.command</code> correspondant à la racine du projet.
+</div>
+<h1>Ma Zone — Audit popup Accept livreur</h1>
+<p><strong>Document technique — Équipe de développement Ma Zone</strong></p>
+<table>
+<thead>
+<tr>
+<th></th>
+<th></th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><strong>Version</strong></td>
+<td>1.0</td>
+</tr>
+<tr>
+<td><strong>Date</strong></td>
+<td>juillet 2026</td>
+</tr>
+<tr>
+<td><strong>Périmètre</strong></td>
+<td>Bug bouton « Accepter » inopérant sur la popup proposition de course (Phase F UX)</td>
+</tr>
+<tr>
+<td><strong>Statut</strong></td>
+<td>Audit + plan de correction (<strong>aucune correction exécutée</strong>)</td>
+</tr>
+<tr>
+<td><strong>Références</strong></td>
+<td>PLAN_UX_CHAPITRE_CLIENT_MESSAGERIE.md, dispatch.js, dispatchOffer.js, DriverHomeScreen.js</td>
+</tr>
+</tbody>
+</table>
+<hr />
+<h2>Document de référence</h2>
+<table>
+<thead>
+<tr>
+<th>Format</th>
+<th>Fichier</th>
+<th>Usage</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><strong>HTML (recommandé dans Cursor)</strong></td>
+<td><code>AUDIT_POPUP_ACCEPT_LIVREUR.html</code></td>
+<td>Lecture directe dans le navigateur</td>
+</tr>
+<tr>
+<td><strong>Markdown</strong></td>
+<td><code>AUDIT_POPUP_ACCEPT_LIVREUR.md</code></td>
+<td>Partage / édition</td>
+</tr>
+<tr>
+<td><strong>PDF</strong></td>
+<td><code>AUDIT_POPUP_ACCEPT_LIVREUR.pdf</code></td>
+<td>Impression — ouvrir via Finder ou <code>Ouvrir_AUDIT_POPUP_PDF.command</code></td>
+</tr>
+</tbody>
+</table>
+<hr />
+<h2>0. Contexte utilisateur</h2>
+<p>Après implémentation du plan UX (Phase F — popup proposition course livreur), le comportement observé est :</p>
+<table>
+<thead>
+<tr>
+<th>Élément</th>
+<th>Statut</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Popup « Nouvelle course disponible ! »</td>
+<td><strong>OK</strong> — s’affiche avec compte à rebours 20 s</td>
+</tr>
+<tr>
+<td>Bouton <strong>Refuser</strong></td>
+<td><strong>OK</strong> — ferme la popup, relance le dispatch</td>
+</tr>
+<tr>
+<td>Bouton <strong>Accepter</strong></td>
+<td><strong>KO</strong> — alerte <em>« Impossible d'accepter la course »</em>, pas de tiroir mission</td>
+</tr>
+<tr>
+<td>Assignation directe (ancien flux)</td>
+<td><strong>Corrigé</strong> — la popup remplace bien l’assignation immédiate</td>
+</tr>
+</tbody>
+</table>
+<p>Ce document explique <strong>pourquoi</strong> Accepter échoue, <strong>ce qui a déjà été corrigé</strong> pour faire apparaître la popup, et <strong>le plan minimal</strong> pour réparer Accept — sans l’avoir encore appliqué.</p>
+<hr />
+<h2>1. Synthèse exécutive</h2>
+<p><strong>Cause racine (confirmée par analyse statique du code)</strong> : dans <code>backend/src/lib/dispatch.js</code>, la fonction <code>driverHasActiveMission()</code> considère qu’un livreur avec une offre en cours (<code>status = 'offered'</code>) est « occupé ». Or <code>assignOrderToDriver()</code> appelle cette fonction <strong>avant</strong> de finaliser l’acceptation. Résultat : rejet systématique → HTTP <strong>409</strong> → alerte mobile générique.</p>
+<p><strong>Asymétrie Refuser / Accepter</strong> : Refuser ne passe pas par <code>assignOrderToDriver</code> ; il remet la mission en <code>available</code> et relance <code>tryDispatchNewOrder</code>. D’où Refuser fonctionnel et Accepter bloqué.</p>
+<p><strong>Gravité</strong> : bloquant pour le flux livreur Phase F. Le moteur dispatch et la communication ne sont pas impactés ; correction localisée (~15 lignes backend).</p>
+<hr />
+<h2>2. Flux attendu vs flux réel</h2>
+<h3>2.1 Flux cible (Phase F UX)</h3>
+<pre><code>Client passe commande
+    → tryDispatchNewOrder (OFFER_MODE=true)
+    → proposeOrderToDriver
+    → DB: mission.status = 'offered', offered_to_driver_id = livreur
+    → Socket: mission:offered → popup livreur (20 s)
+
+Livreur clique ACCEPTER
+    → POST /api/missions/:id/accept
+    → assignOrderToDriver
+    → DB: status = 'accepted', driver_id = livreur
+    → Socket: mission:assigned → tiroir mission
+
+Livreur clique REFUSER ou timeout
+    → POST /api/missions/:id/refuse (ou auto)
+    → DB: status = 'available'
+    → tryDispatchNewOrder(excludeDriverIds)
+</code></pre>
+<h3>2.2 Flux réel aujourd’hui (Accept)</h3>
+<pre><code>Livreur clique ACCEPTER
+    → POST /api/missions/:id/accept          [missions.js L99-112]
+    → assignOrderToDriver(order_id, driver)  [dispatch.js L93+]
+    → driverHasActiveMission(driver) === TRUE  [dispatch.js L105]
+         └── car offre 'offered' pending pour CE livreur [L39-46]
+    → return null
+    → HTTP 409 { error: 'Mission déjà prise ou expirée' }
+    → Mobile: Alert.alert('Impossible d\'accepter la course.')
+</code></pre>
+<h3>2.3 Flux réel Refuser (OK)</h3>
+<pre><code>Livreur clique REFUSER
+    → POST /api/missions/:id/refuse           [missions.js L124-138]
+    → UPDATE mission SET status='available'   (sans assignOrderToDriver)
+    → tryDispatchNewOrder(..., excludeDriverIds)
+    → OK
+</code></pre>
+<hr />
+<h2>3. Cause racine — analyse détaillée</h2>
+<h3>3.1 Fonction <code>driverHasActiveMission</code> (dispatch.js L31-46)</h3>
+<pre><code class="language-javascript">function driverHasActiveMission(driverId) {
+  // Cas 1 : mission en cours de livraison
+  const row = db.prepare(`
+    SELECT id FROM missions
+    WHERE driver_id = ?
+      AND status IN ('accepted', 'picking_up', 'picked_up', 'delivering')
+    LIMIT 1
+  `).get(driverId);
+  if (row) return true;
+
+  // Cas 2 : offre en attente de réponse (AJOUT Phase F)
+  const offer = db.prepare(`
+    SELECT id FROM missions
+    WHERE offered_to_driver_id = ?
+      AND status = 'offered'
+      AND datetime(offer_expires_at) &gt; datetime('now')
+    LIMIT 1
+  `).get(driverId);
+  return !!offer;
+}
+</code></pre>
+<p><strong>Intention du Cas 2</strong> : empêcher qu’un second <code>proposeOrderToDriver</code> soit envoyé au même livreur tant qu’il n’a pas répondu à la popup. <strong>Correct pour la proposition.</strong></p>
+<h3>3.2 Fonction <code>assignOrderToDriver</code> (dispatch.js L93-105)</h3>
+<pre><code class="language-javascript">function assignOrderToDriver(orderId, driverId, io) {
+  const result = db.transaction(() =&gt; {
+    const order = db.prepare(`... AND m.status IN ('available', 'offered')`).get(orderId);
+
+    if (!order) return null;
+    if (driverHasActiveMission(driverId)) return null;  // ← BUG ICI
+
+    // UPDATE mission → accepted ...
+  })();
+  // ...
+}
+</code></pre>
+<p>Au moment où Karim accepte <strong>son</strong> offre :
+- <code>offered_to_driver_id</code> = Karim
+- <code>status</code> = <code>offered</code>
+- <code>driverHasActiveMission(Karim)</code> → <strong>true</strong> (Cas 2)
+- Transaction abortée <strong>avant</strong> le UPDATE SQL (pourtant valide L112-116)</p>
+<h3>3.3 Route accept (missions.js L105-111)</h3>
+<p>La route appelle correctement <code>clearOfferTimeout</code> puis <code>assignOrderToDriver</code>. Le SQL d’update accepte bien <code>status = 'offered' AND offered_to_driver_id = driver</code>. <strong>Le blocage est uniquement en amont</strong>, dans le guard <code>driverHasActiveMission</code>.</p>
+<h3>3.4 Origine de la régression</h3>
+<p>Lors de l’implémentation Phase F, <code>driverHasActiveMission</code> a été enrichi pour inclure les offres pending. Cette fonction est réutilisée à <strong>deux endroits aux sémantiques opposées</strong> :</p>
+<table>
+<thead>
+<tr>
+<th>Appelant</th>
+<th>Besoin</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>proposeOrderToDriver</code>, <code>assignPendingOrdersToDriver</code></td>
+<td>Livreur <strong>occupé</strong> = ne pas proposer une 2e course</td>
+</tr>
+<tr>
+<td><code>assignOrderToDriver</code></td>
+<td>Livreur <strong>en livraison</strong> = ne pas assigner ; mais <strong>doit pouvoir accepter son offre</strong></td>
+</tr>
+</tbody>
+</table>
+<p><strong>Conclusion</strong> : une seule fonction pour deux règles métier incompatibles.</p>
+<hr />
+<h2>4. Causes secondaires (non bloquantes)</h2>
+<table>
+<thead>
+<tr>
+<th>ID</th>
+<th>Problème</th>
+<th>Fichier</th>
+<th>Impact</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>S1</td>
+<td>Message d’erreur API non affiché</td>
+<td><code>DriverHomeScreen.js</code> L106-108</td>
+<td>Debug difficile (<code>409</code> masqué)</td>
+</tr>
+<tr>
+<td>S2</td>
+<td>Pas de fallback HTTP sur accept</td>
+<td><code>DriverHomeScreen.js</code> L100-110</td>
+<td>Dépendance totale au socket <code>mission:assigned</code></td>
+</tr>
+<tr>
+<td>S3</td>
+<td>Race timer 20 s vs clic Accept</td>
+<td><code>DriverHomeScreen.js</code> L113-130</td>
+<td>Refuse auto possible pendant accept (rare)</td>
+</tr>
+<tr>
+<td>S4</td>
+<td><code>acceptMissionOffer</code> API morte</td>
+<td><code>api/index.js</code> L98</td>
+<td>Dette, pas de bug</td>
+</tr>
+</tbody>
+</table>
+<hr />
+<h2>5. Historique des corrections déjà appliquées</h2>
+<p>Ces changements <strong>ont été exécutés</strong> lors de la session UX (phases B–F). Ils expliquent pourquoi la <strong>popup est visible</strong> aujourd’hui (problème initial : assignation directe sans popup).</p>
+<h3>5.1 Backend — activation mode proposition</h3>
+<table>
+<thead>
+<tr>
+<th>Fichier</th>
+<th>Modification</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>backend/src/config/dispatch.js</code></td>
+<td><code>OFFER_MODE = true</code> par défaut (<code>DISPATCH_OFFER_MODE=0</code> pour rollback)</td>
+</tr>
+<tr>
+<td><code>backend/src/lib/dispatchOffer.js</code></td>
+<td><strong>Nouveau</strong> — <code>proposeOrderToDriver</code>, timeout 20 s, socket <code>mission:offered</code></td>
+</tr>
+<tr>
+<td><code>backend/src/lib/dispatch.js</code></td>
+<td><code>tryDispatchNewOrder</code> / <code>assignPendingOrdersToDriver</code> → <code>proposeOrderToDriver</code> si OFFER_MODE</td>
+</tr>
+<tr>
+<td><code>backend/src/db/index.js</code></td>
+<td>Colonnes <code>offered_to_driver_id</code>, <code>offer_expires_at</code> ; <strong>suppression wipe <code>offered</code> au boot</strong></td>
+</tr>
+<tr>
+<td><code>backend/src/routes/missions.js</code></td>
+<td><code>GET /offered</code>, accept/refuse enrichis pour statut <code>offered</code></td>
+</tr>
+<tr>
+<td><code>backend/src/index.js</code></td>
+<td>Log démarrage : <code>Dispatch offer mode : ON (popup 20s)</code></td>
+</tr>
+</tbody>
+</table>
+<h3>5.2 Backend — bug « offre = mission active » (popup invisible / tiroir direct)</h3>
+<p><strong>Symptôme</strong> : popup n’apparaissait pas, ou tiroir s’ouvrait directement.</p>
+<p><strong>Cause</strong> : <code>PUT /api/drivers/online</code> renvoyait <code>mission</code> dès la proposition ; <code>DriverContext</code> mettait cette mission en <code>activeMission</code>.</p>
+<p><strong>Correctifs</strong> :</p>
+<table>
+<thead>
+<tr>
+<th>Fichier</th>
+<th>Modification</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>backend/src/routes/drivers.js</code></td>
+<td>Réponse séparée <code>{ offered, assigned, mission }</code> — <code>mission</code> null si simple proposition</td>
+</tr>
+<tr>
+<td><code>backend/src/routes/orders.js</code></td>
+<td>Champ <code>dispatch: 'offered' \| 'assigned' \| 'pending_driver'</code></td>
+</tr>
+</tbody>
+</table>
+<h3>5.3 Mobile — affichage popup</h3>
+<table>
+<thead>
+<tr>
+<th>Fichier</th>
+<th>Modification</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>mobile/src/context/DriverContext.js</code></td>
+<td>État <code>pendingOffer</code> ; <code>activeMission</code> seulement si statut <code>accepted+</code> ; listener <code>mission:offered</code></td>
+</tr>
+<tr>
+<td><code>mobile/src/screens/driver/DriverHomeScreen.js</code></td>
+<td>Branchement <code>NewCourseOfferModal</code>, timer 20 s, handlers accept/refuse</td>
+</tr>
+<tr>
+<td><code>mobile/src/components/driver/NewCourseOfferModal.js</code></td>
+<td>UI « Nouvelle course disponible ! », Accepter/Refuser, rémunération 3,99 € + 10 %</td>
+</tr>
+</tbody>
+</table>
+<h3>5.4 Phases UX client (B–E) — hors scope popup</h3>
+<p>Drawer hamburger, onglet Messagerie, <code>ChatPresentation</code>, labels commerçant — implémentés en parallèle, <strong>sans lien</strong> avec le bug Accept.</p>
+<h3>5.5 Chronologie</h3>
+<table>
+<thead>
+<tr>
+<th>Étape</th>
+<th>Résultat</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>1. Implémentation Phase F (propose + modal)</td>
+<td>Assignation directe persistait (backend non redémarré / bugs API)</td>
+</tr>
+<tr>
+<td>2. Fix <code>drivers.js</code> + <code>DriverContext</code></td>
+<td>Popup visible, Refuser OK</td>
+</tr>
+<tr>
+<td>3. Test Accept</td>
+<td><strong>Échec 409</strong> — bug <code>driverHasActiveMission</code> identifié</td>
+</tr>
+<tr>
+<td>4. Ce document</td>
+<td>Audit + plan, <strong>correction Accept non appliquée</strong></td>
+</tr>
+</tbody>
+</table>
+<hr />
+<h2>6. Plan de correction proposé (NON EXÉCUTÉ)</h2>
+<h3>6.1 Correctif principal — backend (~15 lignes)</h3>
+<p><strong>Fichier</strong> : <code>backend/src/lib/dispatch.js</code></p>
+<p><strong>Objectif</strong> : séparer « livreur en livraison » vs « livreur avec offre pending ».</p>
+<ol>
+<li>
+<p>Créer <code>driverHasAcceptedMission(driverId)</code> — uniquement statuts <code>accepted|picking_up|picked_up|delivering</code></p>
+</li>
+<li>
+<p>Créer <code>driverHasPendingOffer(driverId, excludeMissionId?)</code> — offres actives, avec exclusion optionnelle</p>
+</li>
+<li>
+<p><strong><code>assignOrderToDriver</code></strong> : guard = <code>driverHasAcceptedMission(driverId)</code> <strong>uniquement</strong></p>
+</li>
+<li>
+<p><strong><code>proposeOrderToDriver</code></strong> / <strong><code>assignPendingOrdersToDriver</code></strong> : guard = <code>driverHasAcceptedMission || driverHasPendingOffer</code></p>
+</li>
+<li>
+<p>Conserver le UPDATE SQL existant (clause <code>offered AND offered_to_driver_id = ?</code>)</p>
+</li>
+</ol>
+<p><strong>Pseudo-code</strong> :</p>
+<pre><code class="language-javascript">function driverHasAcceptedMission(driverId) { /* missions en livraison only */ }
+function driverHasPendingOffer(driverId, excludeMissionId = null) { /* offered pending */ }
+function driverIsBusyForNewOffer(driverId) {
+  return driverHasAcceptedMission(driverId) || driverHasPendingOffer(driverId);
+}
+
+// assignOrderToDriver:
+if (driverHasAcceptedMission(driverId)) return null;
+
+// proposeOrderToDriver / assignPendingOrdersToDriver:
+if (driverIsBusyForNewOffer(driverId)) return null;
+</code></pre>
+<h3>6.2 Correctifs mobile optionnels (robustesse)</h3>
+<p><strong>Fichier</strong> : <code>mobile/src/screens/driver/DriverHomeScreen.js</code></p>
+<ol>
+<li>Sur accept HTTP 200 : <code>setActiveMission(res.data.mission)</code> en fallback</li>
+<li>Alerte : afficher <code>err.response?.data?.error</code></li>
+<li>Pause du timer 20 s quand <code>offerLoading === true</code></li>
+</ol>
+<h3>6.3 Fichiers impactés (correction Accept)</h3>
+<table>
+<thead>
+<tr>
+<th>Fichier</th>
+<th>Type de changement</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>backend/src/lib/dispatch.js</code></td>
+<td><strong>Obligatoire</strong> — scission guards</td>
+</tr>
+<tr>
+<td><code>backend/src/lib/dispatchOffer.js</code></td>
+<td>Appeler <code>driverIsBusyForNewOffer</code> au lieu de <code>driverHasActiveMission</code></td>
+</tr>
+<tr>
+<td><code>mobile/src/screens/driver/DriverHomeScreen.js</code></td>
+<td>Optionnel — durcissement UX</td>
+</tr>
+</tbody>
+</table>
+<p><strong>Fichiers interdits de modification lourde</strong> : <code>communicationEngine.js</code>, transaction core <code>assignOrderToDriver</code> (UPDATE SQL), logique timeout <code>dispatchOffer.js</code>.</p>
+<hr />
+<h2>7. Matrice de tests (recette post-correction)</h2>
+<table>
+<thead>
+<tr>
+<th>#</th>
+<th>Scénario</th>
+<th>Étapes</th>
+<th>Attendu</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>T1</td>
+<td>Accept OK</td>
+<td>Livreur en ligne → commande client → Accepter</td>
+<td>Popup → tiroir mission, <code>status=accepted</code>, pas de 409</td>
+</tr>
+<tr>
+<td>T2</td>
+<td>Refuse OK</td>
+<td>Même flux → Refuser</td>
+<td>Popup fermée, mission <code>available</code>, redispatch possible</td>
+</tr>
+<tr>
+<td>T3</td>
+<td>Timeout 20 s</td>
+<td>Aucune action</td>
+<td>Auto-refuse, pas de mission fantôme <code>offered</code></td>
+</tr>
+<tr>
+<td>T4</td>
+<td>Backend log</td>
+<td>Commande + Accept</td>
+<td><code>[Dispatch] mission:offered</code> puis pas d’erreur sur POST accept</td>
+</tr>
+<tr>
+<td>T5</td>
+<td>Non-régression dispatch</td>
+<td>Livraison complète</td>
+<td>Flux picking → delivered inchangé</td>
+</tr>
+<tr>
+<td>T6</td>
+<td>Non-régression comm</td>
+<td>Chat client/livreur</td>
+<td>Conversations créées à l’assignation (pas à la proposition)</td>
+</tr>
+</tbody>
+</table>
+<hr />
+<h2>8. Procédure de validation manuelle</h2>
+<pre><code class="language-bash"># 1. Backend (vérifier OFFER_MODE ON)
+cd backend &amp;&amp; node src/index.js
+# Attendu : Dispatch offer mode : ON (popup 20s)
+
+# 2. Mobile
+cd mobile &amp;&amp; npx expo start --clear
+
+# 3. Scénario
+# - Livreur Karim : PASSE EN LIGNE
+# - Client Marie : nouvelle commande
+# - Livreur : popup → Accepter
+</code></pre>
+<p><strong>Comptes test</strong> : Client Marie l | Driver Karim Diouf | Merchant taz le tazer</p>
+<hr />
+<h2>9. Estimation et décision</h2>
+<table>
+<thead>
+<tr>
+<th>Tâche</th>
+<th>Effort</th>
+<th>Statut</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Fix backend <code>driverHasActiveMission</code></td>
+<td>30 min</td>
+<td><strong>À valider</strong></td>
+</tr>
+<tr>
+<td>Durcissement mobile (optionnel)</td>
+<td>20 min</td>
+<td><strong>À valider</strong></td>
+</tr>
+<tr>
+<td>Recette T1–T6</td>
+<td>15 min</td>
+<td><strong>À valider</strong></td>
+</tr>
+<tr>
+<td><strong>Total correction</strong></td>
+<td><strong>~1 h</strong></td>
+<td>En attente confirmation équipe</td>
+</tr>
+</tbody>
+</table>
+<p><strong>Décision requise</strong> : confirmer ou non l’exécution du plan section 6 avant toute modification de code.</p>
+<hr />
+<h2>10. Annexe — chaîne d’appels mobile Accept</h2>
+<pre><code>NewCourseOfferModal.onAccept
+  → DriverHomeScreen.handleAcceptOffer
+  → acceptMission(mission.id)                    [api/index.js]
+  → POST /api/missions/:id/accept                [missions.js]
+  → assignOrderToDriver                          [dispatch.js]  ← échec ici
+  → (si OK) socket mission:assigned
+  → DriverContext.onAssigned → MissionDrawer
+</code></pre>
+<hr />
+<p><em>Document généré pour analyse préalable à correction — Ma Zone MVP juillet 2026.</em></p>
+</body>
+</html>

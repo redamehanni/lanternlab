@@ -83,7 +83,17 @@ export default function MerchantInboxScreen() {
         </View>
       ) : (
         <View style={styles.folder}>
-          <TouchableOpacity style={styles.supportCard} onPress={openSupport}>
+          <TouchableOpacity style={styles.supportCard} onPress={() => navigation.navigate('MesClients')}>
+            <View style={styles.supportIcon}>
+              <Ionicons name="people" size={24} color={THEME.colors.accent} />
+            </View>
+            <View style={{ flex: 1 }}>
+              <Text style={styles.supportTitle}>Mes clients</Text>
+              <Text style={styles.supportSub}>Conversations avec vos clients fidèles</Text>
+            </View>
+            <Ionicons name="chevron-forward" size={20} color={THEME.colors.textMuted} />
+          </TouchableOpacity>
+          <TouchableOpacity style={[styles.supportCard, { marginTop: 12 }]} onPress={openSupport}>
             <View style={styles.supportIcon}>
               <Ionicons name="chatbubbles" size={24} color={THEME.colors.accent} />
             </View>

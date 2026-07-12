@@ -3,7 +3,7 @@ import {
   View, Text, ScrollView, TouchableOpacity, Image,
   StyleSheet, ActivityIndicator, Animated,
 } from 'react-native';
-import { useFocusEffect, useRoute } from '@react-navigation/native';
+import { useFocusEffect, useRoute, DrawerActions } from '@react-navigation/native';
 import { Ionicons } from '@expo/vector-icons';
 import { useApp } from '../../context/AppContext';
 import { searchProducts, getFlashPromotions, getFavoriteStores } from '../../api';
@@ -259,6 +259,14 @@ export default function HomeScreen({ navigation }) {
       <ScrollView contentContainerStyle={styles.content} keyboardShouldPersistTaps="handled">
         <FadeIn>
           <View style={styles.hero}>
+            <TouchableOpacity
+              style={styles.menuBtn}
+              onPress={() => navigation.dispatch(DrawerActions.openDrawer())}
+              activeOpacity={0.8}
+              accessibilityLabel="Ouvrir le menu"
+            >
+              <Ionicons name="menu" size={26} color={THEME.colors.text} />
+            </TouchableOpacity>
             <Text style={styles.greeting}>Bonjour{user?.first_name ? `, ${user.first_name}` : ''} 👋</Text>
             <Text style={styles.heroTitle}>Découvrez votre zone</Text>
             <Text style={styles.heroSub}>Livraison locale en moins d'une heure</Text>
@@ -352,6 +360,11 @@ const styles = StyleSheet.create({
   bg: { flex: 1, backgroundColor: THEME.colors.bg },
   content: { paddingBottom: 24 },
   hero: { paddingHorizontal: THEME.spacing.md, paddingTop: THEME.spacing.sm },
+  menuBtn: {
+    width: 44, height: 44, borderRadius: 12, alignItems: 'center', justifyContent: 'center',
+    backgroundColor: THEME.colors.card, borderWidth: 1, borderColor: THEME.colors.borderLight,
+    marginBottom: 8, alignSelf: 'flex-start',
+  },
   greeting: { ...THEME.typography.caption, color: THEME.colors.textSecondary, textTransform: 'uppercase' },
   heroTitle: { ...THEME.typography.hero, color: THEME.colors.text, marginTop: 4 },
   heroSub: { ...THEME.typography.body, color: THEME.colors.textSecondary, marginTop: 4 },

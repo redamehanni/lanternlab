@@ -3,44 +3,77 @@ import {
   View, Text, FlatList, TextInput, TouchableOpacity,
   StyleSheet, KeyboardAvoidingView, Platform, ActivityIndicator, Alert,
 } from 'react-native';
+import { useFocusEffect } from '@react-navigation/native';
 import { useApp } from '../context/AppContext';
-import { getConversationMessages, sendConversationMessage } from '../api';
+import { useCommunication } from '../context/CommunicationContext';
+import { getCommunicationMessages, sendCommunicationMessage } from '../api';
 import Avatar from '../components/Avatar';
+import {
+  getChatPresentationMode,
+  getChatNavTitle,
+  getChatPlaceholder,
+  ChatBanner,
+  getBubbleStyles,
+} from '../components/chat/ChatPresentation';
 import { COLORS } from '../config';
 
 export default function ChatScreen({ route, navigation }) {
   const { user, socket } = useApp();
+  const { setActiveConversation, markRead, registerThread } = useCommunication();
   const conversationId = route.params?.conversationId;
-  const title = route.params?.title || 'Messages';
+  const paramTitle = route.params?.title;
+  const contextOrderId = route.params?.orderId;
+  const paramLifecycle = route.params?.lifecycle;
+  const paramKind = route.params?.kind;
 
   const [messages, setMessages] = useState([]);
   const [input,    setInput]    = useState('');
   const [loading,  setLoading]  = useState(true);
   const [sending,  setSending]  = useState(false);
   const [typing,   setTyping]   = useState('');
+  const [threadMeta, setThreadMeta] = useState(null);
   const listRef = useRef(null);
   const typingTimer = useRef(null);
 
-  useEffect(() => { navigation.setOptions({ title }); }, [title, navigation]);
+  const presentationMode = getChatPresentationMode(
+    threadMeta?.lifecycle || paramLifecycle,
+    threadMeta?.kind || paramKind,
+  );
+  const navTitle = getChatNavTitle(presentationMode);
+
+  useEffect(() => {
+    navigation.setOptions({ title: paramTitle && presentationMode === 'messaging' ? paramTitle : navTitle });
+  }, [navTitle, paramTitle, presentationMode, navigation]);
 
   const load = useCallback(async () => {
+    if (!conversationId) return;
+    setLoading(true);
+    setMessages([]);
     try {
-      const res = await getConversationMessages(conversationId);
+      const res = await getCommunicationMessages(conversationId);
       setMessages(res.data.messages || []);
+      const thread = res.data.thread || res.data.conversation;
+      if (thread) {
+        setThreadMeta(thread);
+        registerThread(thread);
+      }
     } catch {
       Alert.alert('Erreur', 'Impossible de charger la conversation.');
     } finally {
       setLoading(false);
     }
-  }, [conversationId]);
+  }, [conversationId, registerThread]);
 
   useEffect(() => {
+    if (!conversationId) return undefined;
     load();
-    if (!socket) return;
+    setActiveConversation(conversationId);
+    if (!socket) return () => setActiveConversation(null);
+
     socket.emit('join:conversation', conversationId);
 
     const onNew = ({ message, conversationId: cid }) => {
-      if (cid !== conversationId) return; // ne jamais mélanger les canaux (issue #8)
+      if (cid !== conversationId) return;
       setMessages(prev => prev.find(m => m.id === message.id) ? prev : [...prev, message]);
       setTyping('');
     };
@@ -56,8 +89,13 @@ export default function ChatScreen({ route, navigation }) {
       socket.emit('leave:conversation', conversationId);
       socket.off('message:new', onNew);
       socket.off('chat:typing', onTyping);
+      setActiveConversation(null);
     };
-  }, [socket, conversationId, load]);
+  }, [socket, conversationId, load, setActiveConversation]);
+
+  useFocusEffect(useCallback(() => {
+    if (conversationId) markRead(conversationId);
+  }, [conversationId, markRead]));
 
   useEffect(() => {
     if (messages.length > 0) setTimeout(() => listRef.current?.scrollToEnd({ animated: true }), 100);
@@ -67,11 +105,11 @@ export default function ChatScreen({ route, navigation }) {
 
   async function handleSend() {
     const text = input.trim();
-    if (!text || sending) return;
+    if (!text || sending || !conversationId) return;
     setSending(true);
     setInput('');
     try {
-      await sendConversationMessage(conversationId, text);
+      await sendCommunicationMessage(conversationId, text, contextOrderId);
     } catch {
       Alert.alert('Erreur', 'Envoi impossible.');
       setInput(text);
@@ -80,14 +118,26 @@ export default function ChatScreen({ route, navigation }) {
     }
   }
 
+  if (!conversationId) {
+    return (
+      <View style={styles.bg}>
+        <Text style={styles.errorText}>Conversation introuvable.</Text>
+      </View>
+    );
+  }
+
   function renderMessage({ item }) {
     const isMe = item.sender_id === user.id;
+    const { bubble, msgText } = getBubbleStyles(presentationMode, isMe);
     return (
       <View style={[styles.msgRow, isMe && styles.msgRowMe]}>
         {!isMe && <Avatar name={item.sender_name} photoUrl={item.sender_photo} role={item.sender_role} size={32} />}
-        <View style={[styles.bubble, isMe ? styles.bubbleMe : styles.bubbleOther, !isMe && { marginLeft: 8 }]}>
+        <View style={[...bubble, !isMe && { marginLeft: 8 }]}>
           {!isMe && <Text style={styles.senderName}>{item.sender_name}</Text>}
-          <Text style={[styles.msgText, isMe && styles.msgTextMe]}>{item.content}</Text>
+          {item.context_order_id ? (
+            <Text style={styles.orderCtx}>Commande liée</Text>
+          ) : null}
+          <Text style={msgText}>{item.content}</Text>
           <Text style={[styles.msgTime, isMe && styles.msgTimeMe]}>
             {new Date((item.created_at || '') + 'Z').toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' })}
           </Text>
@@ -96,8 +146,12 @@ export default function ChatScreen({ route, navigation }) {
     );
   }
 
+  const storeName = threadMeta?.party?.store?.name;
+
   return (
     <KeyboardAvoidingView style={styles.bg} behavior={Platform.OS === 'ios' ? 'padding' : undefined} keyboardVerticalOffset={90}>
+      <ChatBanner mode={presentationMode} storeName={storeName} />
+
       {loading ? (
         <ActivityIndicator style={styles.center} size="large" color={COLORS.primary} />
       ) : (
@@ -122,7 +176,7 @@ export default function ChatScreen({ route, navigation }) {
           style={styles.input}
           value={input}
           onChangeText={(t) => { setInput(t); handleTyping(); }}
-          placeholder="Votre message…"
+          placeholder={getChatPlaceholder(presentationMode)}
           multiline maxLength={500} returnKeyType="send"
         />
         <TouchableOpacity style={[styles.sendBtn, (!input.trim() || sending) && styles.sendBtnDisabled]}
@@ -137,17 +191,14 @@ export default function ChatScreen({ route, navigation }) {
 const styles = StyleSheet.create({
   bg: { flex: 1, backgroundColor: COLORS.bg },
   center: { flex: 1 },
+  errorText: { textAlign: 'center', marginTop: 40, color: COLORS.textLight },
   list: { padding: 12, flexGrow: 1 },
   emptyChat: { flex: 1, alignItems: 'center', justifyContent: 'center', paddingTop: 60 },
   emptyChatText: { fontSize: 15, color: COLORS.textLight, textAlign: 'center', lineHeight: 24 },
   msgRow: { flexDirection: 'row', marginBottom: 10, alignItems: 'flex-end' },
   msgRowMe: { flexDirection: 'row-reverse' },
-  bubble: { maxWidth: '75%', borderRadius: 14, padding: 10, paddingHorizontal: 14 },
-  bubbleOther: { backgroundColor: COLORS.card },
-  bubbleMe: { backgroundColor: COLORS.primary },
   senderName: { fontSize: 11, fontWeight: '700', marginBottom: 3, color: COLORS.textLight },
-  msgText: { fontSize: 15, color: COLORS.text, lineHeight: 22 },
-  msgTextMe: { color: '#fff' },
+  orderCtx: { fontSize: 10, color: COLORS.secondary, marginBottom: 4, fontWeight: '600' },
   msgTime: { fontSize: 11, color: COLORS.textLight, marginTop: 4, alignSelf: 'flex-end' },
   msgTimeMe: { color: 'rgba(255,255,255,0.6)' },
   typing: { paddingHorizontal: 16, paddingVertical: 6, fontSize: 12, color: COLORS.textLight, fontStyle: 'italic' },

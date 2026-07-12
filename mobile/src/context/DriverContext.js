@@ -3,11 +3,25 @@ import { appStorage } from '../utils/storage';
 import { useApp } from './AppContext';
 import {
   getDriverBroadcast, getDriverOnline, setDriverOnline,
-  getMyMissions, getDriverNotifications,
+  getMyMissions, getDriverNotifications, getOfferedMission,
 } from '../api';
 
 const DriverContext = createContext(null);
 const ONLINE_KEY = 'driver_online';
+
+const ACTIVE_MISSION_STATUSES = ['accepted', 'picking_up', 'picked_up', 'delivering'];
+
+function isActiveMission(mission) {
+  return mission && ACTIVE_MISSION_STATUSES.includes(mission.status);
+}
+
+function applyPendingOffer(setPendingOffer, payload) {
+  if (payload?.mission && payload?.offer) {
+    setPendingOffer({ mission: payload.mission, offer: payload.offer });
+    return true;
+  }
+  return false;
+}
 
 export function DriverProvider({ children }) {
   const { user, socket } = useApp();
@@ -15,9 +29,29 @@ export function DriverProvider({ children }) {
   const [broadcast, setBroadcast] = useState(null);
   const [activeMission, setActiveMission] = useState(null);
   const [notifications, setNotifications] = useState([]);
-  const [chatUnread, setChatUnread] = useState(false);
+  const [pendingOffer, setPendingOffer] = useState(null);
   const [ready, setReady] = useState(false);
   const assignedHandlerRef = useRef(null);
+  const activeMissionRef = useRef(null);
+
+  activeMissionRef.current = activeMission;
+
+  const clearPendingOffer = useCallback(() => setPendingOffer(null), []);
+
+  const loadOfferIfOnline = useCallback(async (isOnline) => {
+    if (!isOnline) {
+      setPendingOffer(null);
+      return;
+    }
+    try {
+      const res = await getOfferedMission();
+      if (res.data?.mission && res.data?.offer && !activeMissionRef.current) {
+        setPendingOffer({ mission: res.data.mission, offer: res.data.offer });
+      }
+    } catch {
+      /* ignore */
+    }
+  }, []);
 
   const syncOnline = useCallback(async (value) => {
     setOnline(value);
@@ -25,15 +59,27 @@ export function DriverProvider({ children }) {
     let mission = null;
     try {
       const res = await setDriverOnline(value);
-      mission = value ? (res.data?.mission || res.data?.assigned?.mission || null) : null;
+      if (value) {
+        if (applyPendingOffer(setPendingOffer, res.data?.offered)) {
+          mission = null;
+        } else {
+          mission = res.data?.mission || res.data?.assigned?.mission || null;
+          if (!isActiveMission(mission)) mission = null;
+        }
+      } else {
+        setPendingOffer(null);
+      }
     } catch { /* offline ok */ }
     if (socket) socket.emit(value ? 'driver:online' : 'driver:offline');
     if (mission) {
       setActiveMission(mission);
+      setPendingOffer(null);
       assignedHandlerRef.current?.(mission);
+    } else if (value) {
+      await loadOfferIfOnline(true);
     }
     return mission;
-  }, [socket]);
+  }, [socket, loadOfferIfOnline]);
 
   const onMissionAssigned = useCallback((handler) => {
     assignedHandlerRef.current = handler;
@@ -58,13 +104,19 @@ export function DriverProvider({ children }) {
       else if (socket) socket.emit('driver:offline');
       setBroadcast(broadcastRes.data.message);
       const active = missionsRes.data.active || null;
-      setActiveMission(active);
-      if (active) assignedHandlerRef.current?.(active);
+      if (isActiveMission(active)) {
+        setActiveMission(active);
+        setPendingOffer(null);
+        assignedHandlerRef.current?.(active);
+      } else {
+        setActiveMission(null);
+        if (isOnline) await loadOfferIfOnline(true);
+      }
       setNotifications(notifRes.data.notifications || []);
     } finally {
       setReady(true);
     }
-  }, [user?.role, socket]);
+  }, [user?.role, socket, loadOfferIfOnline]);
 
   useEffect(() => {
     if (user?.role === 'driver') load();
@@ -72,20 +124,25 @@ export function DriverProvider({ children }) {
 
   useEffect(() => {
     if (!socket || user?.role !== 'driver') return;
-    const onMsg = () => setChatUnread(true);
     const onAssigned = ({ mission }) => {
+      if (!isActiveMission(mission)) return;
       setActiveMission(mission);
+      setPendingOffer(null);
       assignedHandlerRef.current?.(mission);
+    };
+    const onOffered = ({ mission, offer }) => {
+      if (activeMissionRef.current) return;
+      setPendingOffer({ mission, offer });
     };
     const onCancelled = ({ missionId }) => {
       setActiveMission((cur) => (cur?.id === missionId ? null : cur));
     };
-    socket.on('message:new', onMsg);
     socket.on('mission:assigned', onAssigned);
+    socket.on('mission:offered', onOffered);
     socket.on('mission:cancelled', onCancelled);
     return () => {
-      socket.off('message:new', onMsg);
       socket.off('mission:assigned', onAssigned);
+      socket.off('mission:offered', onOffered);
       socket.off('mission:cancelled', onCancelled);
     };
   }, [socket, user?.role]);
@@ -97,10 +154,10 @@ export function DriverProvider({ children }) {
       broadcast,
       activeMission,
       setActiveMission,
+      pendingOffer,
+      clearPendingOffer,
       notifications,
       setNotifications,
-      chatUnread,
-      setChatUnread,
       ready,
       refresh: load,
       onMissionAssigned,

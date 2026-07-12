@@ -1,0 +1,301 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Rapport d'implémentation — Raffinement du modèle métier « livreur occupé »</title>
+<style>
+  @page { margin: 16mm 14mm; }
+  body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Helvetica, Arial, sans-serif; font-size: 10.5pt; line-height: 1.45; color: #1a1a1a; max-width: 100%; }
+  h1 { font-size: 20pt; border-bottom: 2px solid #0f2d5c; padding-bottom: 8px; color: #0f2d5c; page-break-after: avoid; }
+  h2 { font-size: 14pt; margin-top: 22px; color: #0f2d5c; border-bottom: 1px solid #e5e7eb; padding-bottom: 4px; page-break-after: avoid; }
+  h3 { font-size: 11.5pt; margin-top: 14px; color: #1a4a8a; page-break-after: avoid; }
+  table { border-collapse: collapse; width: 100%; margin: 10px 0; font-size: 9pt; page-break-inside: avoid; }
+  th, td { border: 1px solid #d1d5db; padding: 5px 7px; text-align: left; vertical-align: top; }
+  th { background: #f3f4f6; font-weight: 600; }
+  code { background: #f3f4f6; padding: 1px 4px; border-radius: 3px; font-size: 8.5pt; }
+  pre { background: #f8fafc; border: 1px solid #e5e7eb; border-radius: 6px; padding: 10px; overflow-x: auto; font-size: 8pt; line-height: 1.35; white-space: pre-wrap; word-break: break-word; page-break-inside: avoid; }
+  pre code { background: none; padding: 0; }
+  blockquote { border-left: 4px solid #0f2d5c; margin: 10px 0; padding: 6px 14px; background: #f0f4f8; color: #1e3a5f; }
+  hr { border: none; border-top: 1px solid #e5e7eb; margin: 18px 0; }
+  ul, ol { padding-left: 22px; }
+  li { margin-bottom: 3px; }
+  p { margin: 8px 0; }
+  .pdf-note { display: none; }
+  @media screen {
+    .pdf-note { display: block; background: #eff6ff; border: 1px solid #bfdbfe; border-radius: 8px; padding: 12px 16px; margin-bottom: 24px; color: #1e3a8a; }
+  }
+</style>
+</head>
+<body>
+<div class="pdf-note">
+  <strong>Lecture dans Cursor / navigateur :</strong> ce fichier HTML est la version lisible du plan.
+  Pour le PDF, ouvrez <code>RAPPORT_CORRECTION_ACCEPT_LIVREUR.pdf</code> depuis le Finder (clic droit → Ouvrir avec Aperçu)
+  ou double-cliquez le fichier <code>Ouvrir_*_PDF.command</code> correspondant à la racine du projet.
+</div>
+<h1>Rapport d'implémentation — Raffinement du modèle métier « livreur occupé »</h1>
+<p><strong>Date :</strong> 22 juin 2026<br />
+<strong>Statut :</strong> Correction appliquée et validée par tests automatisés<br />
+<strong>Référence :</strong> <a href="./AUDIT_POPUP_ACCEPT_LIVREUR.md">AUDIT_POPUP_ACCEPT_LIVREUR.md</a></p>
+<hr />
+<h2>1. Contexte et objectif</h2>
+<p>Le bug observé (HTTP <strong>409</strong> à l'acceptation d'une offre popup) n'était qu'un <strong>symptôme</strong>. La cause structurelle était l'utilisation d'une fonction générique <code>driverHasActiveMission()</code> qui mélangeait deux notions métier distinctes :</p>
+<table>
+<thead>
+<tr>
+<th>Concept</th>
+<th>Statuts / données</th>
+<th>Signification</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><strong>Mission acceptée</strong></td>
+<td><code>accepted</code>, <code>picking_up</code>, <code>picked_up</code>, <code>delivering</code> + <code>driver_id</code></td>
+<td>Le livreur est engagé dans une livraison en cours</td>
+</tr>
+<tr>
+<td><strong>Offre en attente</strong></td>
+<td><code>offered</code> + <code>offered_to_driver_id</code> + <code>offer_expires_at</code></td>
+<td>Le livreur a reçu une proposition qu'il n'a pas encore acceptée ni refusée</td>
+</tr>
+</tbody>
+</table>
+<p>Ces deux états obéissent à des règles différentes :</p>
+<ul>
+<li><strong>Accepter une offre</strong> ne doit pas être bloqué par l'offre elle-même — seule une mission déjà acceptée doit empêcher une nouvelle acceptation.</li>
+<li><strong>Proposer une nouvelle course</strong> doit tenir compte des deux cas : livreur en livraison <strong>ou</strong> déjà en train de répondre à une offre.</li>
+</ul>
+<p>L'implémentation traite cette correction comme un <strong>raffinement explicite du modèle métier</strong>, pas comme un simple correctif ponctuel.</p>
+<hr />
+<h2>2. Fichiers modifiés</h2>
+<table>
+<thead>
+<tr>
+<th>Fichier</th>
+<th>Nature des changements</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>backend/src/lib/dispatch.js</code></td>
+<td>Scission des responsabilités métier ; garde <code>assignOrderToDriver</code> ; export des nouvelles fonctions</td>
+</tr>
+<tr>
+<td><code>backend/src/lib/dispatchOffer.js</code></td>
+<td>Garde <code>proposeOrderToDriver</code> basée sur <code>driverIsBusyForNewOffer</code></td>
+</tr>
+<tr>
+<td><code>mobile/src/screens/driver/DriverHomeScreen.js</code></td>
+<td>Robustesse UX : fallback HTTP, message d'erreur API, pause du timer pendant l'acceptation</td>
+</tr>
+</tbody>
+</table>
+<p><strong>Fichiers volontairement non modifiés</strong> (conformément à l'audit) :</p>
+<ul>
+<li>Cœur transactionnel SQL de <code>assignOrderToDriver()</code> (UPDATE missions / orders inchangé)</li>
+<li><code>findAvailableDriver()</code> — moteur de sélection du livreur le plus ancien en ligne</li>
+<li><code>tryDispatchNewOrder()</code> — délégation offer/assign inchangée</li>
+<li>Routes <code>missions.js</code> — logique accept/refuse déjà correcte (<code>clearOfferTimeout</code> puis <code>assignOrderToDriver</code>)</li>
+<li><code>DriverContext.js</code>, <code>NewCourseOfferModal.js</code> — hors périmètre du correctif</li>
+</ul>
+<hr />
+<h2>3. Nouvelles responsabilités des fonctions</h2>
+<h3>3.1 <code>driverHasAcceptedMission(driverId)</code></h3>
+<p><strong>Rôle :</strong> Indique si le livreur est <strong>engagé dans une mission active de livraison</strong>.</p>
+<p><strong>Requête :</strong> missions où <code>driver_id = driverId</code> et <code>status IN ('accepted', 'picking_up', 'picked_up', 'delivering')</code>.</p>
+<p><strong>Usage :</strong></p>
+<ul>
+<li>Garde dans <code>assignOrderToDriver()</code> — une offre <code>offered</code> en cours <strong>n'est pas</strong> un blocage.</li>
+</ul>
+<h3>3.2 <code>driverHasPendingOffer(driverId, excludeMissionId?)</code></h3>
+<p><strong>Rôle :</strong> Indique si le livreur possède <strong>une proposition de course en attente</strong> (non expirée).</p>
+<p><strong>Requête :</strong> missions où <code>offered_to_driver_id = driverId</code>, <code>status = 'offered'</code>, <code>offer_expires_at &gt; now</code>. Le paramètre optionnel <code>excludeMissionId</code> permet d'exclure une mission (usage futur / tests).</p>
+<p><strong>Usage :</strong> Modèle métier explicite ; composant de <code>driverIsBusyForNewOffer</code>.</p>
+<h3>3.3 <code>driverIsBusyForNewOffer(driverId)</code></h3>
+<p><strong>Rôle :</strong> Règle métier <strong>uniquement pour la proposition</strong> d'une nouvelle course.</p>
+<p><strong>Implémentation :</strong> <code>driverHasAcceptedMission(driverId) || driverHasPendingOffer(driverId)</code>.</p>
+<p><strong>Usage :</strong></p>
+<ul>
+<li><code>proposeOrderToDriver()</code> — ne pas envoyer une 2ᵉ offre tant que le livreur est occupé ou en attente de réponse</li>
+<li><code>assignPendingOrdersToDriver()</code> — ne pas relancer une proposition si le livreur est déjà « pris » au sens dispatch</li>
+</ul>
+<h3>3.4 <code>driverHasActiveMission(driverId)</code> — alias déprécié</h3>
+<p>Conservé pour compatibilité ascendante ; délègue à <code>driverIsBusyForNewOffer()</code>. Les nouveaux appels doivent utiliser les fonctions explicites ci-dessus.</p>
+<hr />
+<h2>4. Pourquoi cette séparation est plus conforme au modèle métier</h2>
+<h3>Avant (modèle implicite)</h3>
+<pre><code>driverHasActiveMission()
+  ├── mission acceptée en livraison  ─┐
+  └── offre pending (offered)         ─┴─→ une seule fonction pour tout
+         │
+         ├── assignOrderToDriver()  → BUG : bloqué par sa propre offre
+         └── proposeOrderToDriver() → comportement attendu
+</code></pre>
+<p>Une même fonction servait à la fois à <strong>finaliser une acceptation</strong> et à <strong>décider si on peut proposer</strong>. Sémantiques opposées, même nom → bug 409.</p>
+<h3>Après (modèle explicite)</h3>
+<pre><code>driverHasAcceptedMission()     → « est-il en livraison ? »
+driverHasPendingOffer()        → « a-t-il une offre en attente ? »
+driverIsBusyForNewOffer()      → « peut-on lui proposer une course ? »
+</code></pre>
+<table>
+<thead>
+<tr>
+<th>Action</th>
+<th>Fonction utilisée</th>
+<th>Comportement</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Accepter une offre</td>
+<td><code>driverHasAcceptedMission</code> only</td>
+<td>Offre pending <strong>autorisée</strong></td>
+</tr>
+<tr>
+<td>Proposer une course</td>
+<td><code>driverIsBusyForNewOffer</code></td>
+<td>Offre pending <strong>bloque</strong> une nouvelle proposition</td>
+</tr>
+<tr>
+<td>Refuser / timeout</td>
+<td>Inchangé</td>
+<td>Pas de garde métier supplémentaire</td>
+</tr>
+</tbody>
+</table>
+<p>À la lecture du code, la distinction « en livraison » vs « en attente de réponse » est immédiatement visible.</p>
+<hr />
+<h2>5. Améliorations de robustesse mobile</h2>
+<p>Dans <code>DriverHomeScreen.js</code> :</p>
+<ol>
+<li><strong>Fallback HTTP après acceptation</strong> — si le socket <code>mission:assigned</code> tarde, <code>setActiveMission(res.data.mission)</code> + <code>startActiveMission()</code> garantissent l'ouverture du drawer mission.</li>
+<li><strong>Message d'erreur API</strong> — <code>Alert.alert('Erreur', err.response?.data?.error || …)</code> au lieu d'un message générique fixe.</li>
+<li><strong>Pause du timer 20 s</strong> — pendant <code>offerLoading</code>, l'intervalle ne décrémente plus ; <code>offerLoadingRef</code> empêche un auto-refus pendant l'appel réseau ; l'intervalle est arrêté dès le clic « Accepter ».</li>
+</ol>
+<p>Ces changements n'altèrent pas le modèle métier ; ils stabilisent l'expérience livreur.</p>
+<hr />
+<h2>6. Tests de non-régression (dispatch)</h2>
+<p>Tests exécutés via script Node sur la base SQLite locale (<code>backend/</code>), avec <code>OFFER_MODE = true</code>.</p>
+<table>
+<thead>
+<tr>
+<th>ID</th>
+<th>Scénario</th>
+<th>Résultat attendu</th>
+<th>Résultat obtenu</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><strong>T1</strong></td>
+<td>Proposer une offre puis <code>assignOrderToDriver</code> (simule Accept)</td>
+<td>Mission passe à <code>accepted</code>, <code>driver_id</code> renseigné</td>
+<td>✅ OK</td>
+</tr>
+<tr>
+<td><strong>T2</strong></td>
+<td>Deuxième <code>proposeOrderToDriver</code> alors qu'une offre est pending</td>
+<td>Bloqué (<code>driverIsBusyForNewOffer === true</code>)</td>
+<td>✅ OK</td>
+</tr>
+<tr>
+<td><strong>T3</strong></td>
+<td><code>assignPendingOrdersToDriver</code> avec offre pending</td>
+<td>Retourne <code>null</code> (skip)</td>
+<td>✅ OK</td>
+</tr>
+<tr>
+<td><strong>T4</strong></td>
+<td><code>findAvailableDriver</code> avec livreur ayant seulement une offre</td>
+<td>Peut encore retourner ce livreur (comportement moteur <strong>inchangé</strong>)</td>
+<td>✅ OK — documenté</td>
+</tr>
+<tr>
+<td><strong>T5</strong></td>
+<td><code>assignOrderToDriver</code> avec mission déjà <code>accepted</code></td>
+<td>Retourne <code>null</code></td>
+<td>✅ OK</td>
+</tr>
+<tr>
+<td><strong>T6</strong></td>
+<td><code>tryDispatchNewOrder</code> sur commande pending</td>
+<td>Émet une offre (<code>mission:offered</code>)</td>
+<td>✅ OK</td>
+</tr>
+</tbody>
+</table>
+<p><strong>Détail T1 (correctif principal) :</strong></p>
+<pre><code>after propose:
+  acceptedMission: false
+  pendingOffer: true
+  busyForNewOffer: true
+assign after offer: true accepted
+DB status: { status: 'accepted', driver_id: '&lt;driver&gt;' }
+</code></pre>
+<p>Le livreur n'est plus bloqué par sa propre offre en cours d'acceptation.</p>
+<p><strong>Note T4 :</strong> <code>findAvailableDriver</code> exclut uniquement les missions acceptées (SQL <code>NOT EXISTS</code> sur statuts livraison). Ce comportement existait avant la correction et n'a pas été modifié, conformément à la contrainte « ne pas toucher au moteur de dispatch » au-delà du périmètre identifié.</p>
+<hr />
+<h2>7. Recette manuelle recommandée</h2>
+<table>
+<thead>
+<tr>
+<th>Test</th>
+<th>Étapes</th>
+<th>Résultat attendu</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><strong>Accept</strong></td>
+<td>Livreur en ligne → commande client → popup → Accepter</td>
+<td>Drawer mission s'ouvre, pas d'alerte 409</td>
+</tr>
+<tr>
+<td><strong>Refuse</strong></td>
+<td>Même scénario → Refuser</td>
+<td>Popup disparaît, course reproposée à un autre livreur</td>
+</tr>
+<tr>
+<td><strong>Timeout 20 s</strong></td>
+<td>Ne rien faire</td>
+<td>Auto-refus, reproposition dispatch</td>
+</tr>
+</tbody>
+</table>
+<p><strong>Prérequis :</strong> backend redémarré (log <code>Dispatch offer mode : ON (popup 20s)</code>), Metro relancé si nécessaire.</p>
+<hr />
+<h2>8. Synthèse</h2>
+<table>
+<thead>
+<tr>
+<th>Élément</th>
+<th>État</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Modèle métier explicite (3 fonctions)</td>
+<td>✅ Implémenté</td>
+</tr>
+<tr>
+<td>Bug 409 à l'acceptation</td>
+<td>✅ Corrigé</td>
+</tr>
+<tr>
+<td>Moteur dispatch / SQL transactionnel</td>
+<td>✅ Inchangé hors garde</td>
+</tr>
+<tr>
+<td>Robustesse mobile (audit)</td>
+<td>✅ Appliquée</td>
+</tr>
+<tr>
+<td>Tests automatisés dispatch</td>
+<td>✅ 6/6 passés</td>
+</tr>
+</tbody>
+</table>
+<p>La correction aligne le code sur la sémantique métier : <strong>être en livraison</strong> et <strong>avoir une offre en attente</strong> sont deux concepts distincts, avec des usages distincts, lisibles directement dans <code>backend/src/lib/dispatch.js</code>.</p>
+</body>
+</html>

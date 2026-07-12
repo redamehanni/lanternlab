@@ -1,11 +1,11 @@
 const express = require('express');
 const db = require('../db');
 const { verifyToken, requireRole } = require('../middleware/auth');
-const { getOrCreateConversation } = require('../lib/conversations');
+const { archiveEphemeralForOrder } = require('../lib/communicationEngine');
 const { listAvailableMissions, missionToBroadcast } = require('../lib/missions');
 const { ORDER_STATUS } = require('../lib/orderStatus');
-const { getFullMission, emitOrderUpdate, assignPendingOrdersToDriver } = require('../lib/dispatch');
-const { getFullOrder } = require('../lib/orders');
+const { getFullMission, assignPendingOrdersToDriver, assignOrderToDriver, tryDispatchNewOrder } = require('../lib/dispatch');
+const { clearOfferTimeout, getOfferedMissionForDriver } = require('../lib/dispatchOffer');
 
 const router = express.Router();
 
@@ -63,6 +63,12 @@ router.get('/stats', verifyToken, requireRole('driver'), (req, res) => {
   });
 });
 
+router.get('/offered', verifyToken, requireRole('driver'), (req, res) => {
+  const data = getOfferedMissionForDriver(req.user.id);
+  if (!data) return res.json({ mission: null, offer: null });
+  res.json(data);
+});
+
 router.get('/available', verifyToken, requireRole('driver'), (req, res) => {
   const missions = listAvailableMissions(20);
   res.json({ missions, pending: missions.map(missionToBroadcast) });
@@ -93,38 +99,45 @@ router.get('/mine', verifyToken, requireRole('driver'), (req, res) => {
 router.post('/:id/accept', verifyToken, requireRole('driver'), (req, res) => {
   const mission = db.prepare('SELECT * FROM missions WHERE id = ?').get(req.params.id);
   if (!mission) return res.status(404).json({ error: 'Mission introuvable' });
+
+  const io = req.app.get('io');
+
+  if (mission.status === 'offered') {
+    if (mission.offered_to_driver_id && mission.offered_to_driver_id !== req.user.id) {
+      return res.status(409).json({ error: 'Offre expirée ou destinée à un autre livreur' });
+    }
+    clearOfferTimeout(mission.id);
+    const result = assignOrderToDriver(mission.order_id, req.user.id, io);
+    if (!result) return res.status(409).json({ error: 'Mission déjà prise ou expirée' });
+    return res.json(result);
+  }
+
   if (mission.status !== 'available') {
     return res.status(409).json({ error: 'Mission déjà prise ou expirée' });
   }
 
-  const io = req.app.get('io');
-
-  db.prepare(`
-    UPDATE missions SET driver_id = ?, status = 'accepted', accepted_at = datetime('now'), updated_at = datetime('now')
-    WHERE id = ?
-  `).run(req.user.id, mission.id);
-
-  db.prepare(`
-    UPDATE orders SET status = ?, updated_at = datetime('now') WHERE id = ?
-  `).run(ORDER_STATUS.DRIVER_ASSIGNED, mission.order_id);
-
-  const full = getFullMission(mission.id);
-  getOrCreateConversation(mission.order_id, 'client_driver', full.client_id, req.user.id);
-  getOrCreateConversation(mission.order_id, 'merchant_driver', full.merchant_id, req.user.id);
-
-  const order = getFullOrder(mission.order_id);
-  io.to(`order_${mission.order_id}`).emit('mission:accepted', { mission: full });
-  io.to(`merchant_${full.merchant_id}`).emit('mission:accepted', { mission: full });
-  io.to(`user_${req.user.id}`).emit('mission:assigned', { mission: full });
-  emitOrderUpdate(io, order);
-  io.to('drivers_available').emit('mission:taken', { missionId: mission.id });
-
-  res.json({ mission: full });
+  const result = assignOrderToDriver(mission.order_id, req.user.id, io);
+  if (!result) return res.status(409).json({ error: 'Mission déjà prise ou expirée' });
+  res.json(result);
 });
 
 router.post('/:id/refuse', verifyToken, requireRole('driver'), (req, res) => {
   const mission = db.prepare('SELECT * FROM missions WHERE id = ?').get(req.params.id);
   if (!mission) return res.status(404).json({ error: 'Mission introuvable' });
+
+  const io = req.app.get('io');
+
+  if (mission.status === 'offered' && mission.offered_to_driver_id === req.user.id) {
+    clearOfferTimeout(mission.id);
+    db.prepare(`
+      UPDATE missions
+      SET status = 'available', offered_to_driver_id = NULL, offer_expires_at = NULL, updated_at = datetime('now')
+      WHERE id = ?
+    `).run(mission.id);
+    tryDispatchNewOrder(mission.order_id, io, { excludeDriverIds: [req.user.id] });
+    return res.json({ refused: true });
+  }
+
   if (mission.status !== 'available') {
     return res.status(409).json({ error: 'Mission non disponible' });
   }
@@ -157,6 +170,7 @@ router.patch('/:id/status', verifyToken, requireRole('driver'), (req, res) => {
   io.to(`user_${req.user.id}`).emit('mission:status_updated', { mission: full, status });
 
   if (status === 'delivered') {
+    archiveEphemeralForOrder(mission.order_id);
     assignPendingOrdersToDriver(req.user.id, io);
   }
 

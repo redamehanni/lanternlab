@@ -1,0 +1,741 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Ma Zone — Plan UX Chapitre Client, Messagerie & Dispatch</title>
+<style>
+  @page { margin: 16mm 14mm; }
+  body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Helvetica, Arial, sans-serif; font-size: 10.5pt; line-height: 1.45; color: #1a1a1a; max-width: 100%; }
+  h1 { font-size: 20pt; border-bottom: 2px solid #0f2d5c; padding-bottom: 8px; color: #0f2d5c; page-break-after: avoid; }
+  h2 { font-size: 14pt; margin-top: 22px; color: #0f2d5c; border-bottom: 1px solid #e5e7eb; padding-bottom: 4px; page-break-after: avoid; }
+  h3 { font-size: 11.5pt; margin-top: 14px; color: #1a4a8a; page-break-after: avoid; }
+  table { border-collapse: collapse; width: 100%; margin: 10px 0; font-size: 9pt; page-break-inside: avoid; }
+  th, td { border: 1px solid #d1d5db; padding: 5px 7px; text-align: left; vertical-align: top; }
+  th { background: #f3f4f6; font-weight: 600; }
+  code { background: #f3f4f6; padding: 1px 4px; border-radius: 3px; font-size: 8.5pt; }
+  pre { background: #f8fafc; border: 1px solid #e5e7eb; border-radius: 6px; padding: 10px; overflow-x: auto; font-size: 8pt; line-height: 1.35; white-space: pre-wrap; word-break: break-word; page-break-inside: avoid; }
+  pre code { background: none; padding: 0; }
+  blockquote { border-left: 4px solid #0f2d5c; margin: 10px 0; padding: 6px 14px; background: #f0f4f8; color: #1e3a5f; }
+  hr { border: none; border-top: 1px solid #e5e7eb; margin: 18px 0; }
+  ul, ol { padding-left: 22px; }
+  li { margin-bottom: 3px; }
+  p { margin: 8px 0; }
+  .pdf-note { display: none; }
+  @media screen {
+    .pdf-note { display: block; background: #eff6ff; border: 1px solid #bfdbfe; border-radius: 8px; padding: 12px 16px; margin-bottom: 24px; color: #1e3a8a; }
+  }
+</style>
+</head>
+<body>
+<div class="pdf-note">
+  <strong>Lecture dans Cursor / navigateur :</strong> ce fichier HTML est la version lisible du plan.
+  Pour le PDF, ouvrez <code>PLAN_UX_CHAPITRE_CLIENT_MESSAGERIE.pdf</code> depuis le Finder (clic droit → Ouvrir avec Aperçu),
+  ou double-cliquez <code>Ouvrir_PLAN_UX_PDF.command</code> à la racine du projet.
+</div>
+<h1>Ma Zone — Plan UX Chapitre Client, Messagerie &amp; Dispatch</h1>
+<p><strong>Document technique — Équipe de développement Ma Zone</strong></p>
+<table>
+<thead>
+<tr>
+<th></th>
+<th></th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><strong>Version</strong></td>
+<td>1.0</td>
+</tr>
+<tr>
+<td><strong>Date</strong></td>
+<td>juillet 2026</td>
+</tr>
+<tr>
+<td><strong>Périmètre</strong></td>
+<td>Navigation client, onglet Messagerie, UX Chat vs Messagerie, terminologie commerçant, popup proposition course</td>
+</tr>
+<tr>
+<td><strong>Statut</strong></td>
+<td>Plan d'architecture (aucune implémentation avant validation)</td>
+</tr>
+<tr>
+<td><strong>Références</strong></td>
+<td>ORGANE_COMMUNICATION.md, CURRENT_ARCHITECTURE.md, stabilisation_messagerie_mvp_81a6b9a9.plan.md</td>
+</tr>
+</tbody>
+</table>
+<hr />
+<h2>Document de référence</h2>
+<table>
+<thead>
+<tr>
+<th>Format</th>
+<th>Fichier</th>
+<th>Usage</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><strong>HTML (recommandé dans Cursor)</strong></td>
+<td><a href="PLAN_UX_CHAPITRE_CLIENT_MESSAGERIE.html"><code>PLAN_UX_CHAPITRE_CLIENT_MESSAGERIE.html</code></a></td>
+<td>Lecture directe dans le navigateur / Cursor</td>
+</tr>
+<tr>
+<td><strong>Markdown</strong></td>
+<td><a href="PLAN_UX_CHAPITRE_CLIENT_MESSAGERIE.md"><code>PLAN_UX_CHAPITRE_CLIENT_MESSAGERIE.md</code></a></td>
+<td>Partage ChatGPT, édition</td>
+</tr>
+<tr>
+<td><strong>PDF</strong></td>
+<td><a href="PLAN_UX_CHAPITRE_CLIENT_MESSAGERIE.pdf"><code>PLAN_UX_CHAPITRE_CLIENT_MESSAGERIE.pdf</code></a></td>
+<td>Impression / envoi — <strong>ouvrir via Finder ou double-clic sur <code>Ouvrir_PLAN_UX_PDF.command</code></strong> (ne pas ouvrir le PDF dans l’éditeur Cursor : binaire illisible)</td>
+</tr>
+</tbody>
+</table>
+<p><strong>Aucun code ne sera écrit avant validation explicite de ce plan.</strong></p>
+<hr />
+<h2>0. Audit de l'existant (état au 11/07/2026)</h2>
+<h3>Navigation client actuelle</h3>
+<p>Fichier : <code>mobile/src/navigation/index.js</code> — 4 onglets :</p>
+<table>
+<thead>
+<tr>
+<th>Onglet</th>
+<th>Rôle réel</th>
+<th>Problème</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>HomeTab</td>
+<td>Accueil + recherche</td>
+<td>OK</td>
+</tr>
+<tr>
+<td><strong>ProfileTab</strong></td>
+<td><code>ClientProfileScreen</code></td>
+<td>À supprimer de la tab bar</td>
+</tr>
+<tr>
+<td>CartTab</td>
+<td>Panier</td>
+<td>Conserver</td>
+</tr>
+<tr>
+<td><strong>MenuTab</strong></td>
+<td><code>ClientMenuScreen</code> — liste d'écrans</td>
+<td>N'est pas un drawer ; doublon avec Profil</td>
+</tr>
+</tbody>
+</table>
+<p>Le « hamburger » actuel <strong>n'existe pas sur Home</strong> : c'est un onglet Menu séparé. <code>HomeScreen</code> n'a pas de bouton menu latéral.</p>
+<h3>Communication (stable — ne pas refondre)</h3>
+<p>Organe en place (<code>ORGANE_COMMUNICATION.md</code>) :</p>
+<ul>
+<li>Moteur : <code>backend/src/lib/communicationEngine.js</code></li>
+<li>Client mobile : <code>CommunicationContext.js</code>, <code>openCommunication.js</code></li>
+<li>Durable : <code>kind=client_merchant</code>, <code>lifecycle=durable</code>, unicité <code>(store_id, client_id)</code></li>
+<li>Éphémère : <code>kind=client_driver</code>, archivé à la livraison</li>
+<li>Pastilles : <code>UnreadDot.js</code> + helpers <code>getUnreadForStore</code>, <code>getUnreadForOrder</code></li>
+</ul>
+<p><strong>Support client</strong> : <code>SupportChatScreen.js</code> est encore un stub (« Bientôt disponible »). La section « Support client » de l'onglet Messagerie affichera ce stub en V1, sans toucher au moteur.</p>
+<h3>Dispatch (stable — ne pas refondre)</h3>
+<p>Flux actuel dans <code>backend/src/lib/dispatch.js</code> :</p>
+<pre><code>Nouvelle commande (pending_driver)
+    → tryDispatchNewOrder
+    → findAvailableDriver
+    → assignOrderToDriver (assignation IMMÉDIATE)
+    → mission:assigned + conversations ephemeral créées
+</code></pre>
+<ul>
+<li><strong>Aucune étape proposition</strong> : <code>assignOrderToDriver</code> écrit directement <code>driver_id</code> + <code>status=accepted</code></li>
+<li><code>NewCourseOfferModal.js</code> existe mais <strong>n'est branché nulle part</strong></li>
+<li><code>GET /api/missions/offered</code> est appelé côté mobile (<code>api/index.js</code>) mais <strong>la route backend n'existe plus</strong></li>
+<li><code>POST /missions/:id/accept</code> et <code>POST /missions/:id/refuse</code> existent ; <code>refuse</code> est un no-op (ne relance pas le dispatch)</li>
+<li><strong>Point de vigilance critique</strong> : au boot, <code>backend/src/db/index.js</code> L348-355 <strong>efface tout statut <code>offered</code></strong> — incompatible avec la popup tant que cette migration n'est pas adaptée</li>
+</ul>
+<h3>Favoris vs Messagerie commerçants</h3>
+<table>
+<thead>
+<tr>
+<th>Concept</th>
+<th>Source</th>
+<th>Écran actuel</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><strong>Coups de cœur</strong> (favoris)</td>
+<td>API <code>/api/favorites</code>, table <code>store_favorites</code></td>
+<td>Section sur HomeScreen uniquement</td>
+</tr>
+<tr>
+<td><strong>Relation durable</strong> (messagerie)</td>
+<td><code>GET /api/communication/threads?kind=client_merchant</code></td>
+<td><code>MesCommercesScreen.js</code></td>
+</tr>
+</tbody>
+</table>
+<p><strong>Décision validée</strong> : écran dédié pour « Mes commerces coups de cœur » (favoris), distinct de l'onglet Messagerie.</p>
+<hr />
+<h2>1. Audit de stabilité (Partie 6)</h2>
+<h3>Verdict par organe</h3>
+<table>
+<thead>
+<tr>
+<th>Modification</th>
+<th>Dispatch</th>
+<th>Communication</th>
+<th>Dette</th>
+<th>Multi-livreur</th>
+<th>Multi-employé</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Drawer + nav client</td>
+<td>Aucun</td>
+<td>Aucun</td>
+<td>Faible (1 dep drawer)</td>
+<td>OK</td>
+<td>OK</td>
+</tr>
+<tr>
+<td>Onglet Messagerie</td>
+<td>Aucun</td>
+<td>Réutilise Context</td>
+<td>Faible</td>
+<td>OK</td>
+<td>OK</td>
+</tr>
+<tr>
+<td>UX Chat vs Messagerie</td>
+<td>Aucun</td>
+<td><strong>UI seule</strong> sur <code>ChatScreen</code></td>
+<td>Faible</td>
+<td>OK</td>
+<td>OK</td>
+</tr>
+<tr>
+<td>Terminologie commerçant</td>
+<td>Aucun</td>
+<td>Aucun</td>
+<td>Nulle</td>
+<td>OK</td>
+<td>OK</td>
+</tr>
+<tr>
+<td>Popup proposition course</td>
+<td><strong>Couche insertion</strong></td>
+<td>Aucun</td>
+<td>Moyenne si mal placée</td>
+<td><strong>Préparé</strong></td>
+<td>N/A</td>
+</tr>
+</tbody>
+</table>
+<h3>Règle d'or</h3>
+<p><strong>Organes intacts (ne pas refondre) :</strong></p>
+<ul>
+<li><code>dispatch.js</code> → <code>assignOrderToDriver</code></li>
+<li><code>communicationEngine.js</code></li>
+</ul>
+<p><strong>Nouvelles couches UX (insertion uniquement) :</strong></p>
+<ul>
+<li><code>ClientDrawer</code> — navigation latérale</li>
+<li><code>MessagingTab</code> — hub messagerie client</li>
+<li><code>ChatPresentation</code> — styles UI selon lifecycle</li>
+<li><code>OfferModal</code> + <code>proposeOrderToDriver</code> — délègue à <code>assignOrderToDriver</code> après acceptation</li>
+</ul>
+<h3>Adaptations minimales recommandées dès maintenant</h3>
+<ol>
+<li>
+<p><strong>Dispatch — statut <code>offered</code></strong>
+   - Ajouter colonnes <code>missions.offered_to_driver_id</code>, <code>missions.offer_expires_at</code> (nullable)
+   - <strong>Supprimer ou conditionner</strong> les <code>UPDATE</code> boot qui remettent <code>offered</code> → <code>pending_driver</code> (<code>db/index.js</code> L348-355)
+   - Ne <strong>pas</strong> modifier la transaction interne de <code>assignOrderToDriver</code></p>
+</li>
+<li>
+<p><strong>Communication — helper agrégé</strong>
+   - Ajouter <code>getTotalUnreadMessagingTab()</code> dans <code>CommunicationContext.js</code> :</p>
+<ul>
+<li>Somme des <code>unread_count</code> des threads <code>client_merchant</code> + <code>support</code> (future)</li>
+<li><strong>Exclure</strong> <code>client_driver</code> ephemeral du badge onglet Messagerie (reste sur bouton suivi commande)</li>
+</ul>
+</li>
+<li>
+<p><strong>Navigation — paramètre <code>presentationMode</code></strong>
+   - Étendre <code>openCommunication.js</code> pour passer <code>lifecycle</code> / <code>kind</code> déjà retournés par l'API</p>
+</li>
+<li>
+<p><strong>Drawer — pas de 3e système</strong>
+   - Un seul <code>ClientDrawerContent</code> ; réutiliser les écrans existants (<code>OrderHistory</code>, <code>HelpCenter</code>, <code>ClientInfo</code>)</p>
+</li>
+</ol>
+<hr />
+<h2>2. Architecture cible — Navigation client (Partie 1)</h2>
+<h3>Tab bar cible (3 onglets)</h3>
+<pre><code>[ Home ]  [ Messagerie ]  [ Panier ]
+</code></pre>
+<ul>
+<li><strong>Supprimer</strong> : <code>ProfileTab</code>, <code>MenuTab</code> (onglet)</li>
+<li><strong>Conserver</strong> : <code>HomeTab</code>, <code>CartTab</code></li>
+<li><strong>Ajouter</strong> : <code>MessagingTab</code></li>
+</ul>
+<h3>Drawer latéral (hamburger sur Home)</h3>
+<p><strong>Technique recommandée</strong> : <code>@react-navigation/drawer</code> enveloppant <code>HomeStack</code> uniquement.</p>
+<ul>
+<li>Dépendances à ajouter : <code>@react-navigation/drawer</code>, <code>react-native-reanimated</code> (standard Expo)</li>
+<li>Alternative rejetée : Modal custom — plus de code, moins de gestures natives</li>
+</ul>
+<p><strong>Structure</strong> :</p>
+<pre><code>HomeTab
+  └── DrawerNavigator
+        ├── HomeMain → HomeStack (Home, ProductDetail, OrderTracking, Chat…)
+        └── (drawer screens navigables depuis le menu)
+              ├── ClientProfileHub → stack profil
+              ├── FavoriteStores → nouvel écran
+              ├── OrderHistory
+              └── HelpCenter
+</code></pre>
+<p><strong>Contenu drawer</strong> (<code>ClientDrawerContent.js</code>) :</p>
+<table>
+<thead>
+<tr>
+<th>Zone</th>
+<th>Contenu</th>
+<th>Navigation</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Header</td>
+<td>Avatar, nom, email</td>
+<td>—</td>
+</tr>
+<tr>
+<td>CTA</td>
+<td>« Mon profil »</td>
+<td><code>ClientProfileHub</code></td>
+</tr>
+<tr>
+<td>Sous-menu profil (écran hub)</td>
+<td>Mes informations → <code>ClientInfoScreen</code></td>
+<td></td>
+</tr>
+<tr>
+<td></td>
+<td>Modifier mon profil → section édition</td>
+<td>Réutiliser contenu <code>ClientProfileScreen</code></td>
+</tr>
+<tr>
+<td>Liste</td>
+<td>Mes commerces coups de cœur</td>
+<td><code>FavoriteStoresScreen</code> <strong>nouveau</strong></td>
+</tr>
+<tr>
+<td></td>
+<td>Mes commandes</td>
+<td><code>OrderHistory</code></td>
+</tr>
+<tr>
+<td></td>
+<td>Aide</td>
+<td><code>HelpCenter</code></td>
+</tr>
+<tr>
+<td>Footer</td>
+<td>Déconnexion (rouge)</td>
+<td><code>logoutUser()</code> depuis AppContext</td>
+</tr>
+</tbody>
+</table>
+<p><strong>Décisions UX</strong> :</p>
+<ul>
+<li>Style minimaliste : fond blanc/card, séparateurs légers</li>
+<li>« Mon profil » ouvre un <strong>hub intermédiaire</strong> (2 entrées) plutôt qu'un accordion dans le drawer</li>
+<li><code>ClientProfileScreen.js</code> : déprécier en tab ; extraire header + logout vers drawer</li>
+</ul>
+<p><strong>Impacts fichiers</strong> :</p>
+<ul>
+<li><code>mobile/src/navigation/index.js</code> — restructuration <code>ClientTabs</code>, nouveau <code>HomeDrawer</code></li>
+<li>Nouveau : <code>ClientDrawerContent.js</code>, <code>ClientProfileHubScreen.js</code>, <code>FavoriteStoresScreen.js</code></li>
+<li><code>ClientMenuScreen.js</code> — supprimer (redirect legacy non recommandé)</li>
+</ul>
+<hr />
+<h2>3. Onglet Messagerie client (Partie 2)</h2>
+<h3>Structure</h3>
+<p>Nouveau stack <code>MessagingStack</code> remplaçant <code>ProfileTab</code> :</p>
+<pre><code>MessagingTab
+  └── MessagingStack
+        ├── ClientMessagingHome (hub à 2 sections)
+        ├── MesCommerces (existant — liste threads durables)
+        ├── SupportChat (existant — stub V1)
+        └── Chat (existant — partagé)
+</code></pre>
+<p><strong>Écran hub</strong> <code>ClientMessagingHomeScreen.js</code> :</p>
+<table>
+<thead>
+<tr>
+<th>Section</th>
+<th>Libellé</th>
+<th>Action</th>
+<th>Source données</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>A</td>
+<td>Messages de mes commerçants</td>
+<td>→ <code>MesCommercesScreen</code></td>
+<td><code>CommunicationContext</code> threads <code>client_merchant</code></td>
+</tr>
+<tr>
+<td>B</td>
+<td>Support client</td>
+<td>→ <code>SupportChatScreen</code></td>
+<td>Stub V1 ; pastille 0</td>
+</tr>
+</tbody>
+</table>
+<p><strong>Pastille onglet Messagerie</strong> :</p>
+<ul>
+<li>Réutiliser <code>TabIcon</code> avec <code>badge={totalUnread}</code></li>
+<li>Calcul : <code>getTotalUnreadMessagingTab()</code> dans CommunicationContext</li>
+<li>Sync : listeners socket existants (<code>conversation:updated</code>, <code>message:new</code>)</li>
+<li>Comportement identique livreur : pastille disparaît quand conversation ouverte (<code>markRead</code> + <code>activeConversationId</code>)</li>
+</ul>
+<p><strong>Justification UX</strong> : l'onglet Messagerie regroupe les <strong>relations durables + support</strong> ; les chats livreur restent contextuels (suivi commande).</p>
+<hr />
+<h2>4. Différenciation Messagerie vs Chat de mission (Partie 3)</h2>
+<h3>Principe</h3>
+<p><strong>Un seul écran</strong> <code>ChatScreen.js</code> — <strong>deux présentations</strong> selon <code>thread.lifecycle</code> / <code>thread.kind</code>.</p>
+<p>Nouveau composant : <code>ChatPresentation.js</code> (styles + chrome, pas de logique métier).</p>
+<table>
+<thead>
+<tr>
+<th>Aspect</th>
+<th>Durable (<code>client_merchant</code>)</th>
+<th>Éphémère (<code>client_driver</code>)</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Titre navigation</td>
+<td>« Messagerie »</td>
+<td>« Chat de mission »</td>
+</tr>
+<tr>
+<td>Bandeau</td>
+<td>Nom du commerce (existant)</td>
+<td>« Messages éphémères · liés à cette livraison »</td>
+</tr>
+<tr>
+<td>Bulles</td>
+<td>Pleines (actuel)</td>
+<td>Contour pointillé, fond légèrement transparent</td>
+</tr>
+<tr>
+<td>Input</td>
+<td>Standard</td>
+<td>Placeholder « Message pour cette livraison… »</td>
+</tr>
+<tr>
+<td>Vocabulaire UI</td>
+<td>Messagerie</td>
+<td>Chat</td>
+</tr>
+</tbody>
+</table>
+<p><strong>Implémentation minimale</strong> :</p>
+<ol>
+<li><code>openCommunication</code> transmet <code>kind</code>, <code>lifecycle</code> dans <code>route.params</code></li>
+<li><code>ChatScreen</code> dérive <code>presentationMode = lifecycle === 'ephemeral' ? 'mission_chat' : 'messaging'</code></li>
+<li><code>navigation.setOptions({ title })</code> dynamique selon mode</li>
+<li>Styles conditionnels sur <code>renderMessage</code> et bandeau — <strong>aucune modification</strong> moteur, API, ou socket</li>
+</ol>
+<p><strong>Points de vigilance</strong> :</p>
+<ul>
+<li>Ne pas créer <code>MissionChatScreen.js</code> séparé (duplication lifecycle)</li>
+<li>Les messages ephemeral depuis OrderTracking continuent d'utiliser <code>openCommunication({ orderId, targetRole: 'driver' })</code></li>
+</ul>
+<p><strong>Parcours</strong> :</p>
+<pre><code>OrderTracking ──merchant/driver──► openCommunication ──► ChatScreen ──► ChatPresentation
+MesCommerces ──storeId──────────► openCommunication ──► ChatScreen ──► ChatPresentation
+                                              ├── durable  → style Messagerie
+                                              └── ephemeral → style Chat mission
+</code></pre>
+<hr />
+<h2>5. Terminologie commerçant (Partie 4)</h2>
+<p>Fichier unique : <code>MerchantOrdersScreen.js</code></p>
+<table>
+<thead>
+<tr>
+<th>Avant</th>
+<th>Après</th>
+<th>Justification</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Tchat client</td>
+<td><strong>Messagerie client</strong></td>
+<td>Relation durable</td>
+</tr>
+<tr>
+<td>Tchat livreur</td>
+<td><strong>Chat livreur</strong></td>
+<td>Relation temporaire</td>
+</tr>
+</tbody>
+</table>
+<p>Changement <strong>textuel uniquement</strong> — pas de modification dispatch/communication.</p>
+<p>Optionnel cohérence : titre navigation Chat côté commerçant « Messagerie » vs « Chat » selon <code>kind</code> (même logique Partie 3).</p>
+<hr />
+<h2>6. Popup proposition de course (Partie 5)</h2>
+<h3>Objectif</h3>
+<p>Insérer une <strong>couche UX</strong> entre « course trouvée » et « assignation », sans réécrire <code>assignOrderToDriver</code>.</p>
+<h3>Point d'insertion optimal</h3>
+<p><strong>Un seul endroit à modifier</strong> dans le flux automatique — <code>tryDispatchNewOrder</code> (<code>dispatch.js</code> L135-138) :</p>
+<pre><code class="language-javascript">// AVANT (direct)
+return assignOrderToDriver(orderId, driver.id, io);
+
+// APRÈS (proposition)
+return proposeOrderToDriver(orderId, driver.id, io);
+</code></pre>
+<p><code>assignPendingOrdersToDriver</code> (livreur se met en ligne) suit la <strong>même logique</strong>.</p>
+<p><strong><code>assignOrderToDriver</code> reste inchangé</strong> — appelé uniquement après acceptation explicite.</p>
+<h3>Nouvelle fonction <code>proposeOrderToDriver(orderId, driverId, io)</code></h3>
+<p>Responsabilités (nouveau fichier <code>backend/src/lib/dispatchOffer.js</code>) :</p>
+<ol>
+<li>Vérifier mission <code>available</code>, pas de <code>driver_id</code></li>
+<li><code>UPDATE missions SET status='offered', offered_to_driver_id=?, offer_expires_at=datetime('now', '+20 seconds')</code></li>
+<li>Calculer rémunération test : <code>base = 3.99</code>, <code>bonus = total_price * 0.10</code>, <code>earnings = base + bonus</code></li>
+<li>Émettre <code>mission:offered</code> → <code>user_{driverId}</code> avec <code>{ mission, offer: { store_name, earnings, expires_at } }</code></li>
+<li><strong>Ne pas</strong> créer conversations ephemeral (reste dans <code>assignOrderToDriver</code>)</li>
+<li><strong>Ne pas</strong> changer statut commande (reste <code>pending_driver</code>)</li>
+</ol>
+<h3>Acceptation</h3>
+<p><code>POST /missions/:id/accept</code> — adapter conditions :</p>
+<ul>
+<li>Accepter si <code>status IN ('available', 'offered')</code> ET (<code>offered_to_driver_id IS NULL OR offered_to_driver_id = me</code>)</li>
+<li>Déléguer à <strong><code>assignOrderToDriver(orderId, req.user.id, io)</code></strong></li>
+<li>Nettoyer champs offer</li>
+</ul>
+<h3>Refus + timeout (20 s)</h3>
+<p><code>POST /missions/:id/refuse</code> — enrichir :</p>
+<ol>
+<li>Vérifier <code>offered_to_driver_id = me</code></li>
+<li>Reset mission : <code>status='available'</code>, <code>offered_to_driver_id=NULL</code></li>
+<li>Appeler <code>tryDispatchNewOrder(orderId, io, { excludeDriverIds: [me] })</code></li>
+</ol>
+<p><strong>Timeout</strong> :</p>
+<ul>
+<li><strong>Client</strong> : timer 20 s dans <code>NewCourseOfferModal</code> → auto <code>refuse</code></li>
+<li><strong>Serveur</strong> : setTimeout 20 s par mission pour fiabilité multi-device</li>
+</ul>
+<h3>UI livreur</h3>
+<p>Brancher modal existant dans <code>DriverHomeScreen.js</code> :</p>
+<ul>
+<li>Écouter <code>mission:offered</code> dans <code>DriverContext.js</code></li>
+<li>Afficher <code>NewCourseOfferModal</code> :</li>
+<li>Titre : « Nouvelle course disponible ! »</li>
+<li>Commerce + rémunération (3,99 € + 10 %)</li>
+<li>Question : « Souhaitez-vous accepter cette course ? »</li>
+<li>Boutons : <strong>Accepter</strong> / <strong>Refuser</strong></li>
+<li>Compte à rebours 20 s visible</li>
+<li>Accept → <code>POST /missions/:id/accept</code></li>
+<li>Refuse / timeout → <code>POST /missions/:id/refuse</code></li>
+</ul>
+<p>Restaurer route <strong><code>GET /api/missions/offered</code></strong> (polling de secours si socket manqué).</p>
+<h3>Multi-livreur (futur)</h3>
+<ul>
+<li>Un seul <code>offered_to_driver_id</code> par mission à la fois</li>
+<li>Refus/timeout → driver suivant via <code>excludeDriverIds</code></li>
+<li>Compatible extension : table <code>mission_offer_log</code> plus tard si besoin analytics</li>
+</ul>
+<h3>Ce qu'on ne touche PAS</h3>
+<ul>
+<li><code>createOrderWithDispatch</code></li>
+<li>Transaction SQL inside <code>assignOrderToDriver</code></li>
+<li><code>mission:assigned</code> sémantique (émis après accept uniquement)</li>
+<li>Communication / conversations (créées à l'assignation, pas à la proposition)</li>
+</ul>
+<hr />
+<h2>7. Phases d'implémentation</h2>
+<table>
+<thead>
+<tr>
+<th>Phase</th>
+<th>Contenu</th>
+<th>Estimation</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><strong>A</strong></td>
+<td>Livrables doc (ce MD + PDF), validation utilisateur</td>
+<td>0,5 j</td>
+</tr>
+<tr>
+<td><strong>B</strong></td>
+<td>Drawer hamburger, supprimer ProfileTab/MenuTab, FavoriteStoresScreen, ClientProfileHub</td>
+<td>1,5 j</td>
+</tr>
+<tr>
+<td><strong>C</strong></td>
+<td>MessagingTab + ClientMessagingHome + pastille <code>getTotalUnreadMessagingTab</code></td>
+<td>1 j</td>
+</tr>
+<tr>
+<td><strong>D</strong></td>
+<td>ChatPresentation durable vs ephemeral (UI seule)</td>
+<td>0,5 j</td>
+</tr>
+<tr>
+<td><strong>E</strong></td>
+<td>Renommer Messagerie client / Chat livreur</td>
+<td>0,25 j</td>
+</tr>
+<tr>
+<td><strong>F</strong></td>
+<td>dispatchOffer.js, migration DB offer, modal + socket mission:offered, feature flag</td>
+<td>1,5 j</td>
+</tr>
+<tr>
+<td><strong>G</strong></td>
+<td>Recette non-régression dispatch + communication (11 scénarios)</td>
+<td>1 j</td>
+</tr>
+</tbody>
+</table>
+<p><strong>Estimation totale</strong> : ~6 jours — phases B-F partiellement parallélisables (B+C vs F).</p>
+<hr />
+<h2>8. Matrice de tests (recette)</h2>
+<table>
+<thead>
+<tr>
+<th>#</th>
+<th>Scénario</th>
+<th>Attendu</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>1</td>
+<td>Ouvrir drawer depuis Home</td>
+<td>Menu latéral complet</td>
+</tr>
+<tr>
+<td>2</td>
+<td>Mon profil → Mes informations</td>
+<td>ClientInfoScreen</td>
+</tr>
+<tr>
+<td>3</td>
+<td>Mes commerces coups de cœur</td>
+<td>Liste favorites API</td>
+</tr>
+<tr>
+<td>4</td>
+<td>Onglet Messagerie pastille</td>
+<td>Unread durable merchant only</td>
+</tr>
+<tr>
+<td>5</td>
+<td>Mes commerces → conversation</td>
+<td>Même thread qu'en commande</td>
+</tr>
+<tr>
+<td>6</td>
+<td>Chat livreur depuis suivi</td>
+<td>Style ephemeral, pas dans badge Messagerie</td>
+</tr>
+<tr>
+<td>7</td>
+<td>Commerçant voit « Messagerie client »</td>
+<td>Label correct</td>
+</tr>
+<tr>
+<td>8</td>
+<td>Nouvelle commande + livreur online</td>
+<td>Popup 20s, pas assignation immédiate</td>
+</tr>
+<tr>
+<td>9</td>
+<td>Accept popup</td>
+<td>Même comportement qu'assignation actuelle</td>
+</tr>
+<tr>
+<td>10</td>
+<td>Refuse / timeout</td>
+<td>Proposition au livreur suivant</td>
+</tr>
+<tr>
+<td>11</td>
+<td>Livraison</td>
+<td>Conversations ephemeral archivées (inchangé)</td>
+</tr>
+</tbody>
+</table>
+<hr />
+<h2>9. Points de vigilance</h2>
+<ol>
+<li><strong>Boot DB</strong> : les migrations L348-355 <strong>casseront</strong> la popup si non adaptées avant Phase F</li>
+<li><strong>Drawer + Chat</strong> : s'assurer que <code>Chat</code> reste dans HomeStack ET MessagingStack (pattern actuel Cart/Menu)</li>
+<li><strong>Support client stub</strong> : ne pas promettre chat support fonctionnel ; pastille support = 0 jusqu'à migration support dans moteur Communication</li>
+<li><strong>Pas de second moteur messagerie</strong> : MessagingTab = vues filtrées sur CommunicationContext</li>
+<li><strong>Popup ≠ refonte dispatch</strong> : toute régression assignation = rollback <code>proposeOrderToDriver</code> → <code>assignOrderToDriver</code> en une ligne (feature flag recommandé)</li>
+</ol>
+<hr />
+<h2>10. Feature flag recommandé</h2>
+<p>Variable env ou constante <code>backend/src/config/dispatch.js</code> :</p>
+<pre><code class="language-javascript">const OFFER_MODE = process.env.DISPATCH_OFFER_MODE !== '0'; // default true after rollout
+</code></pre>
+<p><code>tryDispatchNewOrder</code> :</p>
+<pre><code class="language-javascript">if (OFFER_MODE) return proposeOrderToDriver(...);
+return assignOrderToDriver(...);
+</code></pre>
+<p>Permet rollback instantané sans revert git en production.</p>
+<hr />
+<h2>11. Fichiers principaux impactés (résumé)</h2>
+<table>
+<thead>
+<tr>
+<th>Phase</th>
+<th>Fichiers</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>B</td>
+<td><code>navigation/index.js</code>, <code>ClientDrawerContent.js</code>, <code>ClientProfileHubScreen.js</code>, <code>FavoriteStoresScreen.js</code>, <code>HomeScreen.js</code></td>
+</tr>
+<tr>
+<td>C</td>
+<td><code>CommunicationContext.js</code>, <code>ClientMessagingHomeScreen.js</code>, <code>navigation/index.js</code></td>
+</tr>
+<tr>
+<td>D</td>
+<td><code>ChatScreen.js</code>, <code>ChatPresentation.js</code>, <code>openCommunication.js</code></td>
+</tr>
+<tr>
+<td>E</td>
+<td><code>MerchantOrdersScreen.js</code></td>
+</tr>
+<tr>
+<td>F</td>
+<td><code>dispatch.js</code>, <code>dispatchOffer.js</code>, <code>missions.js</code>, <code>db/index.js</code>, <code>DriverContext.js</code>, <code>DriverHomeScreen.js</code>, <code>NewCourseOfferModal.js</code></td>
+</tr>
+<tr>
+<td>Doc</td>
+<td><code>PLAN_UX_CHAPITRE_CLIENT_MESSAGERIE.md</code>, <code>.pdf</code></td>
+</tr>
+</tbody>
+</table>
+<p><strong>Fichiers interdits de modification lourde</strong> : <code>communicationEngine.js</code>, <code>communicationPolicies.js</code>, transaction core <code>assignOrderToDriver</code>.</p>
+<hr />
+<p><em>Document généré pour validation avant implémentation — Ma Zone MVP.</em></p>
+</body>
+</html>

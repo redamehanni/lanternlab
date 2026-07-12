@@ -178,6 +178,93 @@ addColumnIfMissing('users', 'first_name', 'TEXT');
 addColumnIfMissing('users', 'last_name', 'TEXT');
 addColumnIfMissing('users', 'driver_online', 'INTEGER NOT NULL DEFAULT 0');
 addColumnIfMissing('users', 'vehicle_plate', 'TEXT');
+addColumnIfMissing('missions', 'offered_to_driver_id', 'TEXT REFERENCES users(id)');
+addColumnIfMissing('missions', 'offer_expires_at', 'TEXT');
+
+// ── Communication organ migrations ─────────────────────────────────────────────
+addColumnIfMissing('conversations', 'lifecycle', "TEXT NOT NULL DEFAULT 'ephemeral'");
+addColumnIfMissing('conversations', 'store_id', 'TEXT');
+addColumnIfMissing('conversations', 'status', "TEXT NOT NULL DEFAULT 'active'");
+addColumnIfMissing('conversations', 'participant_mode', "TEXT NOT NULL DEFAULT 'dyadic'");
+addColumnIfMissing('conversations', 'updated_at', 'TEXT');
+addColumnIfMissing('messages', 'context_order_id', 'TEXT');
+addColumnIfMissing('messages', 'message_type', "TEXT NOT NULL DEFAULT 'text'");
+
+db.exec(`
+  CREATE TABLE IF NOT EXISTS conversation_reads (
+    conversation_id TEXT NOT NULL REFERENCES conversations(id),
+    user_id TEXT NOT NULL REFERENCES users(id),
+    last_read_at TEXT NOT NULL,
+    PRIMARY KEY (conversation_id, user_id)
+  );
+
+  CREATE TABLE IF NOT EXISTS store_members (
+    store_id TEXT NOT NULL REFERENCES stores(id),
+    user_id TEXT NOT NULL REFERENCES users(id),
+    member_role TEXT NOT NULL DEFAULT 'owner',
+    created_at TEXT DEFAULT (datetime('now')),
+    PRIMARY KEY (store_id, user_id)
+  );
+
+  CREATE INDEX IF NOT EXISTS idx_conv_store_client ON conversations(store_id, user_a);
+  CREATE INDEX IF NOT EXISTS idx_conv_store ON conversations(store_id);
+  CREATE INDEX IF NOT EXISTS idx_store_members_user ON store_members(user_id);
+`);
+
+db.prepare(`
+  INSERT OR IGNORE INTO store_members (store_id, user_id, member_role)
+  SELECT id, merchant_id, 'owner' FROM stores WHERE merchant_id IS NOT NULL
+`).run();
+
+db.prepare(`
+  UPDATE conversations SET store_id = (
+    SELECT o.store_id FROM orders o WHERE o.id = conversations.order_id
+  )
+  WHERE store_id IS NULL AND order_id IS NOT NULL
+`).run();
+
+db.prepare(`
+  UPDATE conversations SET lifecycle = 'durable', participant_mode = 'store_team', status = 'active'
+  WHERE kind = 'client_merchant'
+`).run();
+
+db.prepare(`
+  UPDATE conversations SET lifecycle = 'ephemeral', participant_mode = 'dyadic'
+  WHERE kind IN ('client_driver', 'merchant_driver')
+`).run();
+
+(function mergeDurableMerchantConversations() {
+  const dupes = db.prepare(`
+    SELECT store_id, user_a as client_id, GROUP_CONCAT(id) as ids, COUNT(*) as c
+    FROM conversations
+    WHERE kind = 'client_merchant' AND store_id IS NOT NULL
+    GROUP BY store_id, user_a
+    HAVING c > 1
+  `).all();
+
+  for (const row of dupes) {
+    const ids = row.ids.split(',');
+    const keepId = ids[0];
+    for (const dropId of ids.slice(1)) {
+      db.prepare('UPDATE messages SET conversation_id = ? WHERE conversation_id = ?').run(keepId, dropId);
+      db.prepare('UPDATE conversation_reads SET conversation_id = ? WHERE conversation_id = ?').run(keepId, dropId);
+      db.prepare('DELETE FROM conversations WHERE id = ?').run(dropId);
+    }
+    db.prepare(`UPDATE conversations SET lifecycle = 'durable', participant_mode = 'store_team', status = 'active' WHERE id = ?`).run(keepId);
+  }
+})();
+
+db.prepare(`
+  UPDATE conversations SET status = 'archived'
+  WHERE lifecycle = 'ephemeral' AND order_id IN (
+    SELECT id FROM orders WHERE status IN ('delivered', 'cancelled')
+  )
+`).run();
+
+db.prepare(`
+  UPDATE conversations SET updated_at = COALESCE(updated_at, created_at, datetime('now'))
+  WHERE updated_at IS NULL
+`).run();
 
 db.exec(`
   CREATE TABLE IF NOT EXISTS driver_broadcast (
@@ -260,13 +347,6 @@ db.prepare(`
   UPDATE orders SET status = 'driver_assigned'
   WHERE status IN ('accepted', 'accepted_by_driver')
 `).run();
-db.prepare(`
-  UPDATE missions SET driver_id = NULL, status = 'available', updated_at = datetime('now')
-  WHERE status = 'offered'
-`).run();
-db.prepare(`
-  UPDATE orders SET status = 'pending_driver', updated_at = datetime('now')
-  WHERE status = 'offered'
-`).run();
+// Ne plus effacer les offres en cours — incompatible avec le mode proposition (Phase F UX)
 
 module.exports = db;

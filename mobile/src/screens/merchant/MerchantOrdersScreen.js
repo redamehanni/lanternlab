@@ -6,7 +6,10 @@ import {
 import { Ionicons } from '@expo/vector-icons';
 import { useFocusEffect } from '@react-navigation/native';
 import { useApp } from '../../context/AppContext';
-import { getMerchantOrders, resolveConversation } from '../../api';
+import { useCommunication } from '../../context/CommunicationContext';
+import { getMerchantOrders } from '../../api';
+import { openCommunication } from '../../communication/openCommunication';
+import UnreadDot from '../../components/ui/UnreadDot';
 import { THEME } from '../../theme';
 import { ORDER_STATUS_LABEL } from '../../config';
 
@@ -16,31 +19,32 @@ function driverAssignedToOrder(status) {
 
 export default function MerchantOrdersScreen({ navigation }) {
   const { socket } = useApp();
+  const { getUnreadForStore, getUnreadForOrder, getUnreadForClientOnStore, loadThreads, registerThread } = useCommunication();
   const [orders,  setOrders]  = useState([]);
   const [loading, setLoading] = useState(true);
   const [refresh, setRefresh] = useState(false);
 
   async function openChat(order, targetRole, fallbackTitle) {
-    try {
-      const res = await resolveConversation(order.id, targetRole);
-      const conv = res.data.conversation;
-      navigation.navigate('Chat', { conversationId: conv.id, title: conv.other?.name || fallbackTitle });
-    } catch (err) {
-      Alert.alert('Indisponible', err.response?.data?.error || 'Conversation non disponible.');
-    }
+    await openCommunication(navigation, {
+      orderId: order.id,
+      targetRole,
+      title: fallbackTitle,
+      contextOrderId: order.id,
+    }, { registerThread });
   }
 
   const load = useCallback(async () => {
     try {
       const res = await getMerchantOrders();
       setOrders(res.data.orders || []);
+      loadThreads({ kind: 'client_merchant', lifecycle: 'durable' });
     } catch {
       Alert.alert('Erreur', 'Impossible de charger les commandes.');
     } finally {
       setLoading(false);
       setRefresh(false);
     }
-  }, []);
+  }, [loadThreads]);
 
   useFocusEffect(useCallback(() => { load(); }, [load]));
 
@@ -130,18 +134,22 @@ export default function MerchantOrdersScreen({ navigation }) {
             </Text>
           )}
 
-          <View style={styles.chatRow}>
-            <TouchableOpacity style={styles.chatBtn} onPress={() => openChat(item, 'client', item.client_name)}>
-              <Ionicons name="chatbubble-ellipses-outline" size={20} color={THEME.colors.accent} />
-              <Text style={styles.chatBtnText}>Tchat client</Text>
-            </TouchableOpacity>
-            {item.driver_name && driverAssignedToOrder(item.status) ? (
-              <TouchableOpacity style={[styles.chatBtn, styles.chatBtnDriver]} onPress={() => openChat(item, 'driver', item.driver_name)}>
-                <Ionicons name="chatbubble-ellipses-outline" size={20} color="#1d4ed8" />
-                <Text style={[styles.chatBtnText, styles.chatBtnTextDriver]}>Tchat livreur</Text>
+          {item.status !== 'delivered' && (
+            <View style={styles.chatRow}>
+              <TouchableOpacity style={[styles.chatBtn, styles.chatBtnPos]} onPress={() => openChat(item, 'client', item.client_name)}>
+                <Ionicons name="chatbubble-ellipses-outline" size={20} color={THEME.colors.accent} />
+                <Text style={styles.chatBtnText}>Messagerie client</Text>
+                <UnreadDot count={getUnreadForClientOnStore(item.store_id, item.client_id)} />
               </TouchableOpacity>
-            ) : null}
-          </View>
+              {item.driver_name && driverAssignedToOrder(item.status) ? (
+                <TouchableOpacity style={[styles.chatBtn, styles.chatBtnDriver, styles.chatBtnPos]} onPress={() => openChat(item, 'driver', item.driver_name)}>
+                  <Ionicons name="chatbubble-ellipses-outline" size={20} color="#1d4ed8" />
+                  <Text style={[styles.chatBtnText, styles.chatBtnTextDriver]}>Chat livreur</Text>
+                  <UnreadDot count={getUnreadForOrder(item.id, 'merchant_driver')} />
+                </TouchableOpacity>
+              ) : null}
+            </View>
+          )}
         </View>
       )}
     />
@@ -171,4 +179,5 @@ const styles = StyleSheet.create({
   chatBtnDriver: { backgroundColor: '#eff6ff', borderColor: '#bfdbfe' },
   chatBtnText: { color: THEME.colors.accent, fontWeight: '700', fontSize: 14 },
   chatBtnTextDriver: { color: '#1d4ed8' },
+  chatBtnPos: { position: 'relative' },
 });

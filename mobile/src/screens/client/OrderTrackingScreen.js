@@ -3,7 +3,10 @@ import {
   View, Text, ScrollView, TouchableOpacity, StyleSheet, ActivityIndicator, Alert,
 } from 'react-native';
 import { useApp } from '../../context/AppContext';
-import { getOrderById, resolveConversation, cancelOrder } from '../../api';
+import { useCommunication } from '../../context/CommunicationContext';
+import { getOrderById, getMyOrders, cancelOrder } from '../../api';
+import { openCommunication } from '../../communication/openCommunication';
+import UnreadDot from '../../components/ui/UnreadDot';
 import { formatMinutes } from '../../utils/format';
 import MapView from '../../components/MapView';
 import { COLORS, ORDER_STATUS_LABEL, CANCELLABLE_ORDER_STATUSES } from '../../config';
@@ -41,9 +44,21 @@ function canCancelOrder(status) {
   return CANCELLABLE_ORDER_STATUSES.includes(status);
 }
 
+const POST_PICKUP_STATUSES = ['picked_up', 'delivering'];
+
+function showMerchantChat(status) {
+  return !POST_PICKUP_STATUSES.includes(status);
+}
+
+function showDriverChat(status, driverName) {
+  return POST_PICKUP_STATUSES.includes(status) && !!driverName;
+}
+
 export default function OrderTrackingScreen({ navigation, route }) {
   const { socket } = useApp();
-  const orderId = route.params?.orderId;
+  const { getUnreadForStore, getUnreadForOrder, loadThreads, registerThread } = useCommunication();
+  const [resolvedOrderId, setResolvedOrderId] = useState(route.params?.orderId);
+  const orderId = resolvedOrderId;
   const [order, setOrder] = useState(null);
   const [cancellable, setCancellable] = useState(false);
   const [loading, setLoading] = useState(true);
@@ -51,16 +66,33 @@ export default function OrderTrackingScreen({ navigation, route }) {
   const [cancelling, setCancelling] = useState(false);
 
   const load = useCallback(async () => {
+    let id = orderId;
+    if (!id) {
+      try {
+        const res = await getMyOrders();
+        const orders = res.data.orders || [];
+        const active = orders.find((o) => !['delivered', 'cancelled'].includes(o.status));
+        id = active?.id;
+        if (id) setResolvedOrderId(id);
+      } catch { /* ignore */ }
+    }
+    if (!id) {
+      setLoading(false);
+      return;
+    }
     try {
-      const res = await getOrderById(orderId);
+      const res = await getOrderById(id);
       setOrder(res.data.order);
       setCancellable(res.data.cancellable ?? canCancelOrder(res.data.order?.status));
+      if (res.data.order?.store_id) {
+        loadThreads({ kind: 'client_merchant', lifecycle: 'durable' });
+      }
     } catch {
       Alert.alert('Erreur', 'Impossible de charger la commande.');
     } finally {
       setLoading(false);
     }
-  }, [orderId]);
+  }, [orderId, loadThreads]);
 
   useEffect(() => {
     load();
@@ -99,13 +131,15 @@ export default function OrderTrackingScreen({ navigation, route }) {
   }, [socket, orderId, load]);
 
   async function openChat(targetRole, fallbackTitle) {
+    if (!orderId) return;
     setOpening(true);
     try {
-      const res = await resolveConversation(orderId, targetRole);
-      const conv = res.data.conversation;
-      navigation.navigate('Chat', { conversationId: conv.id, title: conv.other?.name || fallbackTitle });
-    } catch (err) {
-      Alert.alert('Indisponible', err.response?.data?.error || 'Conversation non disponible.');
+      await openCommunication(navigation, {
+        orderId,
+        targetRole,
+        title: fallbackTitle,
+        contextOrderId: orderId,
+      }, { registerThread });
     } finally {
       setOpening(false);
     }
@@ -224,14 +258,16 @@ export default function OrderTrackingScreen({ navigation, route }) {
         </>
       )}
 
-      {active && (
-        <TouchableOpacity style={styles.chatBtn} disabled={opening} onPress={() => openChat('merchant', order.store_name)}>
+      {active && showMerchantChat(order.status) && (
+        <TouchableOpacity style={[styles.chatBtn, styles.chatBtnWrap]} disabled={opening} onPress={() => openChat('merchant', order.store_name)}>
           <Text style={styles.chatBtnText}>💬 Contacter le commerçant</Text>
+          <UnreadDot count={getUnreadForStore(order.store_id)} />
         </TouchableOpacity>
       )}
-      {active && order.driver_name && (
-        <TouchableOpacity style={[styles.chatBtn, { backgroundColor: '#eff6ff' }]} disabled={opening} onPress={() => openChat('driver', order.driver_name)}>
+      {active && showDriverChat(order.status, order.driver_name) && (
+        <TouchableOpacity style={[styles.chatBtn, styles.chatBtnWrap, { backgroundColor: '#eff6ff' }]} disabled={opening} onPress={() => openChat('driver', order.driver_name)}>
           <Text style={[styles.chatBtnText, { color: '#1d4ed8' }]}>🛵 Contacter le livreur</Text>
+          <UnreadDot count={getUnreadForOrder(orderId, 'client_driver')} />
         </TouchableOpacity>
       )}
 
@@ -287,6 +323,7 @@ const styles = StyleSheet.create({
   stepLabel: { fontSize: 14, fontWeight: '600', color: COLORS.text },
   stepLabelPending: { color: COLORS.textLight, fontWeight: '400' },
   chatBtn: { backgroundColor: '#f0fdf4', borderRadius: 12, padding: 14, alignItems: 'center', marginTop: 12 },
+  chatBtnWrap: { position: 'relative' },
   chatBtnText: { color: COLORS.success, fontWeight: '700', fontSize: 14 },
   newOrderBtn: { backgroundColor: COLORS.primary, borderRadius: 14, padding: 16, alignItems: 'center', marginTop: 16 },
   newOrderText: { color: '#fff', fontWeight: '800', fontSize: 16 },

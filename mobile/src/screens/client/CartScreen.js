@@ -26,7 +26,7 @@ export default function CartScreen({ navigation }) {
         navigation.navigate('OrderTracking', { orderId: orders[0].id });
       } else {
         Alert.alert('Commandes passées', `${orders.length} commandes ont été créées.`, [
-          { text: 'Voir mes commandes', onPress: () => navigation.navigate('MenuTab', { screen: 'OrderHistory' }) },
+          { text: 'Voir mes commandes', onPress: () => navigation.navigate('HomeTab', { screen: 'OrderHistory' }) },
           { text: 'OK' },
         ]);
       }

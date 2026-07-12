@@ -5,15 +5,11 @@ import {
 import * as Haptics from 'expo-haptics';
 import { Ionicons } from '@expo/vector-icons';
 import { THEME } from '../../theme';
-import { euro, formatMinutes } from '../../utils/format';
+import { euro } from '../../utils/format';
 
-function formatDistance(meters) {
-  if (meters == null) return '—';
-  if (meters < 1000) return `${meters} mètres`;
-  return `${(meters / 1000).toFixed(1)} km`;
-}
-
-export default function NewCourseOfferModal({ visible, mission, offer, onAccept, onDecline, loading }) {
+export default function NewCourseOfferModal({
+  visible, mission, offer, onAccept, onDecline, loading, secondsLeft = 20,
+}) {
   const slide = useRef(new Animated.Value(80)).current;
   const fade = useRef(new Animated.Value(0)).current;
 
@@ -34,7 +30,9 @@ export default function NewCourseOfferModal({ visible, mission, offer, onAccept,
 
   if (!mission || !offer) return null;
 
-  const earnings = offer.earnings ?? offer.commission ?? 0;
+  const earnings = offer.earnings ?? 0;
+  const base = offer.base ?? 3.99;
+  const bonus = offer.bonus ?? 0;
 
   return (
     <Modal visible={visible} animationType="fade" transparent statusBarTranslucent>
@@ -45,43 +43,27 @@ export default function NewCourseOfferModal({ visible, mission, offer, onAccept,
             <Text style={styles.badgeText}>NOUVELLE COURSE</Text>
           </View>
 
+          <Text style={styles.headline}>Nouvelle course disponible !</Text>
           <Text style={styles.storeName}>{offer.store_name || mission.store_name}</Text>
-          <Text style={styles.storeAddr}>{offer.store_address || mission.store_address}</Text>
 
           <View style={styles.divider} />
 
-          <View style={styles.row}>
-            <Ionicons name="navigate-outline" size={20} color={THEME.colors.textSecondary} />
-            <View style={styles.rowText}>
-              <Text style={styles.rowLabel}>Distance jusqu'au commerçant</Text>
-              <Text style={styles.rowValue}>{formatDistance(offer.distance_to_store_m)}</Text>
-            </View>
-          </View>
-
-          <View style={styles.row}>
-            <Ionicons name="map-outline" size={20} color={THEME.colors.textSecondary} />
-            <View style={styles.rowText}>
-              <Text style={styles.rowLabel}>Distance totale estimée</Text>
-              <Text style={styles.rowValue}>{formatDistance(offer.distance_total_m)}</Text>
-            </View>
-          </View>
-
-          <View style={styles.row}>
-            <Ionicons name="time-outline" size={20} color={THEME.colors.textSecondary} />
-            <View style={styles.rowText}>
-              <Text style={styles.rowLabel}>Temps estimé</Text>
-              <Text style={styles.rowValue}>
-                {offer.estimated_minutes ? formatMinutes(offer.estimated_minutes) : '—'}
-              </Text>
-            </View>
-          </View>
-
           <View style={styles.earningsBox}>
-            <Text style={styles.earningsLabel}>Revenu estimé</Text>
+            <Text style={styles.earningsLabel}>Rémunération estimée</Text>
             <Text style={styles.earningsValue}>{euro(earnings)}</Text>
+            <Text style={styles.earningsDetail}>
+              {euro(base)} + {Math.round(bonus * 100) / 100} € (10 % commande)
+            </Text>
           </View>
 
-          <Text style={styles.question}>Acceptez-vous cette course ?</Text>
+          <View style={styles.countdownRow}>
+            <Ionicons name="timer-outline" size={18} color={secondsLeft <= 5 ? THEME.colors.error : THEME.colors.textSecondary} />
+            <Text style={[styles.countdown, secondsLeft <= 5 && styles.countdownUrgent]}>
+              {secondsLeft}s restantes
+            </Text>
+          </View>
+
+          <Text style={styles.question}>Souhaitez-vous accepter cette course ?</Text>
 
           <View style={styles.actions}>
             <TouchableOpacity
@@ -90,7 +72,7 @@ export default function NewCourseOfferModal({ visible, mission, offer, onAccept,
               disabled={loading}
               activeOpacity={0.8}
             >
-              <Text style={styles.noBtnText}>NON</Text>
+              <Text style={styles.noBtnText}>Refuser</Text>
             </TouchableOpacity>
             <TouchableOpacity
               style={styles.yesBtn}
@@ -98,7 +80,7 @@ export default function NewCourseOfferModal({ visible, mission, offer, onAccept,
               disabled={loading}
               activeOpacity={0.85}
             >
-              <Text style={styles.yesBtnText}>{loading ? '…' : 'OUI'}</Text>
+              <Text style={styles.yesBtnText}>{loading ? '…' : 'Accepter'}</Text>
             </TouchableOpacity>
           </View>
         </Animated.View>
@@ -129,7 +111,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: 14,
     paddingVertical: 6,
     borderRadius: THEME.radius.full,
-    marginBottom: THEME.spacing.md,
+    marginBottom: THEME.spacing.sm,
   },
   badgeText: {
     fontSize: 12,
@@ -137,44 +119,44 @@ const styles = StyleSheet.create({
     letterSpacing: 1.2,
     color: THEME.colors.accent,
   },
-  storeName: {
+  headline: {
     ...THEME.typography.title,
-    fontSize: 24,
+    fontSize: 20,
     color: THEME.colors.text,
     textAlign: 'center',
+    marginBottom: 8,
   },
-  storeAddr: {
-    ...THEME.typography.body,
+  storeName: {
+    ...THEME.typography.subtitle,
     color: THEME.colors.textSecondary,
     textAlign: 'center',
-    marginTop: 6,
   },
   divider: {
     height: 1,
     backgroundColor: THEME.colors.borderLight,
     marginVertical: THEME.spacing.lg,
   },
-  row: {
-    flexDirection: 'row',
-    alignItems: 'flex-start',
-    gap: 12,
-    marginBottom: 14,
-  },
-  rowText: { flex: 1 },
-  rowLabel: { fontSize: 12, color: THEME.colors.textMuted, marginBottom: 2 },
-  rowValue: { fontSize: 16, fontWeight: '700', color: THEME.colors.text },
   earningsBox: {
     backgroundColor: '#ecfdf5',
     borderRadius: THEME.radius.md,
     padding: THEME.spacing.md,
     alignItems: 'center',
-    marginTop: 8,
     marginBottom: THEME.spacing.md,
     borderWidth: 1,
     borderColor: '#a7f3d0',
   },
   earningsLabel: { fontSize: 12, color: '#047857', fontWeight: '600' },
   earningsValue: { fontSize: 32, fontWeight: '900', color: '#059669', marginTop: 4 },
+  earningsDetail: { fontSize: 12, color: '#065f46', marginTop: 6 },
+  countdownRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 8,
+    marginBottom: THEME.spacing.md,
+  },
+  countdown: { fontSize: 15, fontWeight: '700', color: THEME.colors.textSecondary },
+  countdownUrgent: { color: THEME.colors.error },
   question: {
     ...THEME.typography.subtitle,
     textAlign: 'center',

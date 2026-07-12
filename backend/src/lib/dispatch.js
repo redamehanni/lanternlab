@@ -2,6 +2,8 @@ const db = require('../db');
 const { ORDER_STATUS, canClientCancel } = require('./orderStatus');
 const { getFullOrder } = require('./orders');
 const { getOrCreateConversation } = require('./conversations');
+const { archiveEphemeralForOrder } = require('./communicationEngine');
+const { OFFER_MODE } = require('../config/dispatch');
 
 const MISSION_ACTIVE = 'accepted';
 
@@ -26,7 +28,11 @@ function getFullMission(missionId) {
   `).get(missionId);
 }
 
-function driverHasActiveMission(driverId) {
+/**
+ * Le livreur est-il engagé dans une mission active (livraison en cours) ?
+ * Usage : garde avant assignOrderToDriver — une offre pending n'est PAS un blocage.
+ */
+function driverHasAcceptedMission(driverId) {
   const row = db.prepare(`
     SELECT id FROM missions
     WHERE driver_id = ?
@@ -34,6 +40,45 @@ function driverHasActiveMission(driverId) {
     LIMIT 1
   `).get(driverId);
   return !!row;
+}
+
+/**
+ * Le livreur possède-t-il une proposition de course en attente de réponse ?
+ * Usage : modèle métier « offre pending » — distinct de la mission acceptée.
+ */
+function driverHasPendingOffer(driverId, excludeMissionId = null) {
+  if (excludeMissionId) {
+    const row = db.prepare(`
+      SELECT id FROM missions
+      WHERE offered_to_driver_id = ?
+        AND status = 'offered'
+        AND datetime(offer_expires_at) > datetime('now')
+        AND id != ?
+      LIMIT 1
+    `).get(driverId, excludeMissionId);
+    return !!row;
+  }
+  const row = db.prepare(`
+    SELECT id FROM missions
+    WHERE offered_to_driver_id = ?
+      AND status = 'offered'
+      AND datetime(offer_expires_at) > datetime('now')
+    LIMIT 1
+  `).get(driverId);
+  return !!row;
+}
+
+/**
+ * Peut-on proposer une nouvelle course à ce livreur ?
+ * Règle métier dispatch : occupé si mission acceptée OU offre déjà en attente.
+ */
+function driverIsBusyForNewOffer(driverId) {
+  return driverHasAcceptedMission(driverId) || driverHasPendingOffer(driverId);
+}
+
+/** @deprecated Préférer driverHasAcceptedMission / driverIsBusyForNewOffer selon le contexte. */
+function driverHasActiveMission(driverId) {
+  return driverIsBusyForNewOffer(driverId);
 }
 
 function findAvailableDriver(excludeDriverIds = []) {
@@ -88,17 +133,24 @@ function assignOrderToDriver(orderId, driverId, io) {
       JOIN missions m ON m.order_id = o.id
       WHERE o.id = ?
         AND m.driver_id IS NULL
-        AND m.status = 'available'
+        AND m.status IN ('available', 'offered')
     `).get(orderId);
 
     if (!order) return null;
-    if (driverHasActiveMission(driverId)) return null;
+    // Acceptation d'une offre : seule une mission acceptée bloque, pas l'offre en cours.
+    if (driverHasAcceptedMission(driverId)) return null;
 
     db.prepare(`
       UPDATE missions
-      SET driver_id = ?, status = ?, accepted_at = datetime('now'), updated_at = datetime('now')
-      WHERE id = ? AND driver_id IS NULL AND status = 'available'
-    `).run(driverId, MISSION_ACTIVE, order.mission_id);
+      SET driver_id = ?, status = ?, accepted_at = datetime('now'),
+          offered_to_driver_id = NULL, offer_expires_at = NULL,
+          updated_at = datetime('now')
+      WHERE id = ? AND driver_id IS NULL
+        AND (
+          status = 'available'
+          OR (status = 'offered' AND (offered_to_driver_id IS NULL OR offered_to_driver_id = ?))
+        )
+    `).run(driverId, MISSION_ACTIVE, order.mission_id, driverId);
 
     db.prepare(`
       UPDATE orders SET status = ?, updated_at = datetime('now') WHERE id = ?
@@ -125,15 +177,23 @@ function assignOrderToDriver(orderId, driverId, io) {
 }
 
 function assignPendingOrdersToDriver(driverId, io) {
-  if (driverHasActiveMission(driverId)) return null;
+  if (driverIsBusyForNewOffer(driverId)) return null;
   const pending = getOldestPendingOrder();
   if (!pending) return null;
+  if (OFFER_MODE) {
+    const { proposeOrderToDriver } = require('./dispatchOffer');
+    return proposeOrderToDriver(pending.id, driverId, io);
+  }
   return assignOrderToDriver(pending.id, driverId, io);
 }
 
-function tryDispatchNewOrder(orderId, io) {
-  const driver = findAvailableDriver();
+function tryDispatchNewOrder(orderId, io, options = {}) {
+  const driver = findAvailableDriver(options.excludeDriverIds || []);
   if (!driver) return null;
+  if (OFFER_MODE) {
+    const { proposeOrderToDriver } = require('./dispatchOffer');
+    return proposeOrderToDriver(orderId, driver.id, io);
+  }
   return assignOrderToDriver(orderId, driver.id, io);
 }
 
@@ -183,6 +243,7 @@ function cancelOrderByClient(orderId, clientId, io) {
   })();
 
   const order = getFullOrder(orderId);
+  archiveEphemeralForOrder(orderId);
 
   if (io) {
     emitOrderUpdate(io, order);
@@ -201,6 +262,9 @@ function cancelOrderByClient(orderId, clientId, io) {
 }
 
 module.exports = {
+  driverHasAcceptedMission,
+  driverHasPendingOffer,
+  driverIsBusyForNewOffer,
   driverHasActiveMission,
   findAvailableDriver,
   getOldestPendingOrder,

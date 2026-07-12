@@ -26,6 +26,10 @@ module.exports = function setupSocket(io) {
     // Les commerçants rejoignent leur room pour recevoir les commandes
     if (role === 'merchant') {
       socket.join(`merchant_${id}`);
+      const memberships = db.prepare('SELECT store_id FROM store_members WHERE user_id = ?').all(id);
+      for (const m of memberships) {
+        socket.join(`store_${m.store_id}`);
+      }
     }
 
     // Les livreurs rejoignent la room uniquement s'ils sont en ligne

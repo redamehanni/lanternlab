@@ -1,4 +1,5 @@
 require('./db'); // Initialise le schéma SQLite au démarrage
+const { OFFER_MODE } = require('./config/dispatch');
 
 const express = require('express');
 const http = require('http');
@@ -13,6 +14,7 @@ const ordersRoutes = require('./routes/orders');
 const missionsRoutes = require('./routes/missions');
 const messagesRoutes = require('./routes/messages');
 const conversationsRoutes = require('./routes/conversations');
+const communicationRoutes = require('./routes/communication');
 const usersRoutes = require('./routes/users');
 const cartRoutes = require('./routes/cart');
 const favoritesRoutes = require('./routes/favorites');
@@ -54,6 +56,7 @@ app.use('/api/orders', ordersRoutes);
 app.use('/api/missions', missionsRoutes);
 app.use('/api/messages', messagesRoutes);
 app.use('/api/conversations', conversationsRoutes);
+app.use('/api/communication', communicationRoutes);
 app.use('/api/cart', cartRoutes);
 app.use('/api/favorites', favoritesRoutes);
 app.use('/api/promotions', promotionsRoutes);
@@ -92,6 +95,7 @@ server.listen(PORT, '0.0.0.0', () => {
   console.log('║         MA ZONE — Backend API         ║');
   console.log('╠═══════════════════════════════════════╣');
   console.log(`║  URL : http://localhost:${PORT}            ║`);
+  console.log(`║  Dispatch offer mode : ${OFFER_MODE ? 'ON (popup 20s)' : 'OFF (direct)'}   ║`);
   console.log('║                                       ║');
   console.log('║  Lancez l\'app : cd mobile && npm run ios');
   console.log('╚═══════════════════════════════════════╝\n');

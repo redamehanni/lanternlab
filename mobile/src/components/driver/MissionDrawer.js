@@ -31,7 +31,8 @@ export default function MissionDrawer({
   onMissionUpdate,
   onMissionComplete,
   onOpenChat,
-  chatUnread,
+  merchantUnread = 0,
+  clientUnread = 0,
   expanded,
   onExpandChange,
 }) {
@@ -44,7 +45,6 @@ export default function MissionDrawer({
   const pulse = useRef(new Animated.Value(0)).current;
 
   const isPickedUp = mission && ['picked_up', 'delivering', 'delivered'].includes(mission.status);
-  const chatTarget = isPickedUp ? 'client' : 'merchant';
 
   useEffect(() => {
     if (!mission) {
@@ -184,7 +184,7 @@ export default function MissionDrawer({
               <TouchableOpacity style={styles.btnOutline} onPress={() => onOpenChat?.('merchant')}>
                 <Ionicons name="chatbubble-outline" size={18} color={THEME.colors.accent} />
                 <Text style={styles.btnOutlineText}>Message</Text>
-                {chatUnread && chatTarget === 'merchant' && <View style={styles.dot} />}
+                {merchantUnread > 0 && <View style={styles.dot} />}
               </TouchableOpacity>
               <TouchableOpacity
                 style={styles.btnPrimary}
@@ -237,7 +237,7 @@ export default function MissionDrawer({
               <TouchableOpacity style={styles.btnOutline} onPress={() => onOpenChat?.('client')}>
                 <Ionicons name="chatbubble-outline" size={18} color={THEME.colors.accent} />
                 <Text style={styles.btnOutlineText}>Message</Text>
-                {chatUnread && chatTarget === 'client' && <View style={styles.dot} />}
+                {clientUnread > 0 && <View style={styles.dot} />}
               </TouchableOpacity>
               <TouchableOpacity
                 style={styles.btnPrimary}

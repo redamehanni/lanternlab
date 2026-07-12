@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useRef } from 'react';
 import {
   View, Text, TouchableOpacity, StyleSheet, Alert, ActivityIndicator,
   SafeAreaView, StatusBar, Platform, Dimensions,
@@ -7,10 +7,15 @@ import { Ionicons } from '@expo/vector-icons';
 import { useFocusEffect, useNavigation } from '@react-navigation/native';
 import { useApp } from '../../context/AppContext';
 import { useDriver } from '../../context/DriverContext';
-import { resolveConversation } from '../../api';
+import { useCommunication } from '../../context/CommunicationContext';
+import { openCommunication } from '../../communication/openCommunication';
 import DriverMap from '../../components/driver/DriverMap';
 import MissionDrawer from '../../components/driver/MissionDrawer';
+import NewCourseOfferModal from '../../components/driver/NewCourseOfferModal';
+import { acceptMission, refuseMission } from '../../api';
 import { THEME } from '../../theme';
+
+const OFFER_SECONDS = 20;
 
 const SCREEN_H = Dimensions.get('window').height;
 const MAP_HEIGHT = Math.round(SCREEN_H * 0.5);
@@ -30,12 +35,15 @@ export default function DriverHomeScreen() {
   const { user } = useApp();
   const {
     online, setOnline, broadcast, activeMission, setActiveMission,
-    chatUnread, setChatUnread, ready,
-    onMissionAssigned,
+    ready, onMissionAssigned, pendingOffer, clearPendingOffer,
   } = useDriver();
+  const { getUnreadForOrder, loadThreads, registerThread } = useCommunication();
 
   const [fullscreen, setFullscreen] = useState(false);
   const [drawerExpanded, setDrawerExpanded] = useState(false);
+  const [offerLoading, setOfferLoading] = useState(false);
+  const [secondsLeft, setSecondsLeft] = useState(OFFER_SECONDS);
+  const offerTimerRef = useRef(null);
 
   const lat = user.lat ?? activeMission?.store_lat ?? 48.8566;
   const lng = user.lng ?? activeMission?.store_lng ?? 2.3522;
@@ -66,6 +74,75 @@ export default function DriverHomeScreen() {
     return () => navigation.getParent()?.setOptions({ tabBarStyle: TAB_BAR_STYLE });
   }, [fullscreen, navigation]));
 
+  useEffect(() => {
+    if (activeMission?.order_id) loadThreads();
+  }, [activeMission?.order_id, loadThreads]);
+
+  const showOfferModal = !!pendingOffer && !activeMission;
+  const pendingMissionId = pendingOffer?.mission?.id;
+  const declineRef = useRef(null);
+  const offerLoadingRef = useRef(false);
+
+  const handleDeclineOffer = useCallback(async () => {
+    if (!pendingOffer?.mission?.id || offerLoadingRef.current) return;
+    offerLoadingRef.current = true;
+    setOfferLoading(true);
+    try {
+      await refuseMission(pendingOffer.mission.id);
+    } catch {
+      /* ignore */
+    } finally {
+      clearPendingOffer();
+      offerLoadingRef.current = false;
+      setOfferLoading(false);
+    }
+  }, [pendingOffer, clearPendingOffer]);
+
+  declineRef.current = handleDeclineOffer;
+
+  const handleAcceptOffer = useCallback(async () => {
+    if (!pendingOffer?.mission?.id || offerLoadingRef.current) return;
+    offerLoadingRef.current = true;
+    setOfferLoading(true);
+    clearInterval(offerTimerRef.current);
+    try {
+      const res = await acceptMission(pendingOffer.mission.id);
+      const mission = res.data?.mission;
+      clearPendingOffer();
+      if (mission) {
+        setActiveMission(mission);
+        startActiveMission(mission);
+      }
+    } catch (err) {
+      const msg = err.response?.data?.error || 'Impossible d\'accepter la course.';
+      Alert.alert('Erreur', msg);
+    } finally {
+      offerLoadingRef.current = false;
+      setOfferLoading(false);
+    }
+  }, [pendingOffer, clearPendingOffer, setActiveMission, startActiveMission]);
+
+  useEffect(() => {
+    if (!showOfferModal || offerLoading) {
+      if (!showOfferModal) clearInterval(offerTimerRef.current);
+      if (!showOfferModal) setSecondsLeft(OFFER_SECONDS);
+      return undefined;
+    }
+    setSecondsLeft(OFFER_SECONDS);
+    offerTimerRef.current = setInterval(() => {
+      if (offerLoadingRef.current) return;
+      setSecondsLeft((s) => {
+        if (s <= 1) {
+          clearInterval(offerTimerRef.current);
+          declineRef.current?.();
+          return 0;
+        }
+        return s - 1;
+      });
+    }, 1000);
+    return () => clearInterval(offerTimerRef.current);
+  }, [showOfferModal, pendingMissionId, offerLoading]);
+
   async function openChat(targetRole) {
     if (!activeMission) return;
     const isPickedUp = ['picked_up', 'delivering'].includes(activeMission.status);
@@ -77,18 +154,20 @@ export default function DriverHomeScreen() {
       Alert.alert('Indisponible', 'La conversation commerçant est fermée après la prise en charge.');
       return;
     }
-    try {
-      const res = await resolveConversation(activeMission.order_id, targetRole);
-      setChatUnread(false);
-      navigation.navigate('Chat', {
-        conversationId: res.data.conversation.id,
-        title: targetRole === 'merchant' ? activeMission.store_name : activeMission.client_name,
-        ephemeral: true,
-      });
-    } catch (err) {
-      Alert.alert('Erreur', err.response?.data?.error || 'Conversation indisponible.');
-    }
+    await openCommunication(navigation, {
+      orderId: activeMission.order_id,
+      targetRole,
+      title: targetRole === 'merchant' ? activeMission.store_name : activeMission.client_name,
+      contextOrderId: activeMission.order_id,
+    }, { registerThread });
   }
+
+  const merchantUnread = activeMission
+    ? getUnreadForOrder(activeMission.order_id, 'merchant_driver')
+    : 0;
+  const clientUnread = activeMission
+    ? getUnreadForOrder(activeMission.order_id, 'client_driver')
+    : 0;
 
   function handleMissionComplete() {
     setActiveMission(null);
@@ -109,6 +188,15 @@ export default function DriverHomeScreen() {
       <View style={styles.fullRoot}>
         <StatusBar barStyle="dark-content" />
         <DriverMap lat={lat} lng={lng} fullScreen zoom={14} />
+        <NewCourseOfferModal
+          visible={showOfferModal}
+          mission={pendingOffer?.mission}
+          offer={pendingOffer?.offer}
+          onAccept={handleAcceptOffer}
+          onDecline={handleDeclineOffer}
+          loading={offerLoading}
+          secondsLeft={secondsLeft}
+        />
         <SafeAreaView style={styles.homeFabWrap} pointerEvents="box-none">
           <TouchableOpacity
             style={styles.homeFab}
@@ -125,7 +213,8 @@ export default function DriverHomeScreen() {
             onMissionUpdate={setActiveMission}
             onMissionComplete={handleMissionComplete}
             onOpenChat={openChat}
-            chatUnread={chatUnread}
+            merchantUnread={merchantUnread}
+            clientUnread={clientUnread}
             expanded={drawerExpanded}
             onExpandChange={setDrawerExpanded}
           />
@@ -136,6 +225,15 @@ export default function DriverHomeScreen() {
 
   return (
     <View style={styles.root}>
+      <NewCourseOfferModal
+        visible={showOfferModal}
+        mission={pendingOffer?.mission}
+        offer={pendingOffer?.offer}
+        onAccept={handleAcceptOffer}
+        onDecline={handleDeclineOffer}
+        loading={offerLoading}
+        secondsLeft={secondsLeft}
+      />
       <View style={styles.content}>
         <View style={styles.mapFrame}>
           <DriverMap lat={lat} lng={lng} zoom={14} height={MAP_HEIGHT} style={styles.mapStretch} />

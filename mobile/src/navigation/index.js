@@ -3,9 +3,12 @@ import { View, Text, StyleSheet } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
+import { createDrawerNavigator } from '@react-navigation/drawer';
 import { useApp } from '../context/AppContext';
 import { useCart } from '../context/CartContext';
+import { useCommunication } from '../context/CommunicationContext';
 import { THEME } from '../theme';
+import ClientDrawerContent from '../components/client/ClientDrawerContent';
 
 // Auth
 import RoleSelectScreen from '../screens/RoleSelectScreen';
@@ -23,12 +26,14 @@ import OrderConfirmScreen  from '../screens/client/OrderConfirmScreen';
 import OrderTrackingScreen from '../screens/client/OrderTrackingScreen';
 import StoreDetailScreen   from '../screens/client/StoreDetailScreen';
 import CartScreen          from '../screens/client/CartScreen';
-import ClientMenuScreen    from '../screens/client/ClientMenuScreen';
 import OrderHistoryScreen  from '../screens/client/OrderHistoryScreen';
+import MesCommercesScreen  from '../screens/client/MesCommercesScreen';
 import ClientInfoScreen    from '../screens/client/ClientInfoScreen';
 import HelpCenterScreen    from '../screens/client/HelpCenterScreen';
 import SupportChatScreen   from '../screens/client/SupportChatScreen';
-import ClientProfileScreen from '../screens/client/ClientProfileScreen';
+import ClientProfileHubScreen from '../screens/client/ClientProfileHubScreen';
+import FavoriteStoresScreen from '../screens/client/FavoriteStoresScreen';
+import ClientMessagingHomeScreen from '../screens/client/ClientMessagingHomeScreen';
 
 // Merchant
 import DashboardScreen      from '../screens/merchant/DashboardScreen';
@@ -40,6 +45,7 @@ import ManagePromotionsScreen from '../screens/merchant/ManagePromotionsScreen';
 import CreatePromotionScreen  from '../screens/merchant/CreatePromotionScreen';
 import PromotionDetailScreen  from '../screens/merchant/PromotionDetailScreen';
 import MerchantInboxScreen    from '../screens/merchant/MerchantInboxScreen';
+import MesClientsScreen         from '../screens/merchant/MesClientsScreen';
 import MerchantSupportChatScreen from '../screens/merchant/MerchantSupportChatScreen';
 
 // Driver — rework premium
@@ -54,6 +60,7 @@ import DriverSupportChatScreen from '../screens/driver/DriverSupportChatScreen';
 
 const Stack = createNativeStackNavigator();
 const Tab   = createBottomTabNavigator();
+const Drawer = createDrawerNavigator();
 
 const screenOptions = {
   headerStyle: { backgroundColor: THEME.colors.primary },
@@ -110,39 +117,96 @@ function CartStack() {
       <Stack.Screen name="Cart" component={CartScreen} options={{ title: 'Mon panier' }} />
       <Stack.Screen name="OrderTracking" component={OrderTrackingScreen} options={{ title: 'Suivi' }} />
       <Stack.Screen name="ProductDetail" component={ProductDetailScreen} options={{ title: 'Produit' }} />
+      <Stack.Screen name="Chat" component={ChatScreen} options={{ title: 'Messages' }} />
     </Stack.Navigator>
   );
 }
 
-function ProfileStack() {
+function ProfileHubStack() {
   return (
     <Stack.Navigator screenOptions={screenOptions}>
-      <Stack.Screen name="ClientProfile" component={ClientProfileScreen} options={{ headerShown: false }} />
+      <Stack.Screen name="ClientProfileHub" component={ClientProfileHubScreen} options={{ title: 'Mon profil' }} />
       <Stack.Screen name="ClientInfo" component={ClientInfoScreen} options={{ title: 'Vos informations' }} />
     </Stack.Navigator>
   );
 }
 
-function MenuStack() {
+function MessagingStack() {
   return (
     <Stack.Navigator screenOptions={screenOptions}>
-      <Stack.Screen name="ClientMenu" component={ClientMenuScreen} options={{ headerShown: false }} />
-      <Stack.Screen name="OrderHistory" component={OrderHistoryScreen} options={{ title: 'Vos commandes' }} />
-      <Stack.Screen name="ClientInfo" component={ClientInfoScreen} options={{ title: 'Vos informations' }} />
-      <Stack.Screen name="HelpCenter" component={HelpCenterScreen} options={{ title: 'Centre d\'aide' }} />
-      <Stack.Screen name="SupportChat" component={SupportChatScreen} options={{ title: 'Service client' }} />
-      <Stack.Screen name="OrderTracking" component={OrderTrackingScreen} options={{ title: 'Suivi' }} />
+      <Stack.Screen name="ClientMessagingHome" component={ClientMessagingHomeScreen} options={{ headerShown: false }} />
+      <Stack.Screen name="MesCommerces" component={MesCommercesScreen} options={{ title: 'Mes commerces' }} />
+      <Stack.Screen name="SupportChat" component={SupportChatScreen} options={{ title: 'Support client' }} />
+      <Stack.Screen name="Chat" component={ChatScreen} options={{ title: 'Messages' }} />
     </Stack.Navigator>
+  );
+}
+
+function HomeDrawer() {
+  return (
+    <Drawer.Navigator
+      drawerContent={(props) => <ClientDrawerContent {...props} />}
+      screenOptions={{
+        headerShown: false,
+        drawerType: 'front',
+        overlayColor: 'rgba(15, 23, 42, 0.45)',
+        drawerStyle: { width: '84%' },
+        drawerItemStyle: { display: 'none' },
+      }}
+    >
+      <Drawer.Screen name="HomeMain" component={HomeStack} />
+      <Drawer.Screen
+        name="ProfileHub"
+        component={ProfileHubStack}
+        options={{ headerShown: false }}
+      />
+      <Drawer.Screen
+        name="FavoriteStores"
+        component={FavoriteStoresScreen}
+        options={{
+          headerShown: true,
+          title: 'Mes commerces coups de cœur',
+          headerStyle: { backgroundColor: THEME.colors.primary },
+          headerTintColor: '#fff',
+          headerTitleStyle: { fontWeight: '700' },
+        }}
+      />
+      <Drawer.Screen
+        name="OrderHistory"
+        component={OrderHistoryScreen}
+        options={{
+          headerShown: true,
+          title: 'Mes commandes',
+          headerStyle: { backgroundColor: THEME.colors.primary },
+          headerTintColor: '#fff',
+          headerTitleStyle: { fontWeight: '700' },
+        }}
+      />
+      <Drawer.Screen
+        name="HelpCenter"
+        component={HelpCenterScreen}
+        options={{
+          headerShown: true,
+          title: 'Centre d\'aide',
+          headerStyle: { backgroundColor: THEME.colors.primary },
+          headerTintColor: '#fff',
+          headerTitleStyle: { fontWeight: '700' },
+        }}
+      />
+    </Drawer.Navigator>
   );
 }
 
 function ClientTabs() {
   const { count } = useCart();
+  const { getTotalUnreadMessagingTab } = useCommunication();
+  const messagingUnread = getTotalUnreadMessagingTab();
+
   return (
     <Tab.Navigator screenOptions={tabOptions}>
       <Tab.Screen
         name="HomeTab"
-        component={HomeStack}
+        component={HomeDrawer}
         options={{
           title: 'Home',
           tabBarIcon: ({ focused }) => <TabIcon name={focused ? 'home' : 'home-outline'} focused={focused} />,
@@ -150,18 +214,20 @@ function ClientTabs() {
         listeners={({ navigation }) => ({
           tabPress: () => {
             navigation.navigate('HomeTab', {
-              screen: 'Home',
-              params: { reset: Date.now() },
+              screen: 'HomeMain',
+              params: { screen: 'Home', params: { reset: Date.now() } },
             });
           },
         })}
       />
       <Tab.Screen
-        name="ProfileTab"
-        component={ProfileStack}
+        name="MessagingTab"
+        component={MessagingStack}
         options={{
-          title: 'Profil',
-          tabBarIcon: ({ focused }) => <TabIcon name={focused ? 'person' : 'person-outline'} focused={focused} />,
+          title: 'Messagerie',
+          tabBarIcon: ({ focused }) => (
+            <TabIcon name={focused ? 'chatbubbles' : 'chatbubbles-outline'} focused={focused} badge={messagingUnread} />
+          ),
         }}
       />
       <Tab.Screen
@@ -170,14 +236,6 @@ function ClientTabs() {
         options={{
           title: 'Panier',
           tabBarIcon: ({ focused }) => <TabIcon name={focused ? 'cart' : 'cart-outline'} focused={focused} badge={count} />,
-        }}
-      />
-      <Tab.Screen
-        name="MenuTab"
-        component={MenuStack}
-        options={{
-          title: 'Menu',
-          tabBarIcon: ({ focused }) => <TabIcon name="menu" focused={focused} />,
         }}
       />
     </Tab.Navigator>
@@ -214,6 +272,7 @@ function MerchantInboxStack() {
   return (
     <Stack.Navigator screenOptions={screenOptions}>
       <Stack.Screen name="MerchantInbox" component={MerchantInboxScreen} options={{ headerShown: false }} />
+      <Stack.Screen name="MesClients" component={MesClientsScreen} options={{ title: 'Mes clients' }} />
       <Stack.Screen name="MerchantSupportChat" component={MerchantSupportChatScreen} options={{ title: 'Assistance Ma Zone' }} />
       <Stack.Screen name="Chat" component={ChatScreen} options={{ title: 'Messages' }} />
     </Stack.Navigator>
