@@ -1,0 +1,271 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Plan de correction — Nouvelle commande & Annulation client</title>
+<style>
+  @page { margin: 16mm 14mm; }
+  body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Helvetica, Arial, sans-serif; font-size: 10.5pt; line-height: 1.45; color: #1a1a1a; max-width: 100%; }
+  h1 { font-size: 20pt; border-bottom: 2px solid #0f2d5c; padding-bottom: 8px; color: #0f2d5c; page-break-after: avoid; }
+  h2 { font-size: 14pt; margin-top: 22px; color: #0f2d5c; border-bottom: 1px solid #e5e7eb; padding-bottom: 4px; page-break-after: avoid; }
+  h3 { font-size: 11.5pt; margin-top: 14px; color: #1a4a8a; page-break-after: avoid; }
+  table { border-collapse: collapse; width: 100%; margin: 10px 0; font-size: 9pt; page-break-inside: avoid; }
+  th, td { border: 1px solid #d1d5db; padding: 5px 7px; text-align: left; vertical-align: top; }
+  th { background: #f3f4f6; font-weight: 600; }
+  code { background: #f3f4f6; padding: 1px 4px; border-radius: 3px; font-size: 8.5pt; }
+  pre { background: #f8fafc; border: 1px solid #e5e7eb; border-radius: 6px; padding: 10px; overflow-x: auto; font-size: 8pt; line-height: 1.35; white-space: pre-wrap; word-break: break-word; page-break-inside: avoid; }
+  pre code { background: none; padding: 0; }
+  blockquote { border-left: 4px solid #0f2d5c; margin: 10px 0; padding: 6px 14px; background: #f0f4f8; color: #1e3a5f; }
+  hr { border: none; border-top: 1px solid #e5e7eb; margin: 18px 0; }
+  ul, ol { padding-left: 22px; }
+  li { margin-bottom: 3px; }
+  p { margin: 8px 0; }
+  .pdf-note { display: none; }
+  @media screen {
+    .pdf-note { display: block; background: #eff6ff; border: 1px solid #bfdbfe; border-radius: 8px; padding: 12px 16px; margin-bottom: 24px; color: #1e3a8a; }
+  }
+</style>
+</head>
+<body>
+<div class="pdf-note">
+  <strong>Lecture dans Cursor / navigateur :</strong> ce fichier HTML est la version lisible du plan.
+  Pour le PDF, ouvrez <code>PLAN_CORRECTION_NOUVELLE_COMMANDE_ANNULATION.pdf</code> depuis le Finder (clic droit → Ouvrir avec Aperçu)
+  ou double-cliquez le fichier <code>Ouvrir_*_PDF.command</code> correspondant à la racine du projet.
+</div>
+<h1>Plan de correction — Nouvelle commande &amp; Annulation client</h1>
+<p><strong>Date :</strong> 12 juillet 2026<br />
+<strong>Statut :</strong> Analyse — en attente de validation avant implémentation<br />
+<strong>Périmètre :</strong> Correctifs uniquement, aucune nouvelle fonctionnalité</p>
+<hr />
+<h2>Diagnostic</h2>
+<h3>Point 1 — « Nouvelle commande » ne fait rien</h3>
+<p><strong>Cause racine confirmée :</strong> chemin de navigation <strong>obsolète</strong> depuis le refactor Drawer (Phase UX B).</p>
+<p>Le handler actuel dans <code>mobile/src/screens/client/OrderTrackingScreen.js</code> (L277-280) :</p>
+<pre><code class="language-javascript">navigation.navigate('HomeTab', {
+  screen: 'Home',           // ← écran inexistant au niveau Drawer
+  params: { reset: Date.now() },
+});
+</code></pre>
+<p><strong>Arborescence réelle</strong> (<code>mobile/src/navigation/index.js</code>) :</p>
+<pre><code>ClientTabs
+├── HomeTab → HomeDrawer
+│   └── HomeMain → HomeStack
+│       ├── Home              ← cible réelle
+│       └── OrderTracking
+└── CartTab → CartStack
+    ├── Cart
+    └── OrderTracking
+</code></pre>
+<p>Le listener de l'onglet Home utilise <strong>le bon chemin</strong> (L216-218) :</p>
+<pre><code class="language-javascript">navigation.navigate('HomeTab', {
+  screen: 'HomeMain',
+  params: { screen: 'Home', params: { reset: Date.now() } },
+});
+</code></pre>
+<p><code>HomeScreen.js</code> écoute <code>route.params.reset</code> pour appeler <code>resetHome()</code> — mais ce paramètre <strong>n'arrive jamais</strong> car la navigation cible un écran fantôme <code>Home</code> au mauvais niveau.</p>
+<p><strong>Cause secondaire :</strong> <code>OrderTracking</code> existe dans <strong>deux stacks</strong> (<code>HomeStack</code> et <code>CartStack</code>). Même après correction du chemin, revenir sur l'onglet Panier peut réafficher l'écran de suivi « livré » si la stack n'est pas remise à zéro.</p>
+<p><strong>Ce n'est PAS la cause :</strong> absence de store <code>activeOrder</code>, listeners socket, ou logique <code>resetHome()</code> — tout cela fonctionne si les params arrivent.</p>
+<p><strong>Régression :</strong> documentée dans <code>MVP_0_8_1_UI_FIXES_REPORT.md</code> — le fix MVP 0.8.1 (<code>HomeTab → Home</code>) a été <strong>invalidé</strong> par l'introduction du Drawer (<code>HomeMain</code> intermédiaire).</p>
+<hr />
+<h3>Point 2 — « Annuler la commande » sans action</h3>
+<p><strong>Causes multiples identifiées :</strong></p>
+<table>
+<thead>
+<tr>
+<th>Cause</th>
+<th>Impact</th>
+<th>Fichier</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><strong><code>Alert.alert</code> non fonctionnel sur web</strong></td>
+<td>Tap → aucune confirmation → API jamais appelée</td>
+<td><code>OrderTrackingScreen.js</code>, <code>OrderHistoryScreen.js</code></td>
+</tr>
+<tr>
+<td><strong><code>cancellable</code> stale via socket</strong></td>
+<td><code>onMissionStatus</code> met à jour <code>status</code> mais pas <code>cancellable</code> ; le bouton peut rester visible après <code>picked_up</code></td>
+<td><code>OrderTrackingScreen.js</code> L113, L179</td>
+</tr>
+<tr>
+<td><strong>Backend : offre pending non notifiée</strong></td>
+<td>Livreur avec popup <code>offered</code> non libéré</td>
+<td><code>dispatch.js</code> <code>cancelOrderByClient</code></td>
+</tr>
+<tr>
+<td><strong>Pas de <code>clearOfferTimeout</code></strong></td>
+<td>Timer offre en mémoire non annulé</td>
+<td><code>dispatchOffer.js</code></td>
+</tr>
+<tr>
+<td><strong>Pas de <code>assignPendingOrdersToDriver</code></strong></td>
+<td>Livreur libéré en DB mais pas re-proposé</td>
+<td><code>cancelOrderByClient</code></td>
+</tr>
+<tr>
+<td><strong><code>DriverContext</code> ne clear pas <code>pendingOffer</code></strong></td>
+<td>Popup livreur persiste après annulation</td>
+<td><code>DriverContext.js</code></td>
+</tr>
+<tr>
+<td><strong>Pas de retour état normal post-annulation</strong></td>
+<td>Client reste bloqué sur écran suivi annulé</td>
+<td><code>OrderTrackingScreen.js</code></td>
+</tr>
+</tbody>
+</table>
+<p><strong>Infrastructure déjà en place (à réutiliser) :</strong></p>
+<ul>
+<li>API mobile : <code>POST /api/orders/:id/cancel</code></li>
+<li>Route backend : <code>backend/src/routes/orders.js</code></li>
+<li>Règle métier : <code>backend/src/lib/orderStatus.js</code> — annulation autorisée jusqu'à <code>picking_up</code> inclus, <strong>interdite</strong> dès <code>picked_up</code></li>
+<li>Helper cross-plateforme : <code>mobile/src/utils/confirm.js</code> → <code>confirmAction()</code></li>
+</ul>
+<p><strong>Flux corrigé attendu :</strong></p>
+<ol>
+<li>Client tape « Annuler »</li>
+<li><code>confirmAction()</code> (web + mobile)</li>
+<li><code>POST /orders/:id/cancel</code></li>
+<li><code>cancelOrderByClient()</code> : DB + stock + <code>clearOfferTimeout</code></li>
+<li>Socket <code>mission:cancelled</code> vers livreur assigné <strong>et</strong> livreur en offre</li>
+<li><code>assignPendingOrdersToDriver()</code> pour libérer le dispatch</li>
+<li>Client : <code>navigateToFreshHome()</code> → état propre pour nouvelle commande</li>
+</ol>
+<hr />
+<h2>Plan de correction</h2>
+<h3>Étape 1 — Utilitaire navigation partagé (Point 1 + Point 2)</h3>
+<p>Créer <code>mobile/src/navigation/navigateToFreshHome.js</code> :</p>
+<ul>
+<li>Remonter au navigateur Tab racine</li>
+<li>Naviguer vers <code>HomeTab → HomeMain → Home</code> avec <code>{ reset: Date.now() }</code></li>
+<li>Réinitialiser la stack <code>CartTab</code> pour éviter un suivi stale au retour sur Panier</li>
+<li>Réutiliser dans <code>OrderTrackingScreen</code> et le listener onglet Home</li>
+</ul>
+<h3>Étape 2 — Corriger « Nouvelle commande » (Point 1)</h3>
+<p>Dans <code>OrderTrackingScreen.js</code> : remplacer le handler par <code>navigateToFreshHome(navigation)</code>.</p>
+<h3>Étape 3 — Corriger l'annulation client mobile (Point 2)</h3>
+<ul>
+<li><code>confirmAction()</code> au lieu de <code>Alert.alert</code></li>
+<li><code>order.id</code> pour l'appel API</li>
+<li><code>showCancel = active &amp;&amp; canCancelOrder(order.status)</code> (source unique)</li>
+<li>Mettre à jour <code>cancellable</code> dans tous les handlers socket</li>
+<li>Après annulation : <code>navigateToFreshHome(navigation)</code></li>
+<li>Même fix dans <code>OrderHistoryScreen.js</code></li>
+<li>Ajouter <code>'offered'</code> à <code>CANCELLABLE_ORDER_STATUSES</code> dans <code>config.js</code></li>
+</ul>
+<h3>Étape 4 — Renforcer <code>cancelOrderByClient</code> backend</h3>
+<p>Sans toucher au cœur transactionnel :</p>
+<ol>
+<li>SELECT <code>offered_to_driver_id</code></li>
+<li><code>clearOfferTimeout(mission_id)</code></li>
+<li>NULL <code>driver_id</code>, <code>offered_to_driver_id</code>, <code>offer_expires_at</code> sur mission</li>
+<li><code>mission:cancelled</code> vers les deux livreurs concernés</li>
+<li><code>assignPendingOrdersToDriver()</code> pour chaque livreur libéré</li>
+</ol>
+<p><strong>Hors périmètre :</strong> <code>assignOrderToDriver</code>, <code>tryDispatchNewOrder</code>, Communication Engine.</p>
+<h3>Étape 5 — Propagation côté livreur</h3>
+<p>Dans <code>DriverContext.js</code> : clear <code>pendingOffer</code> sur <code>mission:cancelled</code>.</p>
+<hr />
+<h2>Tests de non-régression prévus</h2>
+<table>
+<thead>
+<tr>
+<th>ID</th>
+<th>Scénario</th>
+<th>Attendu</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>T1</td>
+<td>Commande livrée → « Nouvelle commande »</td>
+<td>Accueil reset, pas de suivi stale</td>
+</tr>
+<tr>
+<td>T2</td>
+<td>Livrée via CartStack → « Nouvelle commande »</td>
+<td>Panier ne rouvre pas le suivi</td>
+</tr>
+<tr>
+<td>T3</td>
+<td>Annulation web</td>
+<td><code>window.confirm</code> → API → <code>cancelled</code></td>
+</tr>
+<tr>
+<td>T4</td>
+<td>Annulation iOS/simulateur</td>
+<td>Confirmation → annulation OK</td>
+</tr>
+<tr>
+<td>T5</td>
+<td>Statut <code>picked_up</code> via socket</td>
+<td>Bouton annuler disparaît</td>
+</tr>
+<tr>
+<td>T6</td>
+<td>Annulation avec offre <code>offered</code></td>
+<td>Popup livreur disparaît</td>
+</tr>
+<tr>
+<td>T7</td>
+<td>Annulation livreur <code>accepted</code></td>
+<td>Livreur libéré, dispatch relancé</td>
+</tr>
+<tr>
+<td>T8</td>
+<td>Accept/refuse offre dispatch</td>
+<td>Non-régression</td>
+</tr>
+<tr>
+<td>T9</td>
+<td>Communication Engine post-annulation</td>
+<td>Chats éphémères archivés</td>
+</tr>
+</tbody>
+</table>
+<hr />
+<h2>Fichiers impactés (7 fichiers)</h2>
+<table>
+<thead>
+<tr>
+<th>Fichier</th>
+<th>Modification</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>mobile/src/navigation/navigateToFreshHome.js</code></td>
+<td><strong>Nouveau</strong></td>
+</tr>
+<tr>
+<td><code>mobile/src/navigation/index.js</code></td>
+<td>Réutiliser utilitaire</td>
+</tr>
+<tr>
+<td><code>mobile/src/screens/client/OrderTrackingScreen.js</code></td>
+<td>Navigation + cancel</td>
+</tr>
+<tr>
+<td><code>mobile/src/screens/client/OrderHistoryScreen.js</code></td>
+<td>confirmAction</td>
+</tr>
+<tr>
+<td><code>mobile/src/config.js</code></td>
+<td>Ajout <code>offered</code></td>
+</tr>
+<tr>
+<td><code>backend/src/lib/dispatch.js</code></td>
+<td>Enrichissement cancel</td>
+</tr>
+<tr>
+<td><code>mobile/src/context/DriverContext.js</code></td>
+<td>Clear pendingOffer</td>
+</tr>
+</tbody>
+</table>
+<hr />
+<p><em>Document généré pour validation avant implémentation.</em></p>
+</body>
+</html>

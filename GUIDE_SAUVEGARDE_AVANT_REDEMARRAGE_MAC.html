@@ -1,0 +1,452 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Guide de sauvegarde — Avant redémarrage Mac</title>
+<style>
+  @page { margin: 16mm 14mm; }
+  body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Helvetica, Arial, sans-serif; font-size: 10.5pt; line-height: 1.45; color: #1a1a1a; max-width: 100%; }
+  h1 { font-size: 20pt; border-bottom: 2px solid #0f2d5c; padding-bottom: 8px; color: #0f2d5c; page-break-after: avoid; }
+  h2 { font-size: 14pt; margin-top: 22px; color: #0f2d5c; border-bottom: 1px solid #e5e7eb; padding-bottom: 4px; page-break-after: avoid; }
+  h3 { font-size: 11.5pt; margin-top: 14px; color: #1a4a8a; page-break-after: avoid; }
+  table { border-collapse: collapse; width: 100%; margin: 10px 0; font-size: 9pt; page-break-inside: avoid; }
+  th, td { border: 1px solid #d1d5db; padding: 5px 7px; text-align: left; vertical-align: top; }
+  th { background: #f3f4f6; font-weight: 600; }
+  code { background: #f3f4f6; padding: 1px 4px; border-radius: 3px; font-size: 8.5pt; }
+  pre { background: #f8fafc; border: 1px solid #e5e7eb; border-radius: 6px; padding: 10px; overflow-x: auto; font-size: 8pt; line-height: 1.35; white-space: pre-wrap; word-break: break-word; page-break-inside: avoid; }
+  pre code { background: none; padding: 0; }
+  blockquote { border-left: 4px solid #0f2d5c; margin: 10px 0; padding: 6px 14px; background: #f0f4f8; color: #1e3a5f; }
+  hr { border: none; border-top: 1px solid #e5e7eb; margin: 18px 0; }
+  ul, ol { padding-left: 22px; }
+  li { margin-bottom: 3px; }
+  p { margin: 8px 0; }
+  .pdf-note { display: none; }
+  @media screen {
+    .pdf-note { display: block; background: #eff6ff; border: 1px solid #bfdbfe; border-radius: 8px; padding: 12px 16px; margin-bottom: 24px; color: #1e3a8a; }
+  }
+</style>
+</head>
+<body>
+<div class="pdf-note">
+  <strong>Lecture dans Cursor / navigateur :</strong> ce fichier HTML est la version lisible du plan.
+  Pour le PDF, ouvrez <code>GUIDE_SAUVEGARDE_AVANT_REDEMARRAGE_MAC.pdf</code> depuis le Finder (clic droit → Ouvrir avec Aperçu)
+  ou double-cliquez le fichier <code>Ouvrir_*_PDF.command</code> correspondant à la racine du projet.
+</div>
+<h1>Guide de sauvegarde — Avant redémarrage Mac</h1>
+<p><strong>Date :</strong> 12 juillet 2026<br />
+<strong>Objectif :</strong> Vous rassurer sur ce qui est sauvegardé, ce qui ne l'est pas, et comment récupérer votre travail sans maîtriser Git.</p>
+<hr />
+<h2>1. Réponse courte : est-ce que tout est bon ?</h2>
+<p><strong>Oui — vous pouvez quitter Cursor et redémarrer votre Mac sans perdre le travail important.</strong></p>
+<p>Votre code source, la documentation et la configuration du projet sont <strong>sauvegardés sur GitHub</strong>. Le dossier du projet sur votre disque (<code>/Users/redamehanni/Downloads/MaZone-main</code>) <strong>reste en place</strong> après un redémarrage : macOS ne supprime pas vos fichiers lors d'un reboot.</p>
+<table>
+<thead>
+<tr>
+<th>Question</th>
+<th>Réponse</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Puis-je fermer Cursor ?</td>
+<td><strong>Oui</strong></td>
+</tr>
+<tr>
+<td>Puis-je redémarrer le Mac ?</td>
+<td><strong>Oui</strong></td>
+</tr>
+<tr>
+<td>Mon code est-il sauvegardé ailleurs que sur le Mac ?</td>
+<td><strong>Oui — sur GitHub</strong></td>
+</tr>
+<tr>
+<td>Risque de tout perdre ?</td>
+<td><strong>Très faible</strong> pour le code et la doc</td>
+</tr>
+</tbody>
+</table>
+<hr />
+<h2>2. Lien GitHub et point de restauration</h2>
+<table>
+<thead>
+<tr>
+<th>Élément</th>
+<th>Valeur</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><strong>Dépôt GitHub</strong></td>
+<td>https://github.com/redamehanni/Ma-zone-V0.8.1-stable-03-07-2026</td>
+</tr>
+<tr>
+<td><strong>Branche</strong></td>
+<td><code>main</code></td>
+</tr>
+<tr>
+<td><strong>Commit (hash complet)</strong></td>
+<td><code>aa76cba1d979d15942625ddf90183a9a83b2e60c</code></td>
+</tr>
+<tr>
+<td><strong>Tag (marque-page)</strong></td>
+<td><code>mvp-pre-mac-restart-2026-07-12</code></td>
+</tr>
+<tr>
+<td><strong>Message du commit</strong></td>
+<td>MVP stable avant redémarrage Mac - Communication Engine + UI navigation + Driver offer popup</td>
+</tr>
+<tr>
+<td><strong>Date du commit</strong></td>
+<td>12 juillet 2026, 12:56 (heure locale)</td>
+</tr>
+</tbody>
+</table>
+<p>Le <strong>tag</strong> est comme un signet : il pointe toujours vers exactement ce commit, même si d'autres commits sont ajoutés plus tard.</p>
+<p><strong>Vérification effectuée :</strong> le hash sur GitHub (<code>origin/main</code> et le tag) correspond <strong>exactement</strong> au hash local <code>aa76cba</code>.</p>
+<hr />
+<h2>3. Tout ce qui a été fait dans le projet (résumé)</h2>
+<h3>Phase UX client (navigation &amp; messagerie)</h3>
+<ul>
+<li>Navigation client refaite : drawer hamburger, 3 onglets (Accueil, Messagerie, Panier)</li>
+<li>Nouveaux écrans : Messagerie client, Profil, Commerces favoris</li>
+<li>Communication Engine : conversations durables vs éphémères, badges non-lus</li>
+<li>Labels clarifiés : « Messagerie client » / « Chat livreur »</li>
+</ul>
+<h3>Phase livreur (popup offre de course)</h3>
+<ul>
+<li>Mode dispatch « offre popup 20 secondes » (<code>OFFER_MODE</code>)</li>
+<li>Backend : <code>dispatchOffer.js</code>, colonnes <code>offered_to_driver_id</code>, <code>offer_expires_at</code></li>
+<li>Mobile : <code>NewCourseOfferModal</code>, timer 20 s, Accepter / Refuser</li>
+</ul>
+<h3>Correction métier « livreur occupé » (bug Accept 409)</h3>
+<ul>
+<li>Séparation explicite de trois concepts :</li>
+<li><code>driverHasAcceptedMission()</code> — en livraison</li>
+<li><code>driverHasPendingOffer()</code> — offre en attente</li>
+<li><code>driverIsBusyForNewOffer()</code> — règle pour proposer une nouvelle course</li>
+<li>Robustesse mobile : message d'erreur API, fallback HTTP, pause du timer pendant l'acceptation</li>
+</ul>
+<h3>Documentation produite</h3>
+<ul>
+<li>Plan UX messagerie (MD, HTML, PDF)</li>
+<li>Audit popup Accept livreur (MD, HTML, PDF)</li>
+<li>Rapport de correction Accept (MD, HTML, PDF)</li>
+<li>Script de génération PDF (<code>scripts/generate-plan-ux-pdf.py</code>)</li>
+</ul>
+<hr />
+<h2>4. Ce qui a été poussé sur GitHub (57 fichiers)</h2>
+<h3>Backend (code)</h3>
+<table>
+<thead>
+<tr>
+<th>Fichier / zone</th>
+<th>Rôle</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>backend/src/lib/communicationEngine.js</code></td>
+<td>Moteur de communication</td>
+</tr>
+<tr>
+<td><code>backend/src/lib/communicationPolicies.js</code></td>
+<td>Règles métier messagerie</td>
+</tr>
+<tr>
+<td><code>backend/src/lib/dispatchOffer.js</code></td>
+<td>Propositions de course (popup 20 s)</td>
+</tr>
+<tr>
+<td><code>backend/src/lib/dispatch.js</code></td>
+<td>Dispatch + séparation modèle métier livreur</td>
+</tr>
+<tr>
+<td><code>backend/src/lib/unread.js</code></td>
+<td>Compteurs non-lus</td>
+</tr>
+<tr>
+<td><code>backend/src/config/dispatch.js</code></td>
+<td>Configuration OFFER_MODE</td>
+</tr>
+<tr>
+<td><code>backend/src/routes/communication.js</code></td>
+<td>API communication</td>
+</tr>
+<tr>
+<td><code>backend/src/routes/conversations.js</code></td>
+<td>API conversations (refactor)</td>
+</tr>
+<tr>
+<td><code>backend/src/routes/missions.js</code></td>
+<td>Accept / Refuse offres</td>
+</tr>
+<tr>
+<td><code>backend/src/routes/drivers.js</code></td>
+<td>Statut en ligne + offres</td>
+</tr>
+<tr>
+<td><code>backend/src/db/index.js</code></td>
+<td>Schéma SQLite étendu</td>
+</tr>
+<tr>
+<td><code>backend/scripts/migrate-durable-merchant-conversations.js</code></td>
+<td>Script migration</td>
+</tr>
+</tbody>
+</table>
+<h3>Mobile (code)</h3>
+<table>
+<thead>
+<tr>
+<th>Fichier / zone</th>
+<th>Rôle</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>mobile/src/navigation/index.js</code></td>
+<td>Navigation drawer + onglets</td>
+</tr>
+<tr>
+<td><code>mobile/src/context/CommunicationContext.js</code></td>
+<td>État messagerie global</td>
+</tr>
+<tr>
+<td><code>mobile/src/context/DriverContext.js</code></td>
+<td>Offre pending vs mission active</td>
+</tr>
+<tr>
+<td><code>mobile/src/screens/driver/DriverHomeScreen.js</code></td>
+<td>Popup + acceptation</td>
+</tr>
+<tr>
+<td><code>mobile/src/components/driver/NewCourseOfferModal.js</code></td>
+<td>Modal offre 20 s</td>
+</tr>
+<tr>
+<td><code>mobile/src/components/client/ClientDrawerContent.js</code></td>
+<td>Menu hamburger</td>
+</tr>
+<tr>
+<td><code>mobile/src/screens/client/ClientMessagingHomeScreen.js</code></td>
+<td>Hub messagerie</td>
+</tr>
+<tr>
+<td><code>mobile/src/screens/client/ClientProfileHubScreen.js</code></td>
+<td>Profil client</td>
+</tr>
+<tr>
+<td><code>mobile/src/screens/client/FavoriteStoresScreen.js</code></td>
+<td>Favoris</td>
+</tr>
+<tr>
+<td><code>mobile/src/communication/</code>, <code>components/chat/</code></td>
+<td>Couche communication</td>
+</tr>
+<tr>
+<td><code>mobile/package.json</code> + <code>package-lock.json</code></td>
+<td>Dépendances (drawer, reanimated)</td>
+</tr>
+</tbody>
+</table>
+<h3>Documentation &amp; outils (également sur GitHub)</h3>
+<ul>
+<li><code>PLAN_UX_CHAPITRE_CLIENT_MESSAGERIE.md</code> / <code>.html</code> / <code>.pdf</code></li>
+<li><code>AUDIT_POPUP_ACCEPT_LIVREUR.md</code> / <code>.html</code> / <code>.pdf</code></li>
+<li><code>RAPPORT_CORRECTION_ACCEPT_LIVREUR.md</code> / <code>.html</code> / <code>.pdf</code></li>
+<li><code>ORGANE_COMMUNICATION.md</code></li>
+<li><code>scripts/generate-plan-ux-pdf.py</code></li>
+<li><code>Ouvrir_*_PDF.command</code> (raccourcis macOS)</li>
+</ul>
+<p><strong>Total :</strong> 57 fichiers, +5 508 lignes ajoutées, −369 lignes supprimées.</p>
+<hr />
+<h2>5. Ce qui n'a PAS été poussé sur GitHub (volontairement)</h2>
+<table>
+<thead>
+<tr>
+<th>Élément</th>
+<th>Pourquoi pas sur GitHub</th>
+<th>Impact si vous redémarrez</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>.cursor/</code></td>
+<td>Fichiers internes à l'éditeur Cursor (plans, config locale)</td>
+<td>Aucun sur le projet — l'app fonctionne sans</td>
+</tr>
+<tr>
+<td><code>backend/data/</code></td>
+<td>Base SQLite locale (commandes, utilisateurs de test)</td>
+<td><strong>Reste sur votre disque</strong> après reboot ; pas sur GitHub</td>
+</tr>
+<tr>
+<td><code>backend/uploads/</code></td>
+<td>Images uploadées en local</td>
+<td>Idem — reste sur disque</td>
+</tr>
+<tr>
+<td><code>node_modules/</code></td>
+<td>Dépendances npm (très volumineux)</td>
+<td>Se régénère avec <code>npm install</code></td>
+</tr>
+<tr>
+<td><code>mobile/.env</code></td>
+<td>Config locale (URL API personnalisée)</td>
+<td>Seulement si vous l'avez créée</td>
+</tr>
+<tr>
+<td><code>.DS_Store</code>, logs <code>.expo/</code></td>
+<td>Fichiers système / cache</td>
+<td>Sans importance</td>
+</tr>
+</tbody>
+</table>
+<h3>Nuance importante sur le mot « EXACTEMENT »</h3>
+<table>
+<thead>
+<tr>
+<th>Type de contenu</th>
+<th>Récupérable depuis GitHub ?</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><strong>Code source</strong> (backend + mobile)</td>
+<td><strong>Oui — à l'identique</strong></td>
+</tr>
+<tr>
+<td><strong>Documentation</strong> (MD, HTML, PDF)</td>
+<td><strong>Oui — à l'identique</strong></td>
+</tr>
+<tr>
+<td><strong>Configuration projet</strong> (<code>package.json</code>, etc.)</td>
+<td><strong>Oui — à l'identique</strong></td>
+</tr>
+<tr>
+<td><strong>Données de test SQLite</strong> (commandes, comptes)</td>
+<td><strong>Non</strong> — données locales, pas versionnées</td>
+</tr>
+<tr>
+<td><strong>Photos uploadées</strong></td>
+<td><strong>Non</strong> — stockage local</td>
+</tr>
+<tr>
+<td><strong>Dépendances <code>node_modules</code></strong></td>
+<td><strong>Non</strong> — mais réinstallables en 1 commande</td>
+</tr>
+</tbody>
+</table>
+<p><strong>En pratique :</strong> après redémarrage, vous retrouvez <strong>exactement le même code et la même documentation</strong> qu'aujourd'hui. Les <strong>données de démo</strong> (base SQLite avec Marie, Karim, etc.) restent sur votre Mac dans <code>backend/data/</code> tant que vous ne supprimez pas le dossier du projet.</p>
+<hr />
+<h2>6. Risque de redémarrer le Mac — analyse concrète</h2>
+<h3>Scénario A — Tout se passe bien (le cas le plus probable)</h3>
+<ol>
+<li>Vous fermez Cursor</li>
+<li>Vous redémarrez le Mac</li>
+<li>Le dossier <code>MaZone-main</code> est toujours dans <code>Downloads/</code></li>
+<li>Vous rouvrez Cursor sur ce dossier</li>
+<li>Vous relancez backend + mobile</li>
+</ol>
+<p><strong>Rien n'est perdu.</strong> C'est le scénario normal.</p>
+<h3>Scénario B — Le dossier local est endommagé ou supprimé</h3>
+<ol>
+<li>Vous clonez le dépôt depuis GitHub (voir section 7)</li>
+<li>Vous récupérez <strong>100 % du code et de la doc</strong></li>
+<li>Vous faites <code>npm install</code> dans <code>backend/</code> et <code>mobile/</code></li>
+<li>La base SQLite sera <strong>vide ou réinitialisée</strong> (données de test à recréer)</li>
+</ol>
+<p><strong>Le travail de développement est sauvé.</strong> Seules les données locales de test peuvent manquer.</p>
+<h3>Scénario C — Vous voulez être sûr à 100 % avant de redémarrer</h3>
+<p>Copiez le dossier entier ailleurs (clé USB, iCloud, Desktop) :</p>
+<pre><code>Copier : /Users/redamehanni/Downloads/MaZone-main
+Vers   : /Users/redamehanni/Desktop/MaZone-main-BACKUP-12-07-2026
+</code></pre>
+<p>C'est une assurance supplémentaire <strong>en plus</strong> de GitHub, incluant la base SQLite locale.</p>
+<hr />
+<h2>7. Comment récupérer votre travail après redémarrage (sans maîtriser Git)</h2>
+<h3>Option 1 — Le plus simple : ne rien faire de spécial</h3>
+<p>Si le dossier est toujours dans <code>Downloads/</code> :</p>
+<ol>
+<li>Ouvrir Cursor → Ouvrir le dossier <code>MaZone-main</code></li>
+<li>Terminal : <code>cd backend &amp;&amp; npm install &amp;&amp; node src/index.js</code></li>
+<li>Autre terminal : <code>cd mobile &amp;&amp; npm install &amp;&amp; npx expo start</code></li>
+</ol>
+<p>C'est tout. Vous êtes au même point qu'avant le reboot.</p>
+<h3>Option 2 — Vérifier que vous êtes sur la bonne version (facultatif)</h3>
+<p>Dans le terminal, dans le dossier du projet :</p>
+<pre><code class="language-bash">cd /Users/redamehanni/Downloads/MaZone-main
+git log -1 --oneline
+</code></pre>
+<p>Vous devez voir :</p>
+<pre><code>aa76cba MVP stable avant redémarrage Mac - Communication Engine + UI navigation + Driver offer popup
+</code></pre>
+<h3>Option 3 — Re-cloner depuis GitHub (si le dossier local a un problème)</h3>
+<pre><code class="language-bash">cd ~/Downloads
+git clone https://github.com/redamehanni/Ma-zone-V0.8.1-stable-03-07-2026.git MaZone-main-restored
+cd MaZone-main-restored
+git checkout mvp-pre-mac-restart-2026-07-12
+cd backend &amp;&amp; npm install
+cd ../mobile &amp;&amp; npm install
+</code></pre>
+<p>Vous obtenez <strong>exactement</strong> la version sauvegardée aujourd'hui.</p>
+<h3>Option 4 — Retour arrière via le tag (si vous avez fait d'autres modifications après)</h3>
+<pre><code class="language-bash">cd /Users/redamehanni/Downloads/MaZone-main
+git fetch origin
+git checkout mvp-pre-mac-restart-2026-07-12
+</code></pre>
+<hr />
+<h2>8. Checklist avant de redémarrer</h2>
+<ul>
+<li>[x] Code source commité et poussé sur GitHub</li>
+<li>[x] Tag <code>mvp-pre-mac-restart-2026-07-12</code> poussé sur GitHub</li>
+<li>[x] Hash local = hash GitHub (<code>aa76cba</code>)</li>
+<li>[x] Aucun fichier de code important non commité (seul <code>.cursor/</code> reste hors Git)</li>
+<li>[x] Compilation syntaxique backend + mobile vérifiée avant le commit</li>
+<li>[ ] <em>(Optionnel)</em> Copie du dossier <code>MaZone-main</code> sur Desktop ou clé USB</li>
+<li>[ ] <em>(Optionnel)</em> Noter le hash : <code>aa76cba1d979d15942625ddf90183a9a83b2e60c</code></li>
+</ul>
+<hr />
+<h2>9. Synthèse finale</h2>
+<table>
+<thead>
+<tr>
+<th>Ce que vous pouvez faire en toute confiance</th>
+<th>Détail</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Quitter Cursor</td>
+<td>OK</td>
+</tr>
+<tr>
+<td>Redémarrer le Mac</td>
+<td>OK</td>
+</tr>
+<tr>
+<td>Retrouver le code identique</td>
+<td>Oui — via dossier local <strong>ou</strong> GitHub</td>
+</tr>
+<tr>
+<td>Retrouver la doc identique</td>
+<td>Oui — tout est sur GitHub</td>
+</tr>
+<tr>
+<td>Retrouver les données SQLite de test</td>
+<td>Oui — si le dossier local n'est pas supprimé ; sinon recréer</td>
+</tr>
+</tbody>
+</table>
+<p><strong>Vous n'avez pas besoin de maîtriser Git pour être protégé.</strong> Le minimum à retenir :</p>
+<ol>
+<li><strong>Lien de secours :</strong> https://github.com/redamehanni/Ma-zone-V0.8.1-stable-03-07-2026  </li>
+<li><strong>Marque-page :</strong> tag <code>mvp-pre-mac-restart-2026-07-12</code>  </li>
+<li><strong>Hash :</strong> <code>aa76cba1d979d15942625ddf90183a9a83b2e60c</code></li>
+</ol>
+<p>Si après le reboot quelque chose ne va pas, revenez à ce document ou demandez de l'aide en citant le tag <code>mvp-pre-mac-restart-2026-07-12</code>.</p>
+<hr />
+<p><em>Document généré le 12 juillet 2026 — point de restauration Git validé sur GitHub.</em></p>
+</body>
+</html>

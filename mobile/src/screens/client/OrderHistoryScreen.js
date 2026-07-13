@@ -10,6 +10,7 @@ import ComingSoonButton from '../../components/ui/ComingSoonButton';
 import FadeIn from '../../components/ui/FadeIn';
 import { euro } from '../../utils/format';
 import { ORDER_STATUS_LABEL, CANCELLABLE_ORDER_STATUSES } from '../../config';
+import { confirmAction } from '../../utils/confirm';
 import { THEME } from '../../theme';
 
 function formatDateTime(iso) {
@@ -66,28 +67,22 @@ export default function OrderHistoryScreen({ navigation }) {
     }
   }
 
-  async function handleCancel(order) {
-    Alert.alert(
+  function handleCancel(order) {
+    confirmAction(
       'Annuler la commande',
       'Confirmer l\'annulation ?',
-      [
-        { text: 'Non', style: 'cancel' },
-        {
-          text: 'Oui, annuler',
-          style: 'destructive',
-          onPress: async () => {
-            setCancellingId(order.id);
-            try {
-              await cancelOrder(order.id);
-              load();
-            } catch (err) {
-              Alert.alert('Erreur', err.response?.data?.error || 'Annulation impossible.');
-            } finally {
-              setCancellingId(null);
-            }
-          },
-        },
-      ],
+      async () => {
+        setCancellingId(order.id);
+        try {
+          await cancelOrder(order.id);
+          load();
+        } catch (err) {
+          Alert.alert('Erreur', err.response?.data?.error || 'Annulation impossible.');
+        } finally {
+          setCancellingId(null);
+        }
+      },
+      'Oui, annuler',
     );
   }
 

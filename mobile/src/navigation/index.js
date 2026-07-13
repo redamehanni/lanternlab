@@ -9,6 +9,7 @@ import { useCart } from '../context/CartContext';
 import { useCommunication } from '../context/CommunicationContext';
 import { THEME } from '../theme';
 import ClientDrawerContent from '../components/client/ClientDrawerContent';
+import { navigateToFreshHome } from './navigateToFreshHome';
 
 // Auth
 import RoleSelectScreen from '../screens/RoleSelectScreen';
@@ -34,6 +35,10 @@ import SupportChatScreen   from '../screens/client/SupportChatScreen';
 import ClientProfileHubScreen from '../screens/client/ClientProfileHubScreen';
 import FavoriteStoresScreen from '../screens/client/FavoriteStoresScreen';
 import ClientMessagingHomeScreen from '../screens/client/ClientMessagingHomeScreen';
+import FaqScreen from '../screens/client/FaqScreen';
+import BecomeDriverScreen from '../screens/client/BecomeDriverScreen';
+import ContactScreen from '../screens/client/ContactScreen';
+import SettingsScreen from '../screens/client/SettingsScreen';
 
 // Merchant
 import DashboardScreen      from '../screens/merchant/DashboardScreen';
@@ -96,6 +101,14 @@ const tabOptions = {
   },
   tabBarLabelStyle: { fontSize: 11, fontWeight: '600' },
 };
+
+const clientDrawerHeader = (title) => ({
+  headerShown: true,
+  title,
+  headerStyle: { backgroundColor: THEME.colors.primary },
+  headerTintColor: '#fff',
+  headerTitleStyle: { fontWeight: '700' },
+});
 
 // ── Client stacks ─────────────────────────────────────────────────────────────
 function HomeStack() {
@@ -163,35 +176,37 @@ function HomeDrawer() {
       <Drawer.Screen
         name="FavoriteStores"
         component={FavoriteStoresScreen}
-        options={{
-          headerShown: true,
-          title: 'Mes commerces coups de cœur',
-          headerStyle: { backgroundColor: THEME.colors.primary },
-          headerTintColor: '#fff',
-          headerTitleStyle: { fontWeight: '700' },
-        }}
+        options={clientDrawerHeader('Mes commerces coups de cœur')}
       />
       <Drawer.Screen
         name="OrderHistory"
         component={OrderHistoryScreen}
-        options={{
-          headerShown: true,
-          title: 'Mes commandes',
-          headerStyle: { backgroundColor: THEME.colors.primary },
-          headerTintColor: '#fff',
-          headerTitleStyle: { fontWeight: '700' },
-        }}
+        options={clientDrawerHeader('Mes commandes')}
+      />
+      <Drawer.Screen
+        name="Faq"
+        component={FaqScreen}
+        options={clientDrawerHeader('FAQ')}
+      />
+      <Drawer.Screen
+        name="BecomeDriver"
+        component={BecomeDriverScreen}
+        options={clientDrawerHeader('Devenir livreur')}
+      />
+      <Drawer.Screen
+        name="Contact"
+        component={ContactScreen}
+        options={clientDrawerHeader('Contact')}
       />
       <Drawer.Screen
         name="HelpCenter"
         component={HelpCenterScreen}
-        options={{
-          headerShown: true,
-          title: 'Centre d\'aide',
-          headerStyle: { backgroundColor: THEME.colors.primary },
-          headerTintColor: '#fff',
-          headerTitleStyle: { fontWeight: '700' },
-        }}
+        options={clientDrawerHeader('Aide')}
+      />
+      <Drawer.Screen
+        name="Settings"
+        component={SettingsScreen}
+        options={clientDrawerHeader('Paramètres')}
       />
     </Drawer.Navigator>
   );
@@ -212,11 +227,9 @@ function ClientTabs() {
           tabBarIcon: ({ focused }) => <TabIcon name={focused ? 'home' : 'home-outline'} focused={focused} />,
         }}
         listeners={({ navigation }) => ({
-          tabPress: () => {
-            navigation.navigate('HomeTab', {
-              screen: 'HomeMain',
-              params: { screen: 'Home', params: { reset: Date.now() } },
-            });
+          tabPress: (e) => {
+            e.preventDefault();
+            navigateToFreshHome(navigation);
           },
         })}
       />

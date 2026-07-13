@@ -1,0 +1,1069 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Audit d'architecture Ma Zone — Préparation des prochains moteurs</title>
+<style>
+  @page { margin: 16mm 14mm; }
+  body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Helvetica, Arial, sans-serif; font-size: 10.5pt; line-height: 1.45; color: #1a1a1a; max-width: 100%; }
+  h1 { font-size: 20pt; border-bottom: 2px solid #0f2d5c; padding-bottom: 8px; color: #0f2d5c; page-break-after: avoid; }
+  h2 { font-size: 14pt; margin-top: 22px; color: #0f2d5c; border-bottom: 1px solid #e5e7eb; padding-bottom: 4px; page-break-after: avoid; }
+  h3 { font-size: 11.5pt; margin-top: 14px; color: #1a4a8a; page-break-after: avoid; }
+  table { border-collapse: collapse; width: 100%; margin: 10px 0; font-size: 9pt; page-break-inside: avoid; }
+  th, td { border: 1px solid #d1d5db; padding: 5px 7px; text-align: left; vertical-align: top; }
+  th { background: #f3f4f6; font-weight: 600; }
+  code { background: #f3f4f6; padding: 1px 4px; border-radius: 3px; font-size: 8.5pt; }
+  pre { background: #f8fafc; border: 1px solid #e5e7eb; border-radius: 6px; padding: 10px; overflow-x: auto; font-size: 8pt; line-height: 1.35; white-space: pre-wrap; word-break: break-word; page-break-inside: avoid; }
+  pre code { background: none; padding: 0; }
+  blockquote { border-left: 4px solid #0f2d5c; margin: 10px 0; padding: 6px 14px; background: #f0f4f8; color: #1e3a5f; }
+  hr { border: none; border-top: 1px solid #e5e7eb; margin: 18px 0; }
+  ul, ol { padding-left: 22px; }
+  li { margin-bottom: 3px; }
+  p { margin: 8px 0; }
+  .pdf-note { display: none; }
+  @media screen {
+    .pdf-note { display: block; background: #eff6ff; border: 1px solid #bfdbfe; border-radius: 8px; padding: 12px 16px; margin-bottom: 24px; color: #1e3a8a; }
+  }
+</style>
+</head>
+<body>
+<div class="pdf-note">
+  <strong>Lecture dans Cursor / navigateur :</strong> ce fichier HTML est la version lisible du plan.
+  Pour le PDF, ouvrez <code>AUDIT_ARCHITECTURE_MAZONE.pdf</code> depuis le Finder (clic droit → Ouvrir avec Aperçu)
+  ou double-cliquez le fichier <code>Ouvrir_*_PDF.command</code> correspondant à la racine du projet.
+</div>
+<h1>Audit d'architecture Ma Zone — Préparation des prochains moteurs</h1>
+<p><strong>Date :</strong> 13 juillet 2026<br />
+<strong>Périmètre :</strong> Audit read-only — aucune modification de code<br />
+<strong>Rôle :</strong> Évaluation architecturale avant Wallet Engine, QR Identity, Marketing Engine, Event Engine<br />
+<strong>Version projet auditée :</strong> commit <code>mvp-pre-mac-restart-2026-07-12</code> + correctifs postérieurs</p>
+<hr />
+<h2>Résumé exécutif</h2>
+<p>Ma Zone dispose d'une architecture <strong>modulaire par organes</strong> (Dispatch, Communication, Navigation) suffisamment mature pour un MVP stabilisé. Les récents raffinements métier (séparation livreur occupé / offre pending, <code>navigateToFreshHome</code>, annulation client) montrent une capacité d'évolution sans casser les moteurs centraux.</p>
+<p><strong>Verdict : B — Quelques ajustements mineurs recommandés avant Wallet Engine.</strong></p>
+<p>Deux points <strong>Critiques</strong> (autorisations API/socket, persistance des offres dispatch) doivent être traités avant tout moteur financier. Le Wallet Engine peut être ajouté comme <strong>nouvel organe</strong> sans modifier le cœur Dispatch ni Communication.</p>
+<hr />
+<h2>1. Vue d'ensemble de l'architecture</h2>
+<h3>1.1 Stack technique</h3>
+<table>
+<thead>
+<tr>
+<th>Couche</th>
+<th>Technologie</th>
+<th>Rôle</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Mobile</td>
+<td>Expo 56, React Native, React Navigation 7</td>
+<td>UI client / livreur / commerçant</td>
+</tr>
+<tr>
+<td>Backend</td>
+<td>Node.js, Express 4</td>
+<td>API REST</td>
+</tr>
+<tr>
+<td>Temps réel</td>
+<td>Socket.io 4</td>
+<td>Événements commandes, missions, chat</td>
+</tr>
+<tr>
+<td>Données</td>
+<td>SQLite (better-sqlite3), WAL</td>
+<td>Persistance locale MVP</td>
+</tr>
+<tr>
+<td>Auth</td>
+<td>JWT (Bearer + socket handshake)</td>
+<td>3 rôles : client, driver, merchant</td>
+</tr>
+</tbody>
+</table>
+<h3>1.2 Inventaire des organes</h3>
+<table>
+<thead>
+<tr>
+<th>Organe</th>
+<th>Emplacement</th>
+<th>Rôle</th>
+<th>Maturité</th>
+<th>Stabilité</th>
+<th>Dette</th>
+<th>Risques</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><strong>Dispatch Engine</strong></td>
+<td><code>backend/src/lib/dispatch.js</code>, <code>dispatchOffer.js</code>, <code>config/dispatch.js</code></td>
+<td>Attribution livreur, offres 20s, annulation, création commande+mission</td>
+<td>Mature</td>
+<td>Bonne (post-raffinement métier)</td>
+<td>Circulaire dispatch↔offer ; timeouts mémoire</td>
+<td>Restart serveur ; scaling horizontal</td>
+</tr>
+<tr>
+<td><strong>Communication Engine</strong></td>
+<td><code>communicationEngine.js</code>, <code>communicationPolicies.js</code>, <code>unread.js</code></td>
+<td>Threads durable/éphémère, messages, unread, archival</td>
+<td>Mature</td>
+<td>Bonne</td>
+<td>Triple pile API messages legacy</td>
+<td>Duplication routes</td>
+</tr>
+<tr>
+<td><strong>Order/Mission Engine</strong></td>
+<td><code>orderStatus.js</code>, <code>orders.js</code>, routes orders/missions</td>
+<td>Cycle de vie commande et mission</td>
+<td>Fonctionnel</td>
+<td>Moyenne</td>
+<td>Double vocabulaire statuts</td>
+<td>Désync order/mission</td>
+</tr>
+<tr>
+<td><strong>Socket Layer</strong></td>
+<td><code>socket/handlers.js</code> + émissions dans lib/</td>
+<td>Rooms, driver online, typing, propagation</td>
+<td>Fonctionnel</td>
+<td>Moyenne</td>
+<td>Join rooms sans ACL</td>
+<td>Fuite rooms, broadcast global</td>
+</tr>
+<tr>
+<td><strong>SQLite / DB</strong></td>
+<td><code>db/index.js</code></td>
+<td>Schéma, migrations boot, seed</td>
+<td>Fonctionnel</td>
+<td>Moyenne</td>
+<td>Migrations rejouées ; pas de version table</td>
+<td>Croissance données</td>
+</tr>
+<tr>
+<td><strong>API REST</strong></td>
+<td><code>routes/*.js</code> (14 modules)</td>
+<td>~70 endpoints par rôle</td>
+<td>Mature</td>
+<td>Bonne</td>
+<td>PATCH order permissif</td>
+<td>Auth ressource</td>
+</tr>
+<tr>
+<td><strong>AppContext</strong></td>
+<td><code>mobile/context/AppContext.js</code></td>
+<td>Auth, socket lifecycle</td>
+<td>Stable</td>
+<td>Bonne</td>
+<td>driver:offline pour tous rôles</td>
+<td>—</td>
+</tr>
+<tr>
+<td><strong>DriverContext</strong></td>
+<td><code>mobile/context/DriverContext.js</code></td>
+<td>Online, mission, offre pending</td>
+<td>Stable</td>
+<td>Bonne</td>
+<td>notifications non consommées</td>
+<td>Legacy screens</td>
+</tr>
+<tr>
+<td><strong>CommunicationContext</strong></td>
+<td><code>mobile/context/CommunicationContext.js</code></td>
+<td>Threads, unread</td>
+<td>Stable</td>
+<td>Bonne</td>
+<td>Map threads non bornée</td>
+<td>—</td>
+</tr>
+<tr>
+<td><strong>CartContext</strong></td>
+<td><code>mobile/context/CartContext.js</code></td>
+<td>Panier serveur</td>
+<td>Stable</td>
+<td>Bonne</td>
+<td>Pas invalidation socket</td>
+<td>—</td>
+</tr>
+<tr>
+<td><strong>Navigation</strong></td>
+<td><code>navigation/index.js</code>, <code>navigateToFreshHome.js</code></td>
+<td>Arbres client/merchant/driver</td>
+<td>Mature</td>
+<td>Bonne</td>
+<td>ChatScreen 10× ; cross-nav fragile</td>
+<td>—</td>
+</tr>
+<tr>
+<td><strong>Chat UI</strong></td>
+<td><code>ChatScreen</code>, <code>openCommunication.js</code>, <code>ChatPresentation.js</code></td>
+<td>Messagerie unifiée</td>
+<td>Mature</td>
+<td>Bonne</td>
+<td>Support hors engine</td>
+<td>—</td>
+</tr>
+<tr>
+<td><strong>Promotions</strong></td>
+<td><code>lib/promotions.js</code>, routes</td>
+<td>Flash promos, pricing</td>
+<td>Fonctionnel</td>
+<td>Moyenne</td>
+<td>—</td>
+<td>—</td>
+</tr>
+<tr>
+<td><strong>Geo</strong></td>
+<td><code>lib/geo.js</code></td>
+<td>Distance, ETA</td>
+<td>Présent</td>
+<td>Non utilisé dispatch</td>
+<td>Dispatch sans géo</td>
+<td>—</td>
+</tr>
+</tbody>
+</table>
+<h3>1.3 Schéma global — communication entre organes</h3>
+<pre><code class="language-mermaid">flowchart TB
+  subgraph mobile [Mobile App]
+    AppCtx[AppContext]
+    DrvCtx[DriverContext]
+    CommCtx[CommunicationContext]
+    CartCtx[CartContext]
+    Nav[Navigation]
+    Screens[Ecrans]
+    AppCtx --&gt; DrvCtx
+    AppCtx --&gt; CommCtx
+    AppCtx --&gt; CartCtx
+    Screens --&gt; Nav
+    Screens --&gt; CommCtx
+    DrvCtx --&gt; Screens
+  end
+
+  subgraph backend [Backend API]
+    Routes[Routes REST]
+    Dispatch[Dispatch Engine]
+    DispatchOffer[Dispatch Offer]
+    CommEngine[Communication Engine]
+    Policies[Communication Policies]
+    OrderStatus[Order Status]
+    DB[(SQLite)]
+    IO[Socket.io]
+  end
+
+  Screens --&gt;|REST| Routes
+  AppCtx --&gt;|WebSocket| IO
+  Routes --&gt; Dispatch
+  Routes --&gt; CommEngine
+  Dispatch --&gt; DispatchOffer
+  Dispatch --&gt; CommEngine
+  Dispatch --&gt; DB
+  DispatchOffer --&gt; Dispatch
+  CommEngine --&gt; Policies
+  CommEngine --&gt; DB
+  Dispatch --&gt; IO
+  CommEngine --&gt; IO
+  IO --&gt; AppCtx
+</code></pre>
+<hr />
+<h2>2. Audit de chaque moteur</h2>
+<h3>2.1 Dispatch Engine</h3>
+<p><strong>Responsabilités :</strong> Sélection livreur, proposition offre (mode OFFER_MODE), assignation transactionnelle, annulation client, re-dispatch, création commande+mission.</p>
+<p><strong>Forces :</strong>
+- Séparation explicite <code>driverHasAcceptedMission</code> / <code>driverHasPendingOffer</code> / <code>driverIsBusyForNewOffer</code>
+- Transaction SQLite atomique dans <code>assignOrderToDriver</code>
+- Mode offre configurable via <code>DISPATCH_OFFER_MODE</code>
+- Re-dispatch après cancel, refuse, expire, delivery</p>
+<p><strong>Faiblesses :</strong>
+- <code>findAvailableDriver</code> n'exclut pas offres pending (asymétrie avec <code>driverIsBusyForNewOffer</code>)
+- Timeouts offre en <code>Map</code> mémoire — perdus au restart
+- Dépendance circulaire <code>dispatch.js</code> ↔ <code>dispatchOffer.js</code> (require lazy)
+- Pas de dispatch géographique malgré <code>geo.js</code></p>
+<p><strong>Découplage :</strong> Moyen — <code>io</code> passé en paramètre partout ; couplé à DB, conversations, communication archival.</p>
+<p><strong>Dette :</strong> <code>driverHasActiveMission</code> déprécié ; statuts legacy dans requêtes SQL.</p>
+<p><strong>Recommandations :</strong> Important — persister <code>offer_expires_at</code> + job expiry ; Confort — aligner <code>findAvailableDriver</code> sur busy rules.</p>
+<hr />
+<h3>2.2 Communication Engine</h3>
+<p><strong>Responsabilités :</strong> Résolution threads (durable client↔commerce, éphémère mission), envoi messages, unread, archival éphémère à la fin de commande.</p>
+<p><strong>Forces :</strong>
+- Couche policies séparée (<code>communicationPolicies.js</code>)
+- Modèle durable vs éphémère clair
+- <code>openCommunication</code> côté mobile = point d'entrée unique
+- <code>ChatPresentation</code> distingue visuellement les modes</p>
+<p><strong>Faiblesses :</strong>
+- Trois chemins API : <code>/api/messages</code> (legacy), <code>/api/conversations</code>, <code>/api/communication</code>
+- Support driver/merchant hors engine (<code>support_threads</code>)
+- <code>sendMessage</code> requiert parfois contexte order même pour durable</p>
+<p><strong>Découplage :</strong> Bon au sein de l'engine ; faible envers routes dupliquées.</p>
+<p><strong>Recommandations :</strong> Important — déprécier <code>/api/messages</code> ; Confort — unifier support dans engine.</p>
+<hr />
+<h3>2.3 Navigation (mobile)</h3>
+<p><strong>Responsabilités :</strong> Arbres par rôle (client Drawer+Tabs, merchant Tabs, driver Tabs), routing écrans.</p>
+<p><strong>Forces :</strong>
+- Séparation claire client / merchant / driver
+- <code>navigateToFreshHome</code> documenté, SRP navigation pure
+- Drawer client enrichi (profil, FAQ, paramètres placeholders)</p>
+<p><strong>Faiblesses :</strong>
+- <code>OrderTracking</code> dans HomeStack ET CartStack
+- <code>ChatScreen</code> enregistré dans 10 stacks
+- Navigation cross-drawer fragile (<code>OrderHistory</code> → <code>OrderTracking</code>)
+- ~10 écrans legacy orphelins</p>
+<p><strong>Recommandations :</strong> Confort — retirer écrans orphelins ; Important — contrat navigation cross-stack documenté.</p>
+<hr />
+<h3>2.4 CommunicationContext</h3>
+<p><strong>Responsabilités :</strong> Index threads, compteurs unread, sync socket <code>conversation:updated</code> / <code>message:new</code>.</p>
+<p><strong>Forces :</strong> Badge onglet Messagerie centralisé ; skip unread si conversation active.</p>
+<p><strong>Faiblesses :</strong> Map threads croît sans prune ; lookup O(n).</p>
+<p><strong>Recommandations :</strong> Confort — index par clé composite.</p>
+<hr />
+<h3>2.5 DriverContext</h3>
+<p><strong>Responsabilités :</strong> État online, <code>activeMission</code>, <code>pendingOffer</code>, bridge <code>onMissionAssigned</code>.</p>
+<p><strong>Forces :</strong> Distinction offre vs mission acceptée ; ref anti-stale offer.</p>
+<p><strong>Faiblesses :</strong> <code>notifications</code> chargées mais inbox refetch ; APIs <code>acceptMissionOffer</code> inutilisées.</p>
+<p><strong>Recommandations :</strong> Confort — consolider notifications.</p>
+<hr />
+<h3>2.6 Chat</h3>
+<p><strong>Responsabilités :</strong> UI messagerie unifiée (<code>ChatScreen</code>), résolution thread (<code>openCommunication</code>), présentation (<code>ChatPresentation</code>).</p>
+<p><strong>Forces :</strong> Un seul écran chat pour rôles principaux ; join room <code>conv_*</code>.</p>
+<p><strong>Faiblesses :</strong> Support chats séparés ; legacy <code>resolveConversation</code> dans écrans orphelins.</p>
+<hr />
+<h3>2.7 Gestion des commandes</h3>
+<p><strong>Backend :</strong> <code>routes/orders.js</code>, <code>createOrderWithDispatch</code>, checkout cart, cancel.</p>
+<p><strong>Forces :</strong> Cancel transactionnel + restock + archival + re-dispatch.</p>
+<p><strong>Faiblesses :</strong> <code>PATCH /:id/status</code> sans contrôle ownership/rôle ; <code>GET /:id</code> sans ownership.</p>
+<p><strong>Risque : Critique</strong> — autorisation.</p>
+<hr />
+<h3>2.8 Gestion des missions</h3>
+<p><strong>Backend :</strong> <code>routes/missions.js</code> — accept, refuse, status progression livreur.</p>
+<p><strong>Forces :</strong> Offer mode intégré ; chain dispatch après delivery.</p>
+<p><strong>Faiblesses :</strong> Sync manuelle statut order ↔ mission dans PATCH status.</p>
+<hr />
+<h3>2.9 Socket temps réel</h3>
+<p><strong>Événements clés :</strong> <code>order:status_updated</code>, <code>mission:offered</code>, <code>mission:assigned</code>, <code>mission:cancelled</code>, <code>conversation:updated</code>, <code>message:new</code>.</p>
+<p><strong>Forces :</strong> Rooms nommées cohérentes ; JWT à la connexion.</p>
+<p><strong>Faiblesses :</strong> <code>join:order</code> / <code>join:conversation</code> sans vérification ACL ; <code>io.emit</code> global pour stock/catalogue.</p>
+<p><strong>Risque : Critique</strong> — rooms ouvertes à tout utilisateur authentifié.</p>
+<hr />
+<h3>2.10 Gestion des états (mobile)</h3>
+<p><strong>Pattern :</strong> Contextes React + état local par écran + sockets.</p>
+<p><strong>Forces :</strong> Pas de sur-engineering Redux ; contextes par domaine.</p>
+<p><strong>Faiblesses :</strong> Pas de contexte « commande active client » ; listeners socket dupliqués par écran.</p>
+<hr />
+<h3>2.11 Base SQLite</h3>
+<p><strong>Tables :</strong> 18+ (users, stores, products, orders, missions, conversations, messages, cart, favorites, promotions, notifications, support…).</p>
+<p><strong>Forces :</strong> WAL, FK, migrations incrémentales, merge conversations doublons.</p>
+<p><strong>Faiblesses :</strong> Migrations data rejouées chaque boot ; pas de <code>schema_version</code>.</p>
+<p><strong>Recommandations :</strong> Important avant scale — table version ; Confort — geo index.</p>
+<hr />
+<h3>2.12 API backend</h3>
+<p><strong>14 modules routes, ~70 endpoints.</strong></p>
+<p><strong>Forces :</strong> <code>requireRole</code> sur endpoints sensibles ; structure modulaire.</p>
+<p><strong>Faiblesses :</strong> Incohérence ownership checks ; secret JWT fallback dev.</p>
+<hr />
+<h2>3. Cartographie des dépendances</h2>
+<h3>3.1 Composants critiques (impact maximal si modifiés)</h3>
+<table>
+<thead>
+<tr>
+<th>Composant</th>
+<th>Utilisé par</th>
+<th>Utilise</th>
+<th>Si modifié</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>dispatch.js</code></td>
+<td>orders, missions, drivers, socket</td>
+<td>db, orderStatus, conversations, communicationEngine, dispatchOffer</td>
+<td>Tout le flux commande/livreur</td>
+</tr>
+<tr>
+<td><code>communicationEngine.js</code></td>
+<td>communication, conversations, dispatch</td>
+<td>policies, unread, db</td>
+<td>Toute la messagerie</td>
+</tr>
+<tr>
+<td><code>db/index.js</code></td>
+<td>Tout le backend</td>
+<td>—</td>
+<td>Tout</td>
+</tr>
+<tr>
+<td><code>AppContext</code></td>
+<td>Tous contextes mobile</td>
+<td>socket, storage</td>
+<td>Toute l'app</td>
+</tr>
+<tr>
+<td><code>orderStatus.js</code></td>
+<td>dispatch, orders, mobile config</td>
+<td>—</td>
+<td>Règles annulation, affichage</td>
+</tr>
+</tbody>
+</table>
+<h3>3.2 Diagramme de dépendances simplifié</h3>
+<pre><code class="language-mermaid">flowchart LR
+  orders_r[routes/orders] --&gt; dispatch
+  missions_r[routes/missions] --&gt; dispatch
+  missions_r --&gt; dispatchOffer
+  drivers_r[routes/drivers] --&gt; dispatch
+  dispatch --&gt; dispatchOffer
+  dispatchOffer --&gt; dispatch
+  dispatch --&gt; commEngine[communicationEngine]
+  dispatch --&gt; conversations
+  comm_r[routes/communication] --&gt; commEngine
+  conv_r[routes/conversations] --&gt; commEngine
+  commEngine --&gt; policies[communicationPolicies]
+  messages_r[routes/messages] --&gt; db
+  socket_h[socket/handlers] --&gt; dispatch
+</code></pre>
+<h3>3.3 Mobile — qui utilise quoi</h3>
+<table>
+<thead>
+<tr>
+<th>Consommateur</th>
+<th>Dispatch (via API)</th>
+<th>Communication</th>
+<th>Navigation reset</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>OrderTrackingScreen</td>
+<td>cancel, track</td>
+<td>openCommunication</td>
+<td>navigateToFreshHome</td>
+</tr>
+<tr>
+<td>DriverHomeScreen</td>
+<td>accept/refuse offer</td>
+<td>openCommunication</td>
+<td>—</td>
+</tr>
+<tr>
+<td>CartScreen</td>
+<td>checkout</td>
+<td>—</td>
+<td>—</td>
+</tr>
+<tr>
+<td>ClientMessagingHome</td>
+<td>—</td>
+<td>CommunicationContext</td>
+<td>—</td>
+</tr>
+</tbody>
+</table>
+<hr />
+<h2>4. Audit qualité — notes sur 10</h2>
+<table>
+<thead>
+<tr>
+<th>Critère</th>
+<th>Note</th>
+<th>Justification</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><strong>Modularité</strong></td>
+<td>7/10</td>
+<td>Organes nommés et fichiers dédiés ; mais routes dupliquées et legacy coexistants</td>
+</tr>
+<tr>
+<td><strong>Découplage</strong></td>
+<td>6/10</td>
+<td>dispatch↔offer circulaire ; io passé partout ; écrans couplés aux sockets</td>
+</tr>
+<tr>
+<td><strong>Lisibilité</strong></td>
+<td>8/10</td>
+<td>Fonctions métier explicites (driverHasAcceptedMission…) ; commentaires ciblés</td>
+</tr>
+<tr>
+<td><strong>Maintenabilité</strong></td>
+<td>7/10</td>
+<td>MVP documenté ; dette legacy screens ; migrations boot</td>
+</tr>
+<tr>
+<td><strong>Évolutivité</strong></td>
+<td>7/10</td>
+<td>Ajout organe Wallet faisable ; SQLite et socket global limitent scale</td>
+</tr>
+<tr>
+<td><strong>Robustesse</strong></td>
+<td>6/10</td>
+<td>Transactions OK ; auth gaps ; offer timeouts volatiles</td>
+</tr>
+<tr>
+<td><strong>Simplicité</strong></td>
+<td>8/10</td>
+<td>Pas de sur-abstraction ; stack lisible pour MVP</td>
+</tr>
+<tr>
+<td><strong>Cohérence</strong></td>
+<td>6/10</td>
+<td>Double statuts ; triple messaging ; deux thèmes mobile</td>
+</tr>
+</tbody>
+</table>
+<p><strong>Moyenne pondérée : 6,9/10</strong> — solide pour MVP, perfectible avant scale.</p>
+<hr />
+<h2>5. Audit des responsabilités</h2>
+<h3>5.1 Composants exemplaires (un organe = une responsabilité)</h3>
+<table>
+<thead>
+<tr>
+<th>Composant</th>
+<th>Pourquoi</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>navigateToFreshHome.js</code></td>
+<td>Navigation pure, documenté, sans logique métier</td>
+</tr>
+<tr>
+<td><code>orderStatus.js</code></td>
+<td>Règles statut et annulation centralisées</td>
+</tr>
+<tr>
+<td><code>communicationPolicies.js</code></td>
+<td>ACL et lifecycle séparés du transport</td>
+</tr>
+<tr>
+<td><code>NewCourseOfferModal.js</code></td>
+<td>Présentation pure ; logique dans DriverHomeScreen + backend</td>
+</tr>
+<tr>
+<td><code>openCommunication.js</code></td>
+<td>Point d'entrée unique vers Chat</td>
+</tr>
+</tbody>
+</table>
+<h3>5.2 Composants qui font trop</h3>
+<table>
+<thead>
+<tr>
+<th>Composant</th>
+<th>Problème</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>dispatch.js</code></td>
+<td>Dispatch + cancel + create order + emit socket + archive comm</td>
+</tr>
+<tr>
+<td><code>routes/orders.js</code></td>
+<td>Création, cart, cancel, patch status, notifications merchant</td>
+</tr>
+<tr>
+<td><code>db/index.js</code></td>
+<td>DDL + migrations + seed + merge data</td>
+</tr>
+<tr>
+<td><code>DriverHomeScreen.js</code></td>
+<td>Online, offer timer, mission drawer, chat, map</td>
+</tr>
+</tbody>
+</table>
+<h3>5.3 À séparer (futur, pas urgent MVP)</h3>
+<ul>
+<li>Extraire <code>OrderCancellationService</code> de dispatch (Confort)</li>
+<li>Extraire <code>SocketEmitter</code> order/mission (Confort)</li>
+<li>Retirer legacy <code>messages.js</code> route (Important)</li>
+</ul>
+<hr />
+<h2>6. Single Source of Truth</h2>
+<table>
+<thead>
+<tr>
+<th>Domaine</th>
+<th>SSOT</th>
+<th>Statut</th>
+<th>Amélioration possible</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Statuts commande (règles)</td>
+<td><code>backend/orderStatus.js</code></td>
+<td>Correct</td>
+<td>Mobile <code>CANCELLABLE_ORDER_STATUSES</code> doit rester aligné</td>
+</tr>
+<tr>
+<td>Labels statuts UI</td>
+<td><code>mobile/config.js</code></td>
+<td>Partiel</td>
+<td>Alias masquent hétérogénéité backend</td>
+</tr>
+<tr>
+<td>Mission active livreur</td>
+<td><code>DriverContext.activeMission</code></td>
+<td>Correct</td>
+<td>Legacy ActiveMissionScreen en parallèle</td>
+</tr>
+<tr>
+<td>Offre pending livreur</td>
+<td><code>DriverContext.pendingOffer</code></td>
+<td>Correct</td>
+<td>—</td>
+</tr>
+<tr>
+<td>Threads / unread</td>
+<td><code>CommunicationContext</code></td>
+<td>Correct</td>
+<td>Support hors context</td>
+</tr>
+<tr>
+<td>Reset accueil client</td>
+<td><code>navigateToFreshHome</code> + <code>HomeScreen.reset</code></td>
+<td>Correct</td>
+<td>—</td>
+</tr>
+<tr>
+<td>Panier</td>
+<td><code>CartContext</code> + API <code>/cart</code></td>
+<td>Correct</td>
+<td>—</td>
+</tr>
+<tr>
+<td>Auth / socket</td>
+<td><code>AppContext</code></td>
+<td>Correct</td>
+<td>—</td>
+</tr>
+<tr>
+<td>Dispatch busy rules</td>
+<td><code>dispatch.js</code> (3 fonctions)</td>
+<td>Correct</td>
+<td><code>findAvailableDriver</code> à aligner</td>
+</tr>
+<tr>
+<td>Conversations</td>
+<td><code>communicationEngine</code></td>
+<td>Correct</td>
+<td>Legacy <code>/messages</code> concurrent</td>
+</tr>
+</tbody>
+</table>
+<hr />
+<h2>7. Audit des flux utilisateurs</h2>
+<h3>7.1 Client — commande → livraison</h3>
+<pre><code class="language-mermaid">sequenceDiagram
+  participant C as Client
+  participant API as API Orders
+  participant D as Dispatch
+  participant Drv as Livreur
+
+  C-&gt;&gt;API: POST /orders ou /cart
+  API-&gt;&gt;D: createOrderWithDispatch
+  D-&gt;&gt;D: tryDispatchNewOrder
+  D-&gt;&gt;Drv: mission:offered ou mission:assigned
+  Drv-&gt;&gt;API: POST accept
+  API-&gt;&gt;D: assignOrderToDriver
+  D-&gt;&gt;C: order:status_updated
+  Drv-&gt;&gt;API: PATCH mission status
+  API-&gt;&gt;C: mission:status_updated
+</code></pre>
+<p><strong>Cohérence :</strong> Bonne post-correctifs. <strong>Risques :</strong> navigation CartStack vs HomeStack ; pas de bannière commande active globale.</p>
+<h3>7.2 Client — annulation → nouvelle commande</h3>
+<p><strong>Flux :</strong> confirmAction → POST cancel → <code>navigateToFreshHome</code> → accueil reset.</p>
+<p><strong>Stabilité :</strong> Bonne (T10 validé backend). <strong>Risque :</strong> threads durable conservés (attendu).</p>
+<h3>7.3 Client — messagerie</h3>
+<p>Durable via MesCommerces ; éphémère via OrderTracking/Driver selon phase livraison.</p>
+<p><strong>Risque :</strong> Confort — support placeholder.</p>
+<h3>7.4 Livreur — proposition → livraison</h3>
+<p>Offer 20s → accept/refuse → MissionDrawer steps → PATCH statuses → delivery → assignPendingOrdersToDriver.</p>
+<p><strong>Stabilité :</strong> Bonne. <strong>Risque :</strong> timeout mémoire si restart pendant offre.</p>
+<h3>7.5 Commerçant — commande &amp; messagerie</h3>
+<p><code>MerchantOrdersScreen</code> + sockets <code>order:*</code> ; inbox merchant.</p>
+<p><strong>Stabilité :</strong> Fonctionnelle. <strong>Risque :</strong> Confort — pas de lien direct dispatch côté merchant UI.</p>
+<hr />
+<h2>8. Scénarios de non-régression</h2>
+<h3>8.1 Couverts (documentés / testés)</h3>
+<table>
+<thead>
+<tr>
+<th>ID</th>
+<th>Scénario</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>T1</td>
+<td>Nouvelle commande après livraison → accueil reset</td>
+</tr>
+<tr>
+<td>T2</td>
+<td>Nouvelle commande depuis CartStack</td>
+</tr>
+<tr>
+<td>T3–T4</td>
+<td>Annulation web / native</td>
+</tr>
+<tr>
+<td>T5</td>
+<td>Bouton annuler disparaît à picked_up</td>
+</tr>
+<tr>
+<td>T6</td>
+<td>Cancel avec offre offered → livreur libéré</td>
+</tr>
+<tr>
+<td>T7</td>
+<td>Cancel livreur accepted → re-dispatch</td>
+</tr>
+<tr>
+<td>T8</td>
+<td>Dispatch post-cancel</td>
+</tr>
+<tr>
+<td>T9</td>
+<td>Archival éphémère post-cancel</td>
+</tr>
+<tr>
+<td>T10</td>
+<td>Cycle complet annulation → nouvelle → livraison → nouvelle</td>
+</tr>
+<tr>
+<td>—</td>
+<td>Accept offre après raffinement driverHasAcceptedMission</td>
+</tr>
+<tr>
+<td>—</td>
+<td>Refuse / timeout offre 20s</td>
+</tr>
+</tbody>
+</table>
+<h3>8.2 Manquants</h3>
+<table>
+<thead>
+<tr>
+<th>Scénario</th>
+<th>Priorité</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Restart backend pendant offre active</td>
+<td>Important</td>
+</tr>
+<tr>
+<td>Client tente join room order d'un autre</td>
+<td>Critique</td>
+</tr>
+<tr>
+<td>PATCH order status par utilisateur non autorisé</td>
+<td>Critique</td>
+</tr>
+<tr>
+<td>Multi-commandes simultanées même client</td>
+<td>Important</td>
+</tr>
+<tr>
+<td>Driver offline/online race HTTP vs socket</td>
+<td>Important</td>
+</tr>
+<tr>
+<td>Conversation durable pendant commande annulée</td>
+<td>Confort</td>
+</tr>
+<tr>
+<td>Performance 100+ commandes pending</td>
+<td>Confort</td>
+</tr>
+</tbody>
+</table>
+<hr />
+<h2>9. Préparation aux futurs moteurs</h2>
+<h3>9.1 Wallet Engine</h3>
+<table>
+<thead>
+<tr>
+<th>Question</th>
+<th>Réponse</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Architecture prête ?</td>
+<td><strong>Partiellement</strong> — pas de tables wallet/payment</td>
+</tr>
+<tr>
+<td>Modifier moteur existant ?</td>
+<td><strong>Minime</strong> — orders.total_price, missions earnings ; hooks post-delivery</td>
+</tr>
+<tr>
+<td>Nouvel organe seul ?</td>
+<td><strong>Oui</strong> — <code>walletEngine.js</code> + routes <code>/wallet</code> + <code>WalletContext</code> mobile</td>
+</tr>
+<tr>
+<td>Bloqueur</td>
+<td>Auth/ownership (Critique) avant argent réel</td>
+</tr>
+</tbody>
+</table>
+<h3>9.2 QR Identity</h3>
+<table>
+<thead>
+<tr>
+<th>Question</th>
+<th>Réponse</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Prêt ?</td>
+<td><strong>Oui structurellement</strong> — organe additif</td>
+</tr>
+<tr>
+<td>Modifier existant ?</td>
+<td>Missions (scan preuve livraison) — extension PATCH status</td>
+</tr>
+<tr>
+<td>Nouvel organe</td>
+<td><code>qrIdentity.js</code> + génération/validation tokens</td>
+</tr>
+</tbody>
+</table>
+<h3>9.3 Marketing Engine</h3>
+<table>
+<thead>
+<tr>
+<th>Question</th>
+<th>Réponse</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Prêt ?</td>
+<td><strong>Partiellement</strong> — <code>promotions.js</code> existe</td>
+</tr>
+<tr>
+<td>Modifier existant ?</td>
+<td>Enrichir promotions ; Event Engine pour campagnes</td>
+</tr>
+<tr>
+<td>Nouvel organe</td>
+<td><code>marketingEngine.js</code> pour règles, ciblage, A/B</td>
+</tr>
+</tbody>
+</table>
+<h3>9.4 Event Engine</h3>
+<table>
+<thead>
+<tr>
+<th>Question</th>
+<th>Réponse</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Prêt ?</td>
+<td><strong>Non</strong> — pas de bus d'événements interne</td>
+</tr>
+<tr>
+<td>Modifier existant ?</td>
+<td>Remplacer appels socket directs par publish (long terme)</td>
+</tr>
+<tr>
+<td>Nouvel organe</td>
+<td><code>eventBus.js</code> — écoute dispatch, orders, communication</td>
+</tr>
+</tbody>
+</table>
+<h3>9.5 Stock Engine (futur)</h3>
+<table>
+<thead>
+<tr>
+<th>Question</th>
+<th>Réponse</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Prêt ?</td>
+<td><strong>Partiellement</strong> — stock dans products + restock cancel</td>
+</tr>
+<tr>
+<td>Modifier existant ?</td>
+<td>Extraire de products/orders vers engine dédié</td>
+</tr>
+<tr>
+<td>Nouvel organe</td>
+<td>Recommandé pour réservations, seuils, multi-store</td>
+</tr>
+</tbody>
+</table>
+<hr />
+<h2>10. Audit des risques</h2>
+<h3>Critique</h3>
+<ol>
+<li><strong>Autorisation API</strong> — <code>PATCH /orders/:id/status</code>, <code>GET /orders/:id</code> sans ownership</li>
+<li><strong>Socket room join</strong> — tout JWT peut rejoindre <code>order_*</code> / <code>conv_*</code></li>
+<li><strong>JWT secret fallback</strong> — <code>mazone-secret-dev-2024</code> si env absent</li>
+</ol>
+<h3>Important</h3>
+<ol start="4">
+<li>Offer timeouts en mémoire uniquement</li>
+<li>Triple pile messaging (<code>/messages</code>, <code>/conversations</code>, <code>/communication</code>)</li>
+<li><code>findAvailableDriver</code> vs <code>driverIsBusyForNewOffer</code> incohérence</li>
+<li>Migrations SQLite à chaque boot</li>
+<li>Pas de Redis adapter socket — scaling horizontal bloqué</li>
+<li>Désync potentielle statuts order/mission</li>
+</ol>
+<h3>Confort</h3>
+<ol start="10">
+<li>Écrans mobile legacy orphelins</li>
+<li>Double thème COLORS / THEME</li>
+<li>ChatScreen multi-stack</li>
+<li><code>geo.js</code> non utilisé par dispatch</li>
+<li>Notifications driver dupliquées context/inbox</li>
+<li>Global <code>io.emit</code> catalogue/stock</li>
+</ol>
+<hr />
+<h2>11. Audit philosophie produit</h2>
+<table>
+<thead>
+<tr>
+<th>Principe</th>
+<th>Respect</th>
+<th>Dérive</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Un moteur = une responsabilité</td>
+<td><strong>Oui</strong> globalement</td>
+<td>dispatch.js et routes/orders un peu larges</td>
+</tr>
+<tr>
+<td>Organes spécialisés</td>
+<td><strong>Oui</strong></td>
+<td>Legacy messages non retiré</td>
+</tr>
+<tr>
+<td>Séparation UI / métier</td>
+<td><strong>Oui</strong></td>
+<td>Quelques règles statut dupliquées mobile</td>
+</tr>
+<tr>
+<td>Évolutivité</td>
+<td><strong>Oui</strong></td>
+<td>SQLite limite</td>
+</tr>
+<tr>
+<td>Simplicité</td>
+<td><strong>Oui</strong></td>
+<td>Pas de micro-services prématurés</td>
+</tr>
+<tr>
+<td>Réutilisation</td>
+<td><strong>Oui</strong></td>
+<td>openCommunication, navigateToFreshHome</td>
+</tr>
+<tr>
+<td>Pas de duplication logique</td>
+<td><strong>Partiel</strong></td>
+<td>Statuts, messaging, notifications</td>
+</tr>
+</tbody>
+</table>
+<p><strong>Conclusion philosophie :</strong> Le projet reste aligné sur ses principes fondateurs. Les dérives sont principalement des <strong>artefacts de migration MVP</strong> (legacy) plutôt qu'une dérive architecturale fondamentale.</p>
+<hr />
+<h2>12. Verdict final</h2>
+<h3>Choix : <strong>B — Quelques ajustements mineurs sont recommandés avant Wallet Engine</strong></h3>
+<h3>Justification</h3>
+<p><strong>Pour commencer Wallet (arguments A) :</strong>
+- Organes Dispatch et Communication stables et récemment renforcés
+- Wallet peut être un <strong>nouvel organe</strong> sans toucher le cœur transactionnel
+- Documentation et patterns (SSOT, navigateToFreshHome) matures
+- Tests T1–T10 couvrent les flux critiques commande</p>
+<p><strong>Pour attendre refonte (arguments C) :</strong>
+- Failles auth sur orders et socket rooms — <strong>inacceptables pour argent réel</strong>
+- Pas de persistance offre au restart — risque incident ops</p>
+<p><strong>Synthèse B :</strong>
+- <strong>Autoriser la conception et le développement du Wallet Engine</strong> en parallèle, comme organe isolé (<code>wallet/</code>, tables dédiées, routes dédiées)
+- <strong>Bloquer la mise en production paiements réels</strong> jusqu'à correction des 3 points Critiques (auth API, auth socket rooms, secret JWT)
+- <strong>Avant intégration Wallet ↔ Orders :</strong> traiter Important #4 (offer persistence) si cancel/refund touche dispatch</p>
+<h3>Feuille de route recommandée</h3>
+<table>
+<thead>
+<tr>
+<th>Phase</th>
+<th>Action</th>
+<th>Classification</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>0</td>
+<td>Corriger auth orders + socket rooms + JWT env</td>
+<td>Critique</td>
+</tr>
+<tr>
+<td>1</td>
+<td>Démarrer Wallet Engine (schéma, API, UI placeholder)</td>
+<td>—</td>
+</tr>
+<tr>
+<td>2</td>
+<td>Persister offer timeouts / expiry job</td>
+<td>Important</td>
+</tr>
+<tr>
+<td>3</td>
+<td>Déprécier <code>/api/messages</code></td>
+<td>Important</td>
+</tr>
+<tr>
+<td>4</td>
+<td>QR Identity organe</td>
+<td>—</td>
+</tr>
+<tr>
+<td>5</td>
+<td>Marketing / Event engines</td>
+<td>—</td>
+</tr>
+</tbody>
+</table>
+<hr />
+<h2>Annexes</h2>
+<h3>A. Fichiers clés backend</h3>
+<ul>
+<li><code>backend/src/lib/dispatch.js</code> — Dispatch Engine</li>
+<li><code>backend/src/lib/dispatchOffer.js</code> — Offer mode</li>
+<li><code>backend/src/lib/communicationEngine.js</code> — Communication Engine</li>
+<li><code>backend/src/lib/communicationPolicies.js</code> — Policies</li>
+<li><code>backend/src/lib/orderStatus.js</code> — SSOT statuts</li>
+<li><code>backend/src/db/index.js</code> — SQLite</li>
+<li><code>backend/src/socket/handlers.js</code> — Socket</li>
+<li><code>backend/src/routes/*.js</code> — API</li>
+</ul>
+<h3>B. Fichiers clés mobile</h3>
+<ul>
+<li><code>mobile/src/context/*.js</code> — État global</li>
+<li><code>mobile/src/navigation/index.js</code> — Navigation</li>
+<li><code>mobile/src/navigation/navigateToFreshHome.js</code> — Reset accueil</li>
+<li><code>mobile/src/communication/openCommunication.js</code> — Entrée chat</li>
+<li><code>mobile/src/screens/client/OrderTrackingScreen.js</code> — Flux commande client</li>
+<li><code>mobile/src/screens/driver/DriverHomeScreen.js</code> — Flux livreur</li>
+</ul>
+<h3>C. Documents projet connexes</h3>
+<ul>
+<li><code>CURRENT_ARCHITECTURE.md</code></li>
+<li><code>ORGANE_COMMUNICATION.md</code></li>
+<li><code>PLAN_STABILISATION_MVP_PHASE_1.md</code></li>
+<li><code>RAPPORT_CORRECTION_NOUVELLE_COMMANDE_ANNULATION.md</code></li>
+</ul>
+<hr />
+<p><em>Audit généré le 13 juillet 2026 — lecture seule, aucune modification de code.</em></p>
+</body>
+</html>

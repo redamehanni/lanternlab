@@ -220,7 +220,8 @@ function createOrderWithDispatch({
 
 function cancelOrderByClient(orderId, clientId, io) {
   const row = db.prepare(`
-    SELECT o.*, m.id as mission_id, m.driver_id, m.status as mission_status, p.quantity as product_stock
+    SELECT o.*, m.id as mission_id, m.driver_id, m.offered_to_driver_id,
+           m.status as mission_status, p.quantity as product_stock
     FROM orders o
     JOIN missions m ON m.order_id = o.id
     JOIN products p ON o.product_id = p.id
@@ -233,11 +234,21 @@ function cancelOrderByClient(orderId, clientId, io) {
   }
 
   const driverId = row.driver_id;
+  const offeredDriverId = row.offered_to_driver_id;
+  const missionId = row.mission_id;
+
+  const { clearOfferTimeout } = require('./dispatchOffer');
+  clearOfferTimeout(missionId);
+
   db.transaction(() => {
     db.prepare(`UPDATE orders SET status = ?, updated_at = datetime('now') WHERE id = ?`)
       .run(ORDER_STATUS.CANCELLED, orderId);
-    db.prepare(`UPDATE missions SET status = 'cancelled', updated_at = datetime('now') WHERE order_id = ?`)
-      .run(orderId);
+    db.prepare(`
+      UPDATE missions
+      SET status = 'cancelled', driver_id = NULL, offered_to_driver_id = NULL,
+          offer_expires_at = NULL, updated_at = datetime('now')
+      WHERE order_id = ?
+    `).run(orderId);
     db.prepare(`UPDATE products SET quantity = quantity + ? WHERE id = ?`)
       .run(row.quantity, row.product_id);
   })();
@@ -249,9 +260,17 @@ function cancelOrderByClient(orderId, clientId, io) {
     emitOrderUpdate(io, order);
     io.to(`order_${orderId}`).emit('order:cancelled', { orderId, order });
     io.to(`merchant_${order.merchant_id}`).emit('order:cancelled', { orderId, order });
-    if (driverId) {
-      io.to(`user_${driverId}`).emit('mission:cancelled', { missionId: row.mission_id, orderId, order });
+
+    const cancelledPayload = { missionId, orderId, order };
+    const notifiedDrivers = new Set();
+    for (const id of [driverId, offeredDriverId]) {
+      if (id && !notifiedDrivers.has(id)) {
+        io.to(`user_${id}`).emit('mission:cancelled', cancelledPayload);
+        notifiedDrivers.add(id);
+        assignPendingOrdersToDriver(id, io);
+      }
     }
+
     io.emit('product:stock_updated', {
       productId: row.product_id,
       quantity: row.product_stock + row.quantity,

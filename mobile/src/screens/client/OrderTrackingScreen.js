@@ -10,6 +10,8 @@ import UnreadDot from '../../components/ui/UnreadDot';
 import { formatMinutes } from '../../utils/format';
 import MapView from '../../components/MapView';
 import { COLORS, ORDER_STATUS_LABEL, CANCELLABLE_ORDER_STATUSES } from '../../config';
+import { confirmAction, notify } from '../../utils/confirm';
+import { navigateToFreshHome } from '../../navigation/navigateToFreshHome';
 
 const STEPS = [
   { key: 'placed',          label: 'Commande passée',           icon: '✅' },
@@ -110,7 +112,10 @@ export default function OrderTrackingScreen({ navigation, route }) {
       driver_phone: mission.driver_phone,
     } : prev));
     const onAccepted = ({ mission }) => onAssigned({ mission });
-    const onMissionStatus = ({ status }) => setOrder((prev) => (prev ? { ...prev, status } : prev));
+    const onMissionStatus = ({ status }) => {
+      setOrder((prev) => (prev ? { ...prev, status } : prev));
+      setCancellable(canCancelOrder(status));
+    };
     const onCancelled = ({ order: updated }) => {
       setOrder(updated);
       setCancellable(false);
@@ -145,29 +150,23 @@ export default function OrderTrackingScreen({ navigation, route }) {
     }
   }
 
-  async function handleCancel() {
-    Alert.alert(
+  function handleCancel() {
+    confirmAction(
       'Annuler la commande',
       'Confirmer l\'annulation de cette commande ?',
-      [
-        { text: 'Non', style: 'cancel' },
-        {
-          text: 'Oui, annuler',
-          style: 'destructive',
-          onPress: async () => {
-            setCancelling(true);
-            try {
-              await cancelOrder(orderId);
-              await load();
-              Alert.alert('Commande annulée', 'Votre commande a été annulée.');
-            } catch (err) {
-              Alert.alert('Erreur', err.response?.data?.error || 'Annulation impossible.');
-            } finally {
-              setCancelling(false);
-            }
-          },
-        },
-      ],
+      async () => {
+        setCancelling(true);
+        try {
+          await cancelOrder(order.id);
+          navigateToFreshHome(navigation);
+          notify('Commande annulée', 'Votre commande a été annulée.');
+        } catch (err) {
+          Alert.alert('Erreur', err.response?.data?.error || 'Annulation impossible.');
+        } finally {
+          setCancelling(false);
+        }
+      },
+      'Oui, annuler',
     );
   }
 
@@ -176,7 +175,7 @@ export default function OrderTrackingScreen({ navigation, route }) {
 
   const currentIdx = stepIndexForStatus(order.status);
   const active = !['delivered', 'cancelled'].includes(order.status);
-  const showCancel = active && (cancellable || canCancelOrder(order.status));
+  const showCancel = active && canCancelOrder(order.status);
 
   return (
     <ScrollView style={styles.bg} contentContainerStyle={styles.container}>
@@ -271,13 +270,10 @@ export default function OrderTrackingScreen({ navigation, route }) {
         </TouchableOpacity>
       )}
 
-      {order.status === 'delivered' && (
+      {(order.status === 'delivered' || order.status === 'cancelled') && (
         <TouchableOpacity
           style={styles.newOrderBtn}
-          onPress={() => navigation.navigate('HomeTab', {
-            screen: 'Home',
-            params: { reset: Date.now() },
-          })}
+          onPress={() => navigateToFreshHome(navigation)}
         >
           <Text style={styles.newOrderText}>Nouvelle commande</Text>
         </TouchableOpacity>

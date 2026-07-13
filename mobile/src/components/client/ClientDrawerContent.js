@@ -10,7 +10,11 @@ import { THEME } from '../../theme';
 const MENU_ITEMS = [
   { id: 'favorites', icon: 'heart-outline', label: 'Mes commerces coups de cœur', screen: 'FavoriteStores' },
   { id: 'orders', icon: 'receipt-outline', label: 'Mes commandes', screen: 'OrderHistory' },
+  { id: 'faq', icon: 'help-buoy-outline', label: 'FAQ', screen: 'Faq' },
+  { id: 'becomeDriver', icon: 'bicycle-outline', label: 'Devenir livreur', screen: 'BecomeDriver' },
+  { id: 'contact', icon: 'mail-outline', label: 'Contact', screen: 'Contact' },
   { id: 'help', icon: 'help-circle-outline', label: 'Aide', screen: 'HelpCenter' },
+  { id: 'settings', icon: 'settings-outline', label: 'Paramètres', screen: 'Settings' },
 ];
 
 export default function ClientDrawerContent({ navigation }) {

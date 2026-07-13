@@ -54,7 +54,7 @@ export const ORDER_STATUS_LABEL = {
 
 export const CANCELLABLE_ORDER_STATUSES = [
   'placed', 'pending_driver', 'driver_assigned', 'picking_up',
-  'pending', 'accepted', 'searching_driver', 'accepted_by_driver',
+  'pending', 'accepted', 'searching_driver', 'accepted_by_driver', 'offered',
 ];
 
 export const MISSION_STATUS_LABEL = {

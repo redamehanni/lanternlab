@@ -136,6 +136,7 @@ export function DriverProvider({ children }) {
     };
     const onCancelled = ({ missionId }) => {
       setActiveMission((cur) => (cur?.id === missionId ? null : cur));
+      setPendingOffer((cur) => (cur?.mission?.id === missionId ? null : cur));
     };
     socket.on('mission:assigned', onAssigned);
     socket.on('mission:offered', onOffered);
