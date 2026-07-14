@@ -21,6 +21,7 @@ const favoritesRoutes = require('./routes/favorites');
 const promotionsRoutes = require('./routes/promotions');
 const driversRoutes = require('./routes/drivers');
 const merchantsRoutes = require('./routes/merchants');
+const walletRoutes = require('./routes/wallet');
 const setupSocket = require('./socket/handlers');
 
 const app = express();
@@ -62,6 +63,7 @@ app.use('/api/favorites', favoritesRoutes);
 app.use('/api/promotions', promotionsRoutes);
 app.use('/api/drivers', driversRoutes);
 app.use('/api/merchants', merchantsRoutes);
+app.use('/api/wallet', walletRoutes);
 
 // Healthcheck
 app.get('/health', (req, res) => res.json({ status: 'ok', time: new Date().toISOString() }));

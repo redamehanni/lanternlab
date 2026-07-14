@@ -1,0 +1,1099 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Audit technique — Wallet Engine v1 (Ma Zone)</title>
+<style>
+  @page { margin: 16mm 14mm; }
+  body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Helvetica, Arial, sans-serif; font-size: 10.5pt; line-height: 1.45; color: #1a1a1a; max-width: 100%; }
+  h1 { font-size: 20pt; border-bottom: 2px solid #0f2d5c; padding-bottom: 8px; color: #0f2d5c; page-break-after: avoid; }
+  h2 { font-size: 14pt; margin-top: 22px; color: #0f2d5c; border-bottom: 1px solid #e5e7eb; padding-bottom: 4px; page-break-after: avoid; }
+  h3 { font-size: 11.5pt; margin-top: 14px; color: #1a4a8a; page-break-after: avoid; }
+  table { border-collapse: collapse; width: 100%; margin: 10px 0; font-size: 9pt; page-break-inside: avoid; }
+  th, td { border: 1px solid #d1d5db; padding: 5px 7px; text-align: left; vertical-align: top; }
+  th { background: #f3f4f6; font-weight: 600; }
+  code { background: #f3f4f6; padding: 1px 4px; border-radius: 3px; font-size: 8.5pt; }
+  pre { background: #f8fafc; border: 1px solid #e5e7eb; border-radius: 6px; padding: 10px; overflow-x: auto; font-size: 8pt; line-height: 1.35; white-space: pre-wrap; word-break: break-word; page-break-inside: avoid; }
+  pre code { background: none; padding: 0; }
+  blockquote { border-left: 4px solid #0f2d5c; margin: 10px 0; padding: 6px 14px; background: #f0f4f8; color: #1e3a5f; }
+  hr { border: none; border-top: 1px solid #e5e7eb; margin: 18px 0; }
+  ul, ol { padding-left: 22px; }
+  li { margin-bottom: 3px; }
+  p { margin: 8px 0; }
+  .pdf-note { display: none; }
+  @media screen {
+    .pdf-note { display: block; background: #eff6ff; border: 1px solid #bfdbfe; border-radius: 8px; padding: 12px 16px; margin-bottom: 24px; color: #1e3a8a; }
+  }
+</style>
+</head>
+<body>
+<div class="pdf-note">
+  <strong>Lecture dans Cursor / navigateur :</strong> ce fichier HTML est la version lisible du plan.
+  Pour le PDF, ouvrez <code>AUDIT_WALLET_ENGINE_MAZONE.pdf</code> depuis le Finder (clic droit → Ouvrir avec Aperçu)
+  ou double-cliquez le fichier <code>Ouvrir_*_PDF.command</code> correspondant à la racine du projet.
+</div>
+<h1>Audit technique — Wallet Engine v1 (Ma Zone)</h1>
+<p><strong>Date :</strong> 14 juillet 2026<br />
+<strong>Périmètre :</strong> Revue d'architecture read-only — aucune modification du moteur<br />
+<strong>Public :</strong> Architecte logiciel / revue indépendante avant validation définitive<br />
+<strong>Version auditée :</strong> Implémentation post-conception B / B+ / B++ (Phase II, première version professionnelle)</p>
+<hr />
+<h2>Résumé exécutif</h2>
+<p>Le Wallet Engine v1 de Ma Zone est le <strong>premier organe transversal</strong> implémenté selon la philosophie validée en conception : registre personnel des objets numériques du citoyen, générique, extensible via un registre de types, avec journal append-only et projection d'état courant.</p>
+<p><strong>Verdict : fondation architecturale saine (note CTO : B+, 14/20).</strong> Le noyau transactionnel est robuste, lisible et aligné avec les conventions Ma Zone (<code>lib/</code> + routes + context mobile). <strong>Aucun organe métier existant (Orders, Dispatch, Promotions, Communication) n'est encore branché</strong> — seul un script de démonstration (<code>seed-wallet-demo.js</code>) émet des objets. C'est le principal risque opérationnel, pas un défaut de conception.</p>
+<p><strong>Recommandation :</strong> valider la fondation pour intégration progressive ; traiter l'autorisation inter-organes et le premier branchement Orders → <code>pickup_ticket</code> avant toute montée en charge.</p>
+<hr />
+<h2>1. Vision générale</h2>
+<h3>1.1 Comment le Wallet Engine a été construit</h3>
+<p>Le Wallet Engine a été développé en respectant intégralement la trajectoire de conception <strong>B → B+ → B++</strong> :</p>
+<ul>
+<li><strong>Architecture B</strong> : objet générique (<code>DigitalObject</code>), registre de types, machine à états, ledger append-only, projection pour lectures rapides.</li>
+<li><strong>B+</strong> : séparation entitlement (couche dure) / présentation (couche souple), capacités déclaratives, facette souvenir post-consommation.</li>
+<li><strong>B++</strong> : politique de rétention (<code>retention</code>), familles UX, préparation des guards contextuels et relations (non implémentés).</li>
+</ul>
+<p>L'implémentation suit le <strong>pattern organe Ma Zone</strong> déjà éprouvé par <code>communicationEngine.js</code> et <code>dispatch.js</code> : module CommonJS dans <code>backend/src/lib/</code>, routes REST dans <code>backend/src/routes/</code>, tables SQLite au boot dans <code>db/index.js</code>, context React Native côté mobile.</p>
+<h3>1.2 Philosophie</h3>
+<blockquote>
+<p>Le Wallet est le <strong>registre personnel des objets numériques</strong> du citoyen — pas un portefeuille financier, pas un moteur métier.</p>
+</blockquote>
+<p>Chaque objet possède une identité (<code>kind</code>), un cycle de vie gouverné, des capacités contextuelles (déclarées, pas exécutées par le cœur), et peut survivre à la consommation de son droit principal (facette souvenir). Tous les objets parlent le <strong>même langage architectural</strong> ; leur sens métier reste dans le <code>payload</code> opaque et dans l'organe émetteur.</p>
+<h3>1.3 Responsabilité exacte</h3>
+<table>
+<thead>
+<tr>
+<th>In scope (Wallet)</th>
+<th>Out of scope (autres organes)</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Stocker les objets numériques du citoyen</td>
+<td>Logique promotions, événements, commandes</td>
+</tr>
+<tr>
+<td>Gouverner les transitions d'état (issue, consume, revoke)</td>
+<td>Interpréter le contenu du <code>payload</code></td>
+</tr>
+<tr>
+<td>Journaliser chaque transition (audit + biographie)</td>
+<td>Exécuter les actions métier des capacités</td>
+</tr>
+<tr>
+<td>Valider les transitions via le registre de types</td>
+<td>Identifier physiquement (QR Identity)</td>
+</tr>
+<tr>
+<td>Exposer capacités et familles pour l'UI</td>
+<td>Contenu live riche (résolu chez l'émetteur)</td>
+</tr>
+<tr>
+<td>Émettre événements socket <code>wallet:*</code></td>
+<td>Routage inter-organes (Event Engine futur)</td>
+</tr>
+</tbody>
+</table>
+<h3>1.4 Pourquoi cette architecture</h3>
+<table>
+<thead>
+<tr>
+<th>Approche</th>
+<th>Décision</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>CRUD simple (<code>wallet_items</code>)</td>
+<td>Rejetée — faible auditabilité, risque double-dépense</td>
+</tr>
+<tr>
+<td><strong>B : registre + états + ledger + projection</strong></td>
+<td><strong>Retenue</strong> — auditable, extensible, compatible SQLite</td>
+</tr>
+<tr>
+<td>Event Sourcing complet (C)</td>
+<td>Reporté — surdimensionné MVP ; le ledger actuel en est le précurseur</td>
+</tr>
+</tbody>
+</table>
+<p>Le choix garantit qu'ajouter un type d'objet = <strong>déclarer un <code>kind</code> dans le registre</strong>, sans modifier le cœur transactionnel (Open/Closed).</p>
+<hr />
+<h2>2. Architecture</h2>
+<h3>2.1 Schéma global</h3>
+<pre><code>┌─────────────────────────────────────────────────────────────────────────┐
+│  MOBILE (client)                                                        │
+│  WalletTab → WalletStack                                                │
+│    WalletScreen (hub familles) → WalletFamilyScreen → WalletObjectDetail│
+│  WalletContext ← GET /api/wallet ← socket wallet:object_*               │
+└───────────────────────────────┬─────────────────────────────────────────┘
+                                │ HTTP (lecture) + WebSocket
+┌───────────────────────────────▼─────────────────────────────────────────┐
+│  BACKEND                                                                │
+│  routes/wallet.js (GET only, verifyToken)                               │
+│       ↓                                                                 │
+│  walletEngine.js ──→ walletRegistry.js (kinds, transitions, caps)      │
+│       ↓                                                                 │
+│  digital_objects (projection) + digital_object_events (ledger)          │
+└───────────────────────────────▲─────────────────────────────────────────┘
+                                │ in-process (require)
+┌───────────────────────────────┴─────────────────────────────────────────┐
+│  ORGANES ÉMETTEURS (futurs / démo)                                      │
+│  Orders, Event, Marketing, QR Identity, seed-wallet-demo.js           │
+│  → issueObject / consumeObject / revokeObject                           │
+└─────────────────────────────────────────────────────────────────────────┘
+</code></pre>
+<h3>2.2 Backend — fichiers et responsabilités</h3>
+<table>
+<thead>
+<tr>
+<th>Fichier</th>
+<th>Responsabilité</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><a href="backend/src/lib/walletRegistry.js"><code>backend/src/lib/walletRegistry.js</code></a></td>
+<td>Registre déclaratif : statuts, familles, kinds, transitions, capacités, rétention. Point d'extension unique (Open/Closed).</td>
+</tr>
+<tr>
+<td><a href="backend/src/lib/walletEngine.js"><code>backend/src/lib/walletEngine.js</code></a></td>
+<td>Moteur transactionnel : commandes (issue/consume/revoke), requêtes, projection enrichie, émission socket. Aucune logique métier par kind.</td>
+</tr>
+<tr>
+<td><a href="backend/src/routes/wallet.js"><code>backend/src/routes/wallet.js</code></a></td>
+<td>API HTTP <strong>lecture seule</strong> pour le propriétaire authentifié.</td>
+</tr>
+<tr>
+<td><a href="backend/src/db/index.js"><code>backend/src/db/index.js</code></a></td>
+<td>Schéma <code>digital_objects</code> + <code>digital_object_events</code> + index.</td>
+</tr>
+<tr>
+<td><a href="backend/src/index.js"><code>backend/src/index.js</code></a></td>
+<td>Montage <code>app.use('/api/wallet', walletRoutes)</code>.</td>
+</tr>
+<tr>
+<td><a href="backend/scripts/seed-wallet-demo.js"><code>backend/scripts/seed-wallet-demo.js</code></a></td>
+<td>Outil dev : peuple un Wallet client avec 6 objets de démo.</td>
+</tr>
+</tbody>
+</table>
+<h3>2.3 Mobile — fichiers et responsabilités</h3>
+<table>
+<thead>
+<tr>
+<th>Fichier</th>
+<th>Responsabilité</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><a href="mobile/src/context/WalletContext.js"><code>mobile/src/context/WalletContext.js</code></a></td>
+<td>Provider client : fetch familles, refresh socket-driven, hook <code>useWallet()</code>.</td>
+</tr>
+<tr>
+<td><a href="mobile/src/screens/client/WalletScreen.js"><code>mobile/src/screens/client/WalletScreen.js</code></a></td>
+<td>Hub principal : 6 familles d'objets (pattern <code>ClientMessagingHomeScreen</code>).</td>
+</tr>
+<tr>
+<td><a href="mobile/src/screens/client/WalletFamilyScreen.js"><code>mobile/src/screens/client/WalletFamilyScreen.js</code></a></td>
+<td>Liste des objets d'une famille.</td>
+</tr>
+<tr>
+<td><a href="mobile/src/screens/client/WalletObjectDetailScreen.js"><code>mobile/src/screens/client/WalletObjectDetailScreen.js</code></a></td>
+<td>Fiche objet : payload, capacités, biographie (ledger).</td>
+</tr>
+<tr>
+<td><a href="mobile/src/screens/client/walletStatus.js"><code>mobile/src/screens/client/walletStatus.js</code></a></td>
+<td>Libellés/couleurs statuts UI.</td>
+</tr>
+<tr>
+<td><a href="mobile/src/api/index.js"><code>mobile/src/api/index.js</code></a></td>
+<td>6 exports GET wallet.</td>
+</tr>
+<tr>
+<td><a href="mobile/src/navigation/index.js"><code>mobile/src/navigation/index.js</code></a></td>
+<td><code>WalletStack</code> + onglet <code>WalletTab</code> (4e tab client).</td>
+</tr>
+<tr>
+<td><a href="mobile/App.js"><code>mobile/App.js</code></a></td>
+<td><code>&lt;WalletProvider&gt;</code> dans l'arbre de providers.</td>
+</tr>
+</tbody>
+</table>
+<h3>2.4 Modèle de données</h3>
+<p><strong>Table <code>digital_objects</code> (projection d'état courant)</strong></p>
+<table>
+<thead>
+<tr>
+<th>Colonne</th>
+<th>Type</th>
+<th>Rôle</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>id</code></td>
+<td>TEXT PK</td>
+<td>UUID v4</td>
+</tr>
+<tr>
+<td><code>owner_id</code></td>
+<td>TEXT FK → users</td>
+<td>Propriétaire (citoyen)</td>
+</tr>
+<tr>
+<td><code>kind</code></td>
+<td>TEXT</td>
+<td>Type déclaré dans le registre</td>
+</tr>
+<tr>
+<td><code>family</code></td>
+<td>TEXT</td>
+<td>Regroupement UX (billets, retraits…)</td>
+</tr>
+<tr>
+<td><code>status</code></td>
+<td>TEXT</td>
+<td>État entitlement courant</td>
+</tr>
+<tr>
+<td><code>retention</code></td>
+<td>TEXT</td>
+<td>ephemeral / keepsake / entitlement_only</td>
+</tr>
+<tr>
+<td><code>payload</code></td>
+<td>TEXT (JSON)</td>
+<td><strong>Opaque</strong> au moteur</td>
+</tr>
+<tr>
+<td><code>source_engine</code></td>
+<td>TEXT</td>
+<td>Organe émetteur</td>
+</tr>
+<tr>
+<td><code>source_ref</code></td>
+<td>TEXT</td>
+<td>Référence externe (résolution live future)</td>
+</tr>
+<tr>
+<td><code>zone_id</code></td>
+<td>TEXT</td>
+<td>Zone-aware (nullable)</td>
+</tr>
+<tr>
+<td><code>expires_at</code></td>
+<td>TEXT</td>
+<td>Expiration déclarée (nullable, non enforced)</td>
+</tr>
+<tr>
+<td><code>created_at</code>, <code>updated_at</code></td>
+<td>TEXT</td>
+<td>Horodatage</td>
+</tr>
+</tbody>
+</table>
+<p><strong>Table <code>digital_object_events</code> (ledger append-only)</strong></p>
+<table>
+<thead>
+<tr>
+<th>Colonne</th>
+<th>Type</th>
+<th>Rôle</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>id</code></td>
+<td>TEXT PK</td>
+<td>UUID</td>
+</tr>
+<tr>
+<td><code>object_id</code></td>
+<td>TEXT FK</td>
+<td>Objet concerné</td>
+</tr>
+<tr>
+<td><code>type</code></td>
+<td>TEXT</td>
+<td>issued, consumed, revoked, …</td>
+</tr>
+<tr>
+<td><code>from_status</code>, <code>to_status</code></td>
+<td>TEXT</td>
+<td>Transition</td>
+</tr>
+<tr>
+<td><code>payload</code></td>
+<td>TEXT (JSON)</td>
+<td>Données événement (ex. reason revoke)</td>
+</tr>
+<tr>
+<td><code>actor_engine</code></td>
+<td>TEXT</td>
+<td>Organe acteur</td>
+</tr>
+<tr>
+<td><code>idempotency_key</code></td>
+<td>TEXT</td>
+<td>Anti double-consommation (index unique partiel)</td>
+</tr>
+<tr>
+<td><code>created_at</code></td>
+<td>TEXT</td>
+<td>Horodatage immuable</td>
+</tr>
+</tbody>
+</table>
+<h3>2.5 Services publics du moteur (interface in-process)</h3>
+<p><strong>Commandes (écritures — appelées par les organes, pas exposées HTTP client) :</strong></p>
+<pre><code class="language-javascript">issueObject({ ownerId, kind, payload, sourceEngine, sourceRef?, zoneId?, expiresAt? }, io?)
+consumeObject({ objectId, consumerEngine, idempotencyKey? }, io?)
+revokeObject({ objectId, reason?, actorEngine }, io?)
+</code></pre>
+<p><strong>Requêtes (lectures) :</strong></p>
+<pre><code class="language-javascript">getObjectsByOwner(ownerId, { family?, kind?, status? })
+getWalletByFamilies(ownerId)          // vue hub mobile
+getObjectById(objectId, ownerId?)     // contrôle propriétaire si ownerId fourni
+getCapabilitiesForObject(objectId, ownerId?)
+getObjectEvents(objectId, ownerId?)     // biographie / ledger
+getFamilies() / listKinds()             // métadonnées registre
+</code></pre>
+<h3>2.6 Routes HTTP (lecture seule)</h3>
+<table>
+<thead>
+<tr>
+<th>Méthode</th>
+<th>Route</th>
+<th>Rôle</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>GET</td>
+<td><code>/api/wallet</code></td>
+<td>Vue par familles (écran principal)</td>
+</tr>
+<tr>
+<td>GET</td>
+<td><code>/api/wallet/families</code></td>
+<td>Catalogue familles</td>
+</tr>
+<tr>
+<td>GET</td>
+<td><code>/api/wallet/objects</code></td>
+<td>Liste plate (filtres query)</td>
+</tr>
+<tr>
+<td>GET</td>
+<td><code>/api/wallet/objects/:id</code></td>
+<td>Détail objet</td>
+</tr>
+<tr>
+<td>GET</td>
+<td><code>/api/wallet/objects/:id/capabilities</code></td>
+<td>Menu actions</td>
+</tr>
+<tr>
+<td>GET</td>
+<td><code>/api/wallet/objects/:id/events</code></td>
+<td>Biographie ledger</td>
+</tr>
+</tbody>
+</table>
+<p>Toutes protégées par <code>verifyToken</code>. <strong>Aucune route POST/PATCH/DELETE</strong> — décision sécurité : empêcher l'auto-attribution d'objets par le client.</p>
+<h3>2.7 Événements Socket.io</h3>
+<table>
+<thead>
+<tr>
+<th>Événement</th>
+<th>Émetteur</th>
+<th>Room</th>
+<th>Payload</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>wallet:object_issued</code></td>
+<td>walletEngine</td>
+<td><code>user_{ownerId}</code></td>
+<td><code>{ object }</code></td>
+</tr>
+<tr>
+<td><code>wallet:object_consumed</code></td>
+<td>walletEngine</td>
+<td><code>user_{ownerId}</code></td>
+<td><code>{ object }</code></td>
+</tr>
+<tr>
+<td><code>wallet:object_revoked</code></td>
+<td>walletEngine</td>
+<td><code>user_{ownerId}</code></td>
+<td><code>{ object }</code></td>
+</tr>
+</tbody>
+</table>
+<p>Écoutés par <code>WalletContext</code> → <code>refresh()</code> automatique (Wallet « vivant » côté UI).</p>
+<hr />
+<h2>3. Flux de fonctionnement</h2>
+<h3>3.1 Cycle de vie complet d'un objet numérique</h3>
+<pre><code>[Organe émetteur]
+      │
+      ▼ issueObject()
+  ┌─────────┐
+  │ active  │◄──────────────────────────────────┐
+  └────┬────┘                                   │
+       │ consumeObject() (idempotent)            │ revokeObject()
+       ▼                                        ▼
+  ┌──────────┐                            ┌──────────┐
+  │ consumed │                            │ revoked  │
+  └────┬─────┘                            └──────────┘
+       │ facette souvenir (isMemory=true)
+       │ si keepsake + memoryEnabled
+       ▼
+  [Objet persiste en Wallet — patrimoine / keepsake]
+</code></pre>
+<p><strong>Archivage :</strong> non implémenté en v1. Les objets <code>ephemeral</code> restent en base ; la politique <code>retention</code> est déclarée mais non appliquée par un job de purge.</p>
+<h3>3.2 Acteurs et permissions</h3>
+<table>
+<thead>
+<tr>
+<th>Acteur</th>
+<th>Crée</th>
+<th>Modifie état</th>
+<th>Consomme</th>
+<th>Consulte</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Organe émetteur (Event, Orders…)</td>
+<td><code>issueObject</code></td>
+<td><code>revokeObject</code></td>
+<td>—</td>
+<td>—</td>
+</tr>
+<tr>
+<td>Organe consommateur (QR Identity futur)</td>
+<td>—</td>
+<td>—</td>
+<td><code>consumeObject</code></td>
+<td>—</td>
+</tr>
+<tr>
+<td>Citoyen (app mobile)</td>
+<td>—</td>
+<td>—</td>
+<td>—</td>
+<td>GET <code>/api/wallet/*</code> (ses objets uniquement)</td>
+</tr>
+<tr>
+<td>Script démo</td>
+<td><code>issueObject</code> / <code>consumeObject</code></td>
+<td>—</td>
+<td>—</td>
+<td>—</td>
+</tr>
+</tbody>
+</table>
+<h3>3.3 Flux détaillé — émission</h3>
+<ol>
+<li>Organe appelle <code>wallet.issueObject({ ownerId, kind, payload, sourceEngine, ... })</code></li>
+<li>Moteur valide : kind connu, owner existe, sourceEngine présent</li>
+<li>Transaction SQLite : INSERT <code>digital_objects</code> + INSERT event <code>issued</code></li>
+<li>Socket <code>wallet:object_issued</code> → room <code>user_{ownerId}</code></li>
+<li>Mobile <code>WalletContext</code> refresh → famille mise à jour</li>
+</ol>
+<h3>3.4 Flux détaillé — consommation (idempotente)</h3>
+<ol>
+<li>Organe (ex. QR Identity) appelle <code>consumeObject({ objectId, consumerEngine, idempotencyKey })</code></li>
+<li>Si <code>idempotencyKey</code> déjà présent dans le ledger → retour sans double effet</li>
+<li>Vérification : kind consommable, transition autorisée, pas déjà consumed</li>
+<li>Transaction : UPDATE status + INSERT event <code>consumed</code></li>
+<li>Projection enrichie : <code>isMemory=true</code> si keepsake + memoryEnabled</li>
+<li>Capacités recalculées (ex. billet : Offrir disparaît, Revoir le souvenir apparaît)</li>
+<li>Socket <code>wallet:object_consumed</code></li>
+</ol>
+<h3>3.5 Communication inter-organes (modèle cible)</h3>
+<pre><code>Organe émetteur ──issueObject()──▶ Wallet Engine
+Organe consommateur ──consumeObject()──▶ Wallet Engine
+Wallet Engine ──wallet:object_*──▶ Mobile (citoyen)
+Organe propriétaire contenu ──resolveLive(sourceRef)──▶ Mobile (à venir)
+Event Engine (futur) ◀── bus ── organes (pas via Wallet)
+</code></pre>
+<p>Le Wallet n'est <strong>pas</strong> le bus de messages inter-organes (principe B++). Il est le <strong>contrat d'objets partagé</strong> (couche des noms).</p>
+<hr />
+<h2>4. Intégration avec Ma Zone</h2>
+<h3>4.1 État actuel vs prévu</h3>
+<table>
+<thead>
+<tr>
+<th>Organe</th>
+<th>Connexion aujourd'hui</th>
+<th>Intégration prévue</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><strong>QR Identity</strong></td>
+<td>Aucune</td>
+<td><code>consumeObject</code> au scan ; capability <code>show_qr</code> (<code>handledBy: wallet</code>)</td>
+</tr>
+<tr>
+<td><strong>Marketplace</strong></td>
+<td>Aucune</td>
+<td>Émission objets post-achat (kinds à définir)</td>
+</tr>
+<tr>
+<td><strong>Orders</strong></td>
+<td>Aucune</td>
+<td><code>issueObject(pickup_ticket)</code> à la création commande ; <code>revokeObject</code> à annulation</td>
+</tr>
+<tr>
+<td><strong>Dispatch</strong></td>
+<td>Aucune</td>
+<td>Consommation ticket retrait ; statut commande → enrichissement objet</td>
+</tr>
+<tr>
+<td><strong>Communication</strong></td>
+<td>Aucune</td>
+<td>Capability <code>contact_merchant</code> → deep-link Communication Engine</td>
+</tr>
+<tr>
+<td><strong>Delivery</strong></td>
+<td>Aucune</td>
+<td>Via Dispatch — pas de couplage direct Wallet ↔ livreur</td>
+</tr>
+<tr>
+<td><strong>Notifications</strong></td>
+<td>Partielle</td>
+<td>Socket <code>wallet:object_*</code> vers <code>user_{id}</code> ; pas de push natif</td>
+</tr>
+<tr>
+<td><strong>Promotions</strong></td>
+<td>Aucune</td>
+<td><code>issueObject(promo_voucher)</code> depuis Marketing Engine</td>
+</tr>
+<tr>
+<td><strong>Event Engine</strong></td>
+<td>Aucune</td>
+<td><code>issueObject(event_ticket)</code> ; enrichissement live via <code>sourceRef</code></td>
+</tr>
+</tbody>
+</table>
+<p><strong>Seul consommateur actuel :</strong> <a href="backend/scripts/seed-wallet-demo.js"><code>backend/scripts/seed-wallet-demo.js</code></a> (<code>sourceEngine: 'demo_seed'</code>).</p>
+<h3>4.2 Kinds préparés dans le registre (prêts à l'emploi)</h3>
+<table>
+<thead>
+<tr>
+<th>Kind</th>
+<th>Famille</th>
+<th>Organe émetteur cible</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>event_ticket</code></td>
+<td>billets</td>
+<td>Event Engine</td>
+</tr>
+<tr>
+<td><code>pickup_ticket</code></td>
+<td>retraits</td>
+<td>Orders / Dispatch</td>
+</tr>
+<tr>
+<td><code>promo_voucher</code></td>
+<td>promotions</td>
+<td>Marketing</td>
+</tr>
+<tr>
+<td><code>loyalty_card</code></td>
+<td>fidélité</td>
+<td>Marketing / Commerce</td>
+</tr>
+<tr>
+<td><code>badge</code></td>
+<td>badges</td>
+<td>Event / Civic</td>
+</tr>
+<tr>
+<td><code>civic_points</code></td>
+<td>civique</td>
+<td>Points Civiques (forme TBD)</td>
+</tr>
+</tbody>
+</table>
+<hr />
+<h2>5. Philosophie des objets numériques vivants</h2>
+<h3>5.1 Concepts conservés en v1</h3>
+<table>
+<thead>
+<tr>
+<th>Concept (B/B+/B++)</th>
+<th>Implémentation v1</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Objet ≠ simple document</td>
+<td><code>DigitalObject</code> avec cycle de vie</td>
+</tr>
+<tr>
+<td>Couche dure / souple</td>
+<td><code>status</code> gouverné vs <code>capabilities</code> + <code>isMemory</code></td>
+</tr>
+<tr>
+<td>Capacités par état</td>
+<td><code>getCapabilities(kind, status)</code> dans registre</td>
+</tr>
+<tr>
+<td>« Que puis-je faire ? »</td>
+<td>Section « Gérer cet objet numérique » (UI)</td>
+</tr>
+<tr>
+<td>Souvenir post-consommation</td>
+<td><code>isMemory</code> = terminal + <code>memoryEnabled</code> + retention</td>
+</tr>
+<tr>
+<td>Biographie</td>
+<td><code>digital_object_events</code> + section « Histoire de l'objet »</td>
+</tr>
+<tr>
+<td>Patrimoine</td>
+<td><code>retention: keepsake</code> déclaré (filtre futur)</td>
+</tr>
+<tr>
+<td>Payload opaque</td>
+<td>JSON stocké, jamais interprété par le moteur</td>
+</tr>
+<tr>
+<td>Référence source</td>
+<td><code>sourceEngine</code> + <code>sourceRef</code> (résolution live future)</td>
+</tr>
+</tbody>
+</table>
+<h3>5.2 Volontairement laissé de côté (anti sur-ingénierie)</h3>
+<table>
+<thead>
+<tr>
+<th>Fonctionnalité</th>
+<th>Raison</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>enrichObject()</code></td>
+<td>Handler non implémenté ; EVENT_TYPE déclaré seulement</td>
+</tr>
+<tr>
+<td><code>transferObject()</code></td>
+<td>Reporté ; capability <code>offer</code> déclarée sans exécution</td>
+</tr>
+<tr>
+<td><code>reserve</code> / <code>release</code></td>
+<td>Transitions déclarées, handlers absents</td>
+</tr>
+<tr>
+<td>Relations inter-objets</td>
+<td>Pas de table <code>object_relations</code></td>
+</tr>
+<tr>
+<td>Guards contextuels (<code>primaryWhen</code>)</td>
+<td>Évaluation au bord mobile — non implémentée</td>
+</tr>
+<tr>
+<td>Expiration automatique</td>
+<td>Pas de <code>expireObject()</code> ni cron</td>
+</tr>
+<tr>
+<td>Purge <code>retention: ephemeral</code></td>
+<td>Politique déclarée, non enforced</td>
+</tr>
+<tr>
+<td>Exécution réelle des capacités</td>
+<td>Mobile = Alert stub « géré par : {handledBy} »</td>
+</tr>
+<tr>
+<td>Versioning payload</td>
+<td>Absent</td>
+</tr>
+</tbody>
+</table>
+<h3>5.3 Préparé pour le futur (extension sans refonte)</h3>
+<ul>
+<li>Types d'événements ledger : <code>reserved</code>, <code>released</code>, <code>transferred</code>, <code>enriched</code>, <code>expired</code></li>
+<li>Transitions <code>active → reserved → consumed</code> dans <code>DEFAULT_TRANSITIONS</code></li>
+<li>Capabilities avec <code>handledBy: wallet | source | device</code> et <code>invocation</code></li>
+<li>Index idempotence sur <code>(object_id, idempotency_key)</code></li>
+<li>Champs <code>zone_id</code>, <code>expires_at</code>, <code>source_ref</code></li>
+</ul>
+<hr />
+<h2>6. Interface utilisateur</h2>
+<h3>6.1 Organisation et choix UX</h3>
+<p>Le Wallet est un <strong>onglet principal</strong> (<code>WalletTab</code>, 4e tab client) — pas dans le menu hamburger — conformément à la directive « expérience principale de Ma Zone ».</p>
+<p><strong>Navigation à 3 niveaux :</strong></p>
+<ol>
+<li><strong>WalletScreen</strong> — Hub par <strong>familles</strong> (6 cartes : Billets, Retraits, Promotions, Fidélité, Badges, Points civiques), pas une liste chronologique. Pattern identique à <code>ClientMessagingHomeScreen</code>.</li>
+<li><strong>WalletFamilyScreen</strong> — Liste des objets de la famille, badge statut ou « Souvenir ».</li>
+<li><strong>WalletObjectDetailScreen</strong> — Fiche : payload brut, menu actions, timeline ledger.</li>
+</ol>
+<p><strong>Pourquoi par familles :</strong> prépare l'écosystème multi-organes sans surcharger l'écran ; chaque famille correspond à un domaine métier futur ; extensible en ajoutant une entrée dans <code>FAMILIES</code> du registre.</p>
+<h3>6.2 Comportement temps réel</h3>
+<p><code>WalletContext</code> écoute <code>wallet:object_issued|consumed|revoked</code> et appelle <code>refresh()</code> — le Wallet se met à jour sans action utilisateur quand un organe émet ou consomme un objet.</p>
+<h3>6.3 Captures d'écran représentatives</h3>
+<p>Voir le fichier compagnon <a href="AUDIT_WALLET_ENGINE_SCREENS.html"><code>AUDIT_WALLET_ENGINE_SCREENS.html</code></a> — mockups fidèles au design system THEME avec données du seed de démonstration :</p>
+<ol>
+<li><strong>Page principale</strong> — 6 familles, compteurs, états vides/peuplés</li>
+<li><strong>Famille Billets</strong> — liste avec statut Actif / Souvenir</li>
+<li><strong>Fiche billet actif</strong> — payload, menu « Gérer » (QR, Offrir, Calendrier)</li>
+<li><strong>Fiche billet consommé</strong> — badge Souvenir, capacité « Revoir le souvenir », historique ledger</li>
+</ol>
+<hr />
+<h2>7. Séparation des responsabilités</h2>
+<h3>7.1 Appartient au Wallet</h3>
+<ul>
+<li>Persistance et propriété (<code>owner_id</code>)</li>
+<li>Validation et exécution des transitions d'état</li>
+<li>Intégrité transactionnelle (atomicité, idempotence consommation)</li>
+<li>Journal append-only (audit)</li>
+<li>Déclaration et exposition des capacités (descripteurs)</li>
+<li>Calcul facette souvenir (<code>isMemory</code>)</li>
+<li>Regroupement par familles (présentation)</li>
+<li>Émission événements socket propriétaire</li>
+</ul>
+<h3>7.2 Appartient aux autres moteurs</h3>
+<table>
+<thead>
+<tr>
+<th>Responsabilité</th>
+<th>Organe</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Décider <strong>quand</strong> émettre un objet</td>
+<td>Organe métier (Orders, Event…)</td>
+</tr>
+<tr>
+<td>Contenu et sens du <code>payload</code></td>
+<td>Organe émetteur</td>
+</tr>
+<tr>
+<td>Scan QR et validation identité</td>
+<td>QR Identity</td>
+</tr>
+<tr>
+<td>Exécution « Offrir », « Voir le commerce », « Contacter »</td>
+<td>Organe indiqué par <code>handledBy</code></td>
+</tr>
+<tr>
+<td>Contenu live (photos event, promo actuelle)</td>
+<td>Organe source via <code>sourceRef</code></td>
+</tr>
+<tr>
+<td>Logique promotion / fidélité / badge</td>
+<td>Marketing, Event, Civic</td>
+</tr>
+<tr>
+<td>Livraison physique</td>
+<td>Dispatch (indépendant du Wallet)</td>
+</tr>
+</tbody>
+</table>
+<h3>7.3 Vérification anti-fourre-tout</h3>
+<p>Inspection de <code>walletEngine.js</code> : <strong>aucun <code>if (kind === 'event_ticket')</code> métier</strong>. Toute connaissance type-spécifique est dans <code>walletRegistry.js</code> (déclaratif). Le moteur appelle uniquement <code>registry.canTransition</code>, <code>registry.getCapabilities</code>, <code>registry.getRetention</code>.</p>
+<p><strong>Conclusion :</strong> le Wallet reste un organe transversal. Il ne devient pas un moteur métier en v1.</p>
+<hr />
+<h2>8. Évolutivité</h2>
+<h3>8.1 Ajouter un nouvel organe (ex. Event Engine)</h3>
+<pre><code>1. Déclarer kind(s) dans walletRegistry.js (defineKind)
+2. Depuis eventEngine.js : require('./walletEngine').issueObject(...)
+3. (Optionnel) Écouter wallet:object_* ou laisser le mobile refresh seul
+4. Mobile : nouvelle famille ou kind existant → affichage automatique via API
+</code></pre>
+<p><strong>Aucune modification de walletEngine.js requise</strong> si le kind respecte les transitions par défaut.</p>
+<h3>8.2 Organes futurs — mapping prévu</h3>
+<table>
+<thead>
+<tr>
+<th>Organe</th>
+<th>Kind(s)</th>
+<th>Commande principale</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>QR Identity</td>
+<td>tous consommables</td>
+<td><code>consumeObject</code></td>
+</tr>
+<tr>
+<td>Marketing</td>
+<td><code>promo_voucher</code>, <code>loyalty_card</code></td>
+<td><code>issueObject</code>, <code>revokeObject</code></td>
+</tr>
+<tr>
+<td>Event</td>
+<td><code>event_ticket</code>, <code>badge</code></td>
+<td><code>issueObject</code>, enrichissement futur</td>
+</tr>
+<tr>
+<td>Orders/Dispatch</td>
+<td><code>pickup_ticket</code></td>
+<td><code>issueObject</code> à commande, <code>consumeObject</code> au retrait</td>
+</tr>
+<tr>
+<td>Civic</td>
+<td><code>civic_points</code>, <code>badge</code></td>
+<td><code>issueObject</code>, enrichissement</td>
+</tr>
+<tr>
+<td>Stock</td>
+<td>—</td>
+<td>Pas de kind direct ; émission via Orders/Marketing</td>
+</tr>
+</tbody>
+</table>
+<h3>8.3 Évolutions architecturales sans refonte</h3>
+<ul>
+<li>Passage registre code → table DB (si kinds dynamiques)</li>
+<li>PostgreSQL + event store (scale)</li>
+<li>Event Engine bus (couche des verbes, distincte du Wallet)</li>
+<li>Capability router mobile (<code>handledBy</code> → navigation inter-écrans)</li>
+</ul>
+<hr />
+<h2>9. Dette technique</h2>
+<h3>9.1 Compromis assumés</h3>
+<table>
+<thead>
+<tr>
+<th>Compromis</th>
+<th>Justification</th>
+<th>Impact</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Registre en JS (pas DB)</td>
+<td>Simplicité MVP, 6 kinds statiques</td>
+<td>Redéploiement pour nouveau kind</td>
+</tr>
+<tr>
+<td>Écritures in-process only</td>
+<td>Sécurité client, pattern organe Ma Zone</td>
+<td>Nécessite discipline backend</td>
+</tr>
+<tr>
+<td>SQLite</td>
+<td>Cohérence stack MVP</td>
+<td>Limites concurrence / volume</td>
+</tr>
+<tr>
+<td>Capacités stub mobile</td>
+<td>Fondation d'abord, organes pas prêts</td>
+<td>UX actions non fonctionnelles</td>
+</tr>
+<tr>
+<td>Pas d'intégration organe</td>
+<td>Périmètre v1 = noyau sain</td>
+<td>Wallet vide en prod sans seed</td>
+</tr>
+</tbody>
+</table>
+<h3>9.2 Limites connues</h3>
+<ol>
+<li><strong>Aucune autorisation inter-organes</strong> — tout module backend peut appeler <code>issueObject</code> sans allowlist <code>sourceEngine</code>.</li>
+<li><strong><code>expires_at</code> non enforced</strong> — pas de job expiration.</li>
+<li><strong><code>retention: ephemeral</code> non appliquée</strong> — objets éphémères persistent indéfiniment.</li>
+<li><strong>Pas de versioning payload</strong> — risque dérive schéma par kind.</li>
+<li><strong>Événements <code>reserved/transferred/enriched/expired</code></strong> — types déclarés, handlers absents.</li>
+<li><strong>Client-only</strong> — pas de vue Wallet commerçant/livreur.</li>
+<li><strong>Pas de tests automatisés</strong> — validation manuelle + script verify éphémère.</li>
+<li><strong>Pas de documentation organe</strong> — <code>ORGANE_WALLET.md</code> absent.</li>
+</ol>
+<h3>9.3 Sujets prochaines versions</h3>
+<ul>
+<li>Allowlist <code>sourceEngine</code> pour écritures</li>
+<li>Branchement Orders → <code>pickup_ticket</code></li>
+<li><code>expireObject</code> + scheduler</li>
+<li>Capability router mobile</li>
+<li>Purge rétention ephemeral</li>
+<li>Tests d'intégration idempotence / transitions</li>
+</ul>
+<hr />
+<h2>10. Auto-évaluation (regard CTO)</h2>
+<h3>10.1 Note globale : <strong>B+ (14/20)</strong></h3>
+<table>
+<thead>
+<tr>
+<th>Critère</th>
+<th>Note</th>
+<th>Commentaire</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Architecture / conception</td>
+<td>17/20</td>
+<td>Alignée B++, Open/Closed, ledger, séparation couches</td>
+</tr>
+<tr>
+<td>Qualité code</td>
+<td>15/20</td>
+<td>Lisible, conventions Ma Zone, peu de dette structurelle</td>
+</tr>
+<tr>
+<td>Robustesse transactionnelle</td>
+<td>16/20</td>
+<td>Idempotence, transactions SQLite, ownership</td>
+</tr>
+<tr>
+<td>Intégration écosystème</td>
+<td>8/20</td>
+<td>Noyau seul, zéro organe branché</td>
+</tr>
+<tr>
+<td>UX / complétude mobile</td>
+<td>13/20</td>
+<td>Hub solide, actions stub</td>
+</tr>
+<tr>
+<td>Opérationnel / sécurité</td>
+<td>12/20</td>
+<td>Pas d'auth inter-organes, pas d'expiration</td>
+</tr>
+<tr>
+<td>Documentation</td>
+<td>10/20</td>
+<td>Commentaires code OK, pas de doc organe dédiée</td>
+</tr>
+</tbody>
+</table>
+<h3>10.2 Plus grandes qualités</h3>
+<ol>
+<li><strong>Fondation extensible</strong> — registre + moteur générique : ajout de kinds sans toucher au cœur.</li>
+<li><strong>Intégrité des droits</strong> — ledger append-only + idempotence consommation : base saine pour QR Identity et droits à valeur.</li>
+<li><strong>Cohérence Ma Zone</strong> — même pattern que Communication/Dispatch ; risque faible pour l'équipe.</li>
+</ol>
+<h3>10.3 Principaux risques</h3>
+<ol>
+<li><strong>Wallet isolé</strong> — sans branchement Orders/Event, la valeur utilisateur reste limitée au seed démo.</li>
+<li><strong>API interne ouverte</strong> — un bug ou module malveillant pourrait émettre des objets arbitraires.</li>
+<li><strong>Capacités non exécutables</strong> — risque perception « coquille vide » côté citoyen tant que les organes ne répondent pas aux <code>handledBy</code>.</li>
+</ol>
+<h3>10.4 Trois améliorations architecturales recommandées (sans développer maintenant)</h3>
+<ol>
+<li><strong>Couche d'autorisation inter-organes</strong> — allowlist des <code>sourceEngine</code> autorisés à appeler issue/consume/revoke ; log structuré.</li>
+<li><strong>Premier branchement production Orders → <code>pickup_ticket</code></strong> — preuve d'intégration bout-en-bout, validation du modèle in-process.</li>
+<li><strong>Capability router mobile</strong> — mapper <code>handledBy</code> + <code>invocation</code> vers navigation/API des organes existants (remplacer Alert stub).</li>
+</ol>
+<hr />
+<h2>11. Annexes</h2>
+<h3>11.1 Arborescence Wallet</h3>
+<pre><code>backend/
+├── src/
+│   ├── db/index.js                    (modifié — tables wallet)
+│   ├── index.js                       (modifié — route /api/wallet)
+│   ├── lib/
+│   │   ├── walletEngine.js            (créé)
+│   │   └── walletRegistry.js          (créé)
+│   └── routes/
+│       └── wallet.js                  (créé)
+└── scripts/
+    └── seed-wallet-demo.js            (créé)
+
+mobile/
+├── App.js                             (modifié — WalletProvider)
+└── src/
+    ├── api/index.js                   (modifié — 6 endpoints wallet)
+    ├── context/
+    │   └── WalletContext.js           (créé)
+    ├── navigation/index.js            (modifié — WalletStack + WalletTab)
+    └── screens/client/
+        ├── WalletScreen.js            (créé)
+        ├── WalletFamilyScreen.js      (créé)
+        ├── WalletObjectDetailScreen.js (créé)
+        └── walletStatus.js            (créé)
+</code></pre>
+<h3>11.2 Fichiers créés ou modifiés</h3>
+<p><strong>Créés (10) :</strong> <code>walletEngine.js</code>, <code>walletRegistry.js</code>, <code>routes/wallet.js</code>, <code>seed-wallet-demo.js</code>, <code>WalletContext.js</code>, <code>WalletScreen.js</code>, <code>WalletFamilyScreen.js</code>, <code>WalletObjectDetailScreen.js</code>, <code>walletStatus.js</code></p>
+<p><strong>Modifiés (5) :</strong> <code>db/index.js</code>, <code>backend/src/index.js</code>, <code>mobile/App.js</code>, <code>mobile/src/api/index.js</code>, <code>mobile/src/navigation/index.js</code></p>
+<h3>11.3 Statuts d'objet (registre)</h3>
+<p><code>pending</code> → <code>active</code> → <code>consumed</code> | <code>expired</code> | <code>revoked</code><br />
+Branches : <code>active</code> ↔ <code>reserved</code> (transitions déclarées, handlers reserve absents)</p>
+<h3>11.4 Familles UX</h3>
+<table>
+<thead>
+<tr>
+<th>id</th>
+<th>label</th>
+<th>icon</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>billets</td>
+<td>Billets</td>
+<td>ticket-outline</td>
+</tr>
+<tr>
+<td>retraits</td>
+<td>Retraits</td>
+<td>cube-outline</td>
+</tr>
+<tr>
+<td>promotions</td>
+<td>Promotions</td>
+<td>pricetag-outline</td>
+</tr>
+<tr>
+<td>fidelite</td>
+<td>Fidélité</td>
+<td>heart-outline</td>
+</tr>
+<tr>
+<td>badges</td>
+<td>Badges</td>
+<td>ribbon-outline</td>
+</tr>
+<tr>
+<td>civique</td>
+<td>Points civiques</td>
+<td>leaf-outline</td>
+</tr>
+</tbody>
+</table>
+<h3>11.5 Routes navigation mobile</h3>
+<table>
+<thead>
+<tr>
+<th>Route</th>
+<th>Écran</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>WalletTab</code> → <code>WalletHome</code></td>
+<td>WalletScreen</td>
+</tr>
+<tr>
+<td><code>WalletTab</code> → <code>WalletFamily</code></td>
+<td>WalletFamilyScreen</td>
+</tr>
+<tr>
+<td><code>WalletTab</code> → <code>WalletObjectDetail</code></td>
+<td>WalletObjectDetailScreen</td>
+</tr>
+</tbody>
+</table>
+<h3>11.6 Références conception</h3>
+<ul>
+<li><a href="PLAN_ETUDE_WALLET_ENGINE.md"><code>PLAN_ETUDE_WALLET_ENGINE.md</code></a> — Architecture B</li>
+<li><a href="ANALYSE_OBJET_NUMERIQUE_VIVANT.md"><code>ANALYSE_OBJET_NUMERIQUE_VIVANT.md</code></a> — B+</li>
+<li><a href="ANALYSE_OBJET_VIVANT_B_PLUS_PLUS.md"><code>ANALYSE_OBJET_VIVANT_B_PLUS_PLUS.md</code></a> — B++</li>
+</ul>
+<hr />
+<p><em>Rapport généré le 14 juillet 2026 — Audit read-only Wallet Engine v1, revue d'architecture avant validation définitive.</em></p>
+</body>
+</html>

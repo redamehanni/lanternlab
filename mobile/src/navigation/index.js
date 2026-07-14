@@ -39,6 +39,9 @@ import FaqScreen from '../screens/client/FaqScreen';
 import BecomeDriverScreen from '../screens/client/BecomeDriverScreen';
 import ContactScreen from '../screens/client/ContactScreen';
 import SettingsScreen from '../screens/client/SettingsScreen';
+import WalletScreen from '../screens/client/WalletScreen';
+import WalletFamilyScreen from '../screens/client/WalletFamilyScreen';
+import WalletObjectDetailScreen from '../screens/client/WalletObjectDetailScreen';
 
 // Merchant
 import DashboardScreen      from '../screens/merchant/DashboardScreen';
@@ -135,6 +138,24 @@ function CartStack() {
   );
 }
 
+function WalletStack() {
+  return (
+    <Stack.Navigator screenOptions={screenOptions}>
+      <Stack.Screen name="WalletHome" component={WalletScreen} options={{ headerShown: false }} />
+      <Stack.Screen
+        name="WalletFamily"
+        component={WalletFamilyScreen}
+        options={({ route }) => ({ title: route.params?.family?.label || 'Objets' })}
+      />
+      <Stack.Screen
+        name="WalletObjectDetail"
+        component={WalletObjectDetailScreen}
+        options={({ route }) => ({ title: route.params?.title || 'Objet numérique' })}
+      />
+    </Stack.Navigator>
+  );
+}
+
 function ProfileHubStack() {
   return (
     <Stack.Navigator screenOptions={screenOptions}>
@@ -150,6 +171,16 @@ function MessagingStack() {
       <Stack.Screen name="ClientMessagingHome" component={ClientMessagingHomeScreen} options={{ headerShown: false }} />
       <Stack.Screen name="MesCommerces" component={MesCommercesScreen} options={{ title: 'Mes commerces' }} />
       <Stack.Screen name="SupportChat" component={SupportChatScreen} options={{ title: 'Support client' }} />
+      <Stack.Screen name="Chat" component={ChatScreen} options={{ title: 'Messages' }} />
+    </Stack.Navigator>
+  );
+}
+
+function OrderHistoryStack() {
+  return (
+    <Stack.Navigator screenOptions={screenOptions}>
+      <Stack.Screen name="OrderHistoryList" component={OrderHistoryScreen} options={{ headerShown: false }} />
+      <Stack.Screen name="OrderTracking" component={OrderTrackingScreen} options={{ title: 'Suivi' }} />
       <Stack.Screen name="Chat" component={ChatScreen} options={{ title: 'Messages' }} />
     </Stack.Navigator>
   );
@@ -180,7 +211,7 @@ function HomeDrawer() {
       />
       <Drawer.Screen
         name="OrderHistory"
-        component={OrderHistoryScreen}
+        component={OrderHistoryStack}
         options={clientDrawerHeader('Mes commandes')}
       />
       <Drawer.Screen
@@ -241,6 +272,14 @@ function ClientTabs() {
           tabBarIcon: ({ focused }) => (
             <TabIcon name={focused ? 'chatbubbles' : 'chatbubbles-outline'} focused={focused} badge={messagingUnread} />
           ),
+        }}
+      />
+      <Tab.Screen
+        name="WalletTab"
+        component={WalletStack}
+        options={{
+          title: 'Wallet',
+          tabBarIcon: ({ focused }) => <TabIcon name={focused ? 'wallet' : 'wallet-outline'} focused={focused} />,
         }}
       />
       <Tab.Screen

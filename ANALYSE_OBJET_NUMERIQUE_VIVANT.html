@@ -1,0 +1,532 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Analyse architecturale — L'objet numérique vivant dans le Wallet Engine</title>
+<style>
+  @page { margin: 16mm 14mm; }
+  body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Helvetica, Arial, sans-serif; font-size: 10.5pt; line-height: 1.45; color: #1a1a1a; max-width: 100%; }
+  h1 { font-size: 20pt; border-bottom: 2px solid #0f2d5c; padding-bottom: 8px; color: #0f2d5c; page-break-after: avoid; }
+  h2 { font-size: 14pt; margin-top: 22px; color: #0f2d5c; border-bottom: 1px solid #e5e7eb; padding-bottom: 4px; page-break-after: avoid; }
+  h3 { font-size: 11.5pt; margin-top: 14px; color: #1a4a8a; page-break-after: avoid; }
+  table { border-collapse: collapse; width: 100%; margin: 10px 0; font-size: 9pt; page-break-inside: avoid; }
+  th, td { border: 1px solid #d1d5db; padding: 5px 7px; text-align: left; vertical-align: top; }
+  th { background: #f3f4f6; font-weight: 600; }
+  code { background: #f3f4f6; padding: 1px 4px; border-radius: 3px; font-size: 8.5pt; }
+  pre { background: #f8fafc; border: 1px solid #e5e7eb; border-radius: 6px; padding: 10px; overflow-x: auto; font-size: 8pt; line-height: 1.35; white-space: pre-wrap; word-break: break-word; page-break-inside: avoid; }
+  pre code { background: none; padding: 0; }
+  blockquote { border-left: 4px solid #0f2d5c; margin: 10px 0; padding: 6px 14px; background: #f0f4f8; color: #1e3a5f; }
+  hr { border: none; border-top: 1px solid #e5e7eb; margin: 18px 0; }
+  ul, ol { padding-left: 22px; }
+  li { margin-bottom: 3px; }
+  p { margin: 8px 0; }
+  .pdf-note { display: none; }
+  @media screen {
+    .pdf-note { display: block; background: #eff6ff; border: 1px solid #bfdbfe; border-radius: 8px; padding: 12px 16px; margin-bottom: 24px; color: #1e3a8a; }
+  }
+</style>
+</head>
+<body>
+<div class="pdf-note">
+  <strong>Lecture dans Cursor / navigateur :</strong> ce fichier HTML est la version lisible du plan.
+  Pour le PDF, ouvrez <code>ANALYSE_OBJET_NUMERIQUE_VIVANT.pdf</code> depuis le Finder (clic droit → Ouvrir avec Aperçu)
+  ou double-cliquez le fichier <code>Ouvrir_*_PDF.command</code> correspondant à la racine du projet.
+</div>
+<h1>Analyse architecturale — L'objet numérique vivant dans le Wallet Engine</h1>
+<p><strong>Date :</strong> 14 juillet 2026<br />
+<strong>Statut :</strong> Compte rendu d'architecte — à valider — aucune implémentation<br />
+<strong>Référence :</strong> <a href="PLAN_ETUDE_WALLET_ENGINE.md">PLAN_ETUDE_WALLET_ENGINE.md</a> (Architecture B)</p>
+<hr />
+<h2>Résumé exécutif</h2>
+<p>Depuis le plan d'architecture Wallet Engine, la philosophie du Wallet a évolué : il ne s'agit plus seulement de stocker des droits, mais d'héberger des <strong>objets numériques vivants</strong> — capables d'évoluer, d'être enrichis, de survivre à leur consommation, et de proposer des actions contextuelles (« Que puis-je faire avec toi ? »).</p>
+<p><strong>Verdict d'architecte : cette évolution ne casse pas l'architecture B.</strong> Elle la valide et la renforce. Elle révèle toutefois une imprécision conceptuelle à corriger : la confusion entre le <strong>Droit</strong> (entitlement porteur de valeur) et l'<strong>Objet</strong> (contenant vivant, face citoyen).</p>
+<p><strong>Recommandation :</strong> faire évoluer l'architecture B vers <strong>B+</strong> — même noyau transactionnel, avec trois extensions additifs pilotées par le registre de types, sans compromettre la robustesse.</p>
+<hr />
+<h2>1. Ce qui ne change pas</h2>
+<p>L'architecture B proposée dans le plan d'étude reste le socle :</p>
+<table>
+<thead>
+<tr>
+<th>Élément</th>
+<th>Rôle</th>
+<th>Statut</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Registre de types (<code>RightKind</code>)</td>
+<td>Déclarer les kinds sans toucher au noyau</td>
+<td>Conservé</td>
+</tr>
+<tr>
+<td>Machine à états</td>
+<td>Gouverner les transitions d'entitlement</td>
+<td>Conservé, étendu</td>
+</tr>
+<tr>
+<td>Journal append-only (ledger)</td>
+<td>Auditabilité, traçabilité, anti double-dépense</td>
+<td>Conservé — devient la biographie de l'objet</td>
+</tr>
+<tr>
+<td>Projection d'état courant</td>
+<td>Lectures rapides</td>
+<td>Conservé</td>
+</tr>
+<tr>
+<td>Payload opaque</td>
+<td>Le noyau n'interprète jamais le métier</td>
+<td>Conservé</td>
+</tr>
+<tr>
+<td>API publique + événements</td>
+<td>Séparation des organes</td>
+<td>Conservé</td>
+</tr>
+<tr>
+<td>Principes non négociables</td>
+<td>Simplicité du noyau, responsabilités claires</td>
+<td>Conservés</td>
+</tr>
+</tbody>
+</table>
+<p>La philosophie « objet vivant » ne remet pas en cause ces fondations. Elle demande de les <strong>compléter</strong>, pas de les remplacer.</p>
+<hr />
+<h2>2. L'insight central : séparer le Droit de l'Objet</h2>
+<h3>Le problème conceptuel</h3>
+<p>Jusqu'ici, le plan parlait de <code>DigitalRight</code> comme objet central. Cette formulation est correcte pour la couche transactionnelle, mais incomplète pour l'expérience utilisateur.</p>
+<p>Un billet consommé n'est pas « mort » dans la vision Ma Zone. Le <strong>droit d'entrée</strong> est épuisé ; l'<strong>objet billet</strong> continue d'exister comme souvenir.</p>
+<h3>La distinction</h3>
+<table>
+<thead>
+<tr>
+<th>Concept</th>
+<th>Nature</th>
+<th>Cycle de vie</th>
+<th>Responsable</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><strong>Droit (entitlement)</strong></td>
+<td>Créance porteuse de valeur</td>
+<td>Transactionnel, terminal (<code>pending → active → consumed/expired/revoked</code>)</td>
+<td>Wallet — couche dure</td>
+</tr>
+<tr>
+<td><strong>Objet numérique (<code>DigitalObject</code>)</strong></td>
+<td>Contenant vivant, face citoyen</td>
+<td>Permanent, évolutif, enrichissable</td>
+<td>Wallet (contenant) + organes émetteurs (contenu) — couche souple</td>
+</tr>
+</tbody>
+</table>
+<h3>Règle d'or</h3>
+<blockquote>
+<p>La présentation et les capacités sont <strong>molles</strong>. L'entitlement et la valeur sont <strong>durs</strong>. Le seul vrai danger est de laisser la couche molle contaminer la couche dure.</p>
+</blockquote>
+<h3>Schéma en couches</h3>
+<pre><code>┌─────────────────────────────────────────────────────────┐
+│  COUCHE SOUPLE (évolutive, face citoyen)                │
+│  ┌─────────────┐  ┌──────────────┐  ┌────────────────┐ │
+│  │ Capacités   │  │ Références   │  │ Facette        │ │
+│  │ déclaratives│  │ vers organes │  │ souvenir       │ │
+│  │ (menu)      │  │ (contenu live)│  │ (post-consomm.)│ │
+│  └─────────────┘  └──────────────┘  └────────────────┘ │
+├─────────────────────────────────────────────────────────┤
+│  COUCHE DURE (gouvernée, transactionnelle)              │
+│  ┌─────────────┐  ┌──────────────┐  ┌────────────────┐ │
+│  │ Entitlement │→ │ Machine à    │→ │ Ledger         │ │
+│  │ (droit)     │  │ états        │  │ append-only    │ │
+│  └─────────────┘  └──────────────┘  └────────────────┘ │
+└─────────────────────────────────────────────────────────┘
+         DigitalObject = contenant des deux couches
+</code></pre>
+<hr />
+<h2>3. Les trois extensions additifs (architecture B+)</h2>
+<p>Toutes sont <strong>pilotées par le registre de types</strong>. Aucune ne modifie le cœur transactionnel.</p>
+<h3>3.1 Capacités déclaratives — « Que puis-je faire avec toi ? »</h3>
+<p>Chaque objet possède un bouton <strong>« Gérer cet objet numérique »</strong> dont les actions dépendent de son <code>kind</code> et de son état courant.</p>
+<p><strong>Mécanisme :</strong> le registre déclare, par kind et par état, une liste de <strong>descripteurs d'action</strong> :</p>
+<pre><code>{
+  id: &quot;offer&quot;,
+  label: &quot;Offrir&quot;,
+  icon: &quot;gift&quot;,
+  availableInStates: [&quot;active&quot;],
+  handledBy: &quot;wallet&quot;,           // ou &quot;event_engine&quot;, &quot;orders&quot;, etc.
+  invocation: &quot;wallet.transfer&quot;, // commande ou deep-link
+  guard: &quot;transferable === true&quot; // condition déclarative
+}
+</code></pre>
+<p><strong>Rôle du Wallet :</strong> exposer le menu des capacités disponibles pour un objet donné.<br />
+<strong>Rôle du Wallet :</strong> <strong>ne jamais exécuter</strong> une action métier qu'il ne possède pas.</p>
+<table>
+<thead>
+<tr>
+<th>Action exemple</th>
+<th>Exposée par</th>
+<th>Exécutée par</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Offrir un billet</td>
+<td>Wallet</td>
+<td>Wallet (<code>transfer</code>)</td>
+</tr>
+<tr>
+<td>Ajouter au calendrier</td>
+<td>Wallet (descripteur)</td>
+<td>Event Engine</td>
+</tr>
+<tr>
+<td>Créer une procuration</td>
+<td>Wallet (descripteur)</td>
+<td>Orders / Dispatch</td>
+</tr>
+<tr>
+<td>Voir le commerce</td>
+<td>Wallet (descripteur)</td>
+<td>Commerce Engine (futur)</td>
+</tr>
+<tr>
+<td>Personnaliser carte cadeau</td>
+<td>Wallet (descripteur)</td>
+<td>Marketing Engine</td>
+</tr>
+</tbody>
+</table>
+<p><strong>Danger signalé :</strong> si le cœur Wallet commence à implémenter les actions par type (« pour un billet, faire X »), il redevient un fourre-tout monolithique. Règle dure : le cœur sait <em>qu'</em>une action existe et <em>qui</em> la traite, jamais <em>comment</em> (sauf pour les capacités cœur : transfer, revoke).</p>
+<hr />
+<h3>3.2 Mémoire et présentation post-consommation</h3>
+<p><strong>Vision :</strong> un billet utilisé ne disparaît pas. Il devient un <strong>souvenir numérique</strong> : date, lieu, organisateur, photos, édition, historique.</p>
+<p><strong>Mécanisme :</strong> extension de la machine à états — <code>consumed</code> devient <strong>non destructif</strong>.</p>
+<pre><code>active → consumed → [facette souvenir activée]
+</code></pre>
+<ul>
+<li>L'objet reste dans le Wallet du citoyen.</li>
+<li>La facette « droit actif » se ferme (entitlement épuisé).</li>
+<li>La facette « souvenir » s'ouvre (métadonnées de présentation, propriété de l'émetteur).</li>
+<li>Le ledger append-only <strong>est</strong> la biographie de l'objet : chaque transition inscrite = un chapitre de son histoire.</li>
+</ul>
+<p><strong>Harmonie remarquable :</strong> le ledger, conçu pour l'audit et la sécurité, devient naturellement le support de la mémoire vivante. Aucune contradiction.</p>
+<hr />
+<h3>3.3 Évolution en direct — le Wallet comme espace vivant</h3>
+<p><strong>Vision :</strong> un commerçant ajoute une animation à son événement → le billet évolue. Une promotion change → l'objet est mis à jour. Le Wallet n'est pas une archive figée.</p>
+<p><strong>Deux mécanismes gouvernés :</strong></p>
+<h4>A. Résolution par référence (défaut recommandé)</h4>
+<p>L'objet stocke <code>sourceEngine + sourceRef</code>. Le contenu riche et volatil (photos, promo actuelle, édition de l'événement) est <strong>résolu à la lecture</strong> auprès de l'organe propriétaire.</p>
+<ul>
+<li>Le Wallet reste léger.</li>
+<li>Jamais périmé (la source est la vérité).</li>
+<li>Le « vivant » est réel car la source est vivante.</li>
+</ul>
+<h4>B. Événements d'enrichissement (si persistance ou notification requise)</h4>
+<p>L'organe propriétaire appelle une commande gouvernée :</p>
+<pre><code>enrichObject({ objectId, enrichmentPayload, sourceEngine, idempotencyKey })
+</code></pre>
+<p>→ entrée append-only dans le ledger<br />
+→ projection mise à jour<br />
+→ événement <code>wallet:object_enriched</code> émis</p>
+<p><strong>Danger signalé :</strong> laisser les organes muter directement les payloads du Wallet détruirait l'invariant du payload opaque, la garantie append-only, et créerait un couplage N-vers-Wallet. L'enrichissement passe <strong>toujours</strong> par l'API publique et est journalisé — ou se fait par référence. Jamais via une table mutable partagée.</p>
+<hr />
+<h2>4. Exemples revisités sous l'architecture B+</h2>
+<h3>Billet d'événement</h3>
+<table>
+<thead>
+<tr>
+<th>Phase</th>
+<th>Facette droit</th>
+<th>Facette objet</th>
+<th>Capacités disponibles</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Avant l'événement</td>
+<td><code>active</code></td>
+<td>Présentation live (résolue via Event Engine)</td>
+<td>Offrir, partager, calendrier, voir lieu</td>
+</tr>
+<tr>
+<td>Scan QR à l'entrée</td>
+<td><code>consumed</code></td>
+<td>Transition journalisée</td>
+<td>—</td>
+</tr>
+<tr>
+<td>Après l'événement</td>
+<td><code>consumed</code></td>
+<td>Souvenir (date, lieu, photos, édition)</td>
+<td>Partager le souvenir, revoir l'historique</td>
+</tr>
+</tbody>
+</table>
+<p>L'objet ne meurt jamais. Le droit se ferme. Le souvenir s'ouvre.</p>
+<h3>Ticket Click &amp; Collect</h3>
+<table>
+<thead>
+<tr>
+<th>Phase</th>
+<th>Capacités</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Avant retrait</td>
+<td>Créer procuration, changer personne autorisée, voir commerce, itinéraire, contacter commerçant</td>
+</tr>
+<tr>
+<td>Après retrait</td>
+<td>Souvenir d'achat (historique transaction, commerce, date)</td>
+</tr>
+</tbody>
+</table>
+<h3>Carte de fidélité</h3>
+<p>Objet <strong>sans consommation terminale</strong>. L'objet vit en permanence. Les récompenses discrètes sont des <strong>droits</strong> émis sur l'objet puis consommés un par un. Le commerçant enrichit l'objet (nouveaux bonus) via <code>enrichObject</code> ou résolution live.</p>
+<h3>Badge</h3>
+<p>Les niveaux sont des <strong>événements d'enrichissement</strong> (<code>badge:leveled_up</code>). La progression est dans le ledger. Les capacités évoluent avec l'état (<code>voir progression</code>, <code>comprendre comment évoluer</code>, <code>partager</code>).</p>
+<hr />
+<h2>5. Machine à états révisée</h2>
+<pre><code>                    ┌──────────┐
+                    │ pending  │
+                    └────┬─────┘
+                         │ issue
+                         ▼
+                    ┌──────────┐
+              ┌─────│  active  │─────┐
+              │     └────┬─────┘     │
+         reserve│          │consume  │revoke
+              │     ┌────▼─────┐     │
+              │     │ reserved │     │
+              │     └────┬─────┘     │
+              │   release│consume    │
+              │          ▼           ▼
+              │     ┌──────────┐  ┌─────────┐
+              │     │ consumed │  │ revoked │
+              │     └────┬─────┘  └─────────┘
+              │          │ facette souvenir
+              │          ▼
+              │     ┌──────────┐
+              │     │  memory  │  (présentation, pas un nouvel entitlement)
+              │     └──────────┘
+              │
+         expire▼
+         ┌──────────┐
+         │ expired  │  (peut aussi activer facette souvenir selon kind)
+         └──────────┘
+</code></pre>
+<p><strong>Point clé :</strong> <code>memory</code> n'est pas un état d'entitlement. C'est un <strong>mode de présentation</strong> de l'objet après clôture du droit. L'entitlement reste <code>consumed</code> ou <code>expired</code> dans le ledger.</p>
+<hr />
+<h2>6. Communication inter-organes (inchangée dans l'esprit)</h2>
+<pre><code>┌──────────────┐     issue/consume/enrich     ┌─────────────────┐
+│  Marketing   │ ───────────────────────────▶ │  Wallet Engine  │
+│  Engine      │                              │  (B+)           │
+└──────────────┘                              └────────┬────────┘
+┌──────────────┐     issue/consume              │        │
+│  Event       │ ───────────────────────────────┘        │
+│  Engine      │                                        │ wallet:object_*
+└──────────────┘                                        ▼
+┌──────────────┐                              ┌─────────────────┐
+│  Dispatch    │ ─ issue (ticket retrait) ──▶ │  Autres organes │
+│  / Orders    │                              │  réagissent     │
+└──────────────┘                              └─────────────────┘
+
+Lecture live : Wallet ──resolve──▶ Event Engine (contenu riche à la volée)
+</code></pre>
+<ul>
+<li><strong>Écritures :</strong> commandes synchrones via API publique (inchangé).</li>
+<li><strong>Notifications :</strong> événements de domaine (<code>wallet:object_issued</code>, <code>wallet:object_consumed</code>, <code>wallet:object_enriched</code>).</li>
+<li><strong>Contenu live :</strong> résolution par référence à la lecture (nouveau, défaut).</li>
+<li><strong>Jamais</strong> d'accès direct à la base du Wallet.</li>
+</ul>
+<hr />
+<h2>7. Dangers architecturaux identifiés</h2>
+<table>
+<thead>
+<tr>
+<th>Danger</th>
+<th>Conséquence</th>
+<th>Mitigation</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Actions métier dans le cœur Wallet</td>
+<td>Fourre-tout, violation SRP</td>
+<td>Descripteurs déclaratifs ; exécution déléguée</td>
+</tr>
+<tr>
+<td>Mutation directe des payloads par les organes</td>
+<td>Perte invariants, couplage</td>
+<td>API <code>enrichObject</code> journalisée ou résolution par référence</td>
+</tr>
+<tr>
+<td>Confondre état d'entitlement et mode de présentation</td>
+<td>Réouverture de droits consommés</td>
+<td>Séparer facette droit / facette souvenir</td>
+</tr>
+<tr>
+<td>Objets « vivants » = table mutable sans ledger</td>
+<td>Perte d'auditabilité</td>
+<td>Tout enrichissement append-only</td>
+</tr>
+<tr>
+<td>Menu d'actions codé en dur côté mobile</td>
+<td>Non extensible</td>
+<td>Capacités servies par le registre + API</td>
+</tr>
+<tr>
+<td>Contenu live sans fallback</td>
+<td>Objet vide si organe source down</td>
+<td>Cache projection + graceful degradation</td>
+</tr>
+</tbody>
+</table>
+<hr />
+<h2>8. Impact sur les principes non négociables</h2>
+<table>
+<thead>
+<tr>
+<th>Principe</th>
+<th>Impact</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Wallet stocke et gouverne des droits</td>
+<td><strong>Clarifié</strong> : gouverne les entitlements ; héberge les objets</td>
+</tr>
+<tr>
+<td>Générique, piloté par registre</td>
+<td><strong>Renforcé</strong> : capacités et facettes déclarées par kind</td>
+</tr>
+<tr>
+<td>Journal append-only</td>
+<td><strong>Renforcé</strong> : devient la biographie de l'objet</td>
+</tr>
+<tr>
+<td>Payloads opaques au noyau</td>
+<td><strong>Conservé</strong> : enrichissement = nouveau payload versionné, opaque</td>
+</tr>
+<tr>
+<td>API publique uniquement</td>
+<td><strong>Conservé</strong></td>
+</tr>
+<tr>
+<td>Consommation idempotente et atomique</td>
+<td><strong>Conservé</strong></td>
+</tr>
+<tr>
+<td>Centré propriétaire, Zone-aware</td>
+<td><strong>Conservé</strong></td>
+</tr>
+<tr>
+<td>Ne pas toucher Dispatch / Communication</td>
+<td><strong>Conservé</strong></td>
+</tr>
+</tbody>
+</table>
+<p>Aucun principe n'est affaibli. Deux sont clarifiés, deux sont renforcés.</p>
+<hr />
+<h2>9. Positionnement vs Event Sourcing (approche C)</h2>
+<p>La philosophie « objet vivant dont l'histoire compte » pousse naturellement vers l'event sourcing : <strong>les événements sont l'objet</strong>.</p>
+<p>Recommandation : <strong>ne pas basculer en C/CQRS complet maintenant</strong> (surdimensionné pour SQLite/MVP), mais faire un choix compatible-futur :</p>
+<ul>
+<li>Traiter le <strong>ledger comme le flux d'événements typés</strong> de l'objet (<code>Issued</code>, <code>Enriched</code>, <code>Consumed</code>, <code>Transferred</code>, <code>LeveledUp</code>…).</li>
+<li><strong>Dériver</strong> la projection (facette courante + capacités disponibles) depuis ce flux.</li>
+<li>C'est « B, orienté événements » — le précurseur exact de C, sans réécriture ultérieure.</li>
+</ul>
+<hr />
+<h2>10. Renommage conceptuel recommandé</h2>
+<table>
+<thead>
+<tr>
+<th>Avant (plan B)</th>
+<th>Après (B+)</th>
+<th>Raison</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>DigitalRight</code> (objet central)</td>
+<td><code>DigitalObject</code></td>
+<td>L'objet est le contenant vivant</td>
+</tr>
+<tr>
+<td>—</td>
+<td><code>Entitlement</code> (aspect de l'objet)</td>
+<td>Le droit est un facet gouverné</td>
+</tr>
+<tr>
+<td><code>right_events</code></td>
+<td><code>object_events</code></td>
+<td>Le ledger raconte l'objet, pas seulement le droit</td>
+</tr>
+<tr>
+<td><code>RightKind</code></td>
+<td><code>ObjectKind</code></td>
+<td>Le registre décrit des types d'objets</td>
+</tr>
+</tbody>
+</table>
+<p>Ce renommage empêche les futurs développeurs de traiter les objets comme des reçus jetables après consommation.</p>
+<hr />
+<h2>11. Interfaces publiques enrichies (conceptuelles)</h2>
+<pre><code>// Commandes existantes (inchangées dans l'esprit)
+issueObject({ ownerId, kind, payload, zoneId?, expiresAt?, sourceEngine, sourceRef })
+consumeObject({ objectId, consumerEngine, idempotencyKey })
+revokeObject({ objectId, reason, actorEngine })
+transferObject({ objectId, newOwnerId, idempotencyKey })   // si kind.transferable
+
+// Nouvelles commandes B+
+enrichObject({ objectId, enrichmentPayload, sourceEngine, idempotencyKey })
+activateMemoryFacet({ objectId })   // post-consommation, si kind.memoryEnabled
+
+// Queries enrichies
+getObjectsByOwner(ownerId, filters?)
+getObjectById(objectId)
+getCapabilities(objectId) → [{ id, label, icon, handledBy, invocation }]
+resolveLiveContent(objectId) → contenu riche depuis organe source (cache optionnel)
+
+// Événements
+wallet:object_issued
+wallet:object_consumed
+wallet:object_enriched
+wallet:object_transferred
+wallet:memory_activated
+</code></pre>
+<hr />
+<h2>12. Recommandation finale</h2>
+<h3>Verdict</h3>
+<p><strong>L'architecture B n'est pas remise en cause.</strong> La philosophie « objet numérique vivant » est une <strong>évolution naturelle et compatible</strong> qui corrige une imprécision (droit vs objet) et exploite des forces déjà présentes (ledger, registre, machine à états).</p>
+<h3>Architecture retenue : B+</h3>
+<pre><code>B (existant)
+  + Séparation Droit / Objet (couche dure / couche souple)
+  + Capacités déclaratives dans le registre (menu « Gérer »)
+  + Cycle de vie non destructif avec facette souvenir
+  + Enrichissement : résolution par référence (défaut) + événements gouvernés
+  + Ledger reformulé comme flux d'événements / biographie de l'objet
+  + Renommage conceptuel DigitalRight → DigitalObject
+</code></pre>
+<h3>Ce qui reste rigide</h3>
+<ul>
+<li>Transactions d'entitlement (issue, consume, revoke, transfer)</li>
+<li>Atomicité, idempotence, anti double-dépense</li>
+<li>Journal append-only</li>
+<li>Accès uniquement via API publique</li>
+</ul>
+<h3>Ce qui devient souple</h3>
+<ul>
+<li>Présentation et contenu riche (résolution live)</li>
+<li>Menu d'actions (descripteurs déclaratifs)</li>
+<li>Facette souvenir post-consommation</li>
+<li>Enrichissement par les organes émetteurs</li>
+</ul>
+<h3>Prochaine étape</h3>
+<p>Sur validation de cette analyse, intégrer B+ dans l'étude complète <code>ETUDE_ARCHITECTURE_WALLET_ENGINE.md</code> avant tout chapitre d'implémentation.</p>
+<hr />
+<p><em>Document généré le 14 juillet 2026 — Analyse architecturale, design uniquement, aucune implémentation.</em></p>
+</body>
+</html>

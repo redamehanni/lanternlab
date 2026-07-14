@@ -118,6 +118,20 @@ export const sendCommunicationMessage = (id, content, context_order_id) =>
 export const markCommunicationRead = (id) =>
   api.post(`/api/communication/threads/${id}/read`);
 
+// ── Wallet (registre des objets numériques) ───────────────────────────────────
+export const getWallet = () => api.get('/api/wallet');
+export const getWalletFamilies = () => api.get('/api/wallet/families');
+export const getWalletObjects = (params = {}) => {
+  const q = Object.entries(params)
+    .filter(([, v]) => v != null && v !== '')
+    .map(([k, v]) => `${encodeURIComponent(k)}=${encodeURIComponent(v)}`)
+    .join('&');
+  return api.get(`/api/wallet/objects${q ? `?${q}` : ''}`);
+};
+export const getWalletObject = (id) => api.get(`/api/wallet/objects/${id}`);
+export const getWalletObjectCapabilities = (id) => api.get(`/api/wallet/objects/${id}/capabilities`);
+export const getWalletObjectEvents = (id) => api.get(`/api/wallet/objects/${id}/events`);
+
 // ── Conversations (legacy alias) ───────────────────────────────────────────────
 export const getConversations     = () => api.get('/api/conversations');
 export const resolveConversation  = (order_id, target_role) =>

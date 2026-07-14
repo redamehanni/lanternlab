@@ -1,0 +1,155 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<title>Audit Wallet Engine — Captures UI</title>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Helvetica, Arial, sans-serif; background: #e2e8f0; padding: 32px; color: #0F172A; }
+  h1 { font-size: 22px; color: #0f2d5c; margin-bottom: 8px; }
+  .intro { color: #64748B; margin-bottom: 32px; font-size: 14px; max-width: 900px; line-height: 1.5; }
+  .grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 28px; max-width: 920px; }
+  .panel { background: #fff; border-radius: 16px; padding: 20px; box-shadow: 0 4px 16px rgba(15,23,42,0.08); }
+  .panel h2 { font-size: 13px; text-transform: uppercase; letter-spacing: 0.5px; color: #64748B; margin-bottom: 14px; font-weight: 600; }
+  .phone { width: 100%; max-width: 320px; margin: 0 auto; border: 2px solid #E2E8F0; border-radius: 28px; overflow: hidden; background: #F8FAFC; }
+  .statusbar { height: 28px; background: #0A1628; }
+  .screen { padding: 16px; min-height: 480px; }
+  .hero { font-size: 26px; font-weight: 800; letter-spacing: -0.5px; margin-bottom: 4px; }
+  .sub { font-size: 14px; color: #64748B; margin-bottom: 16px; }
+  .card { display: flex; align-items: center; background: #fff; border: 1px solid #F1F5F9; border-radius: 16px; padding: 14px; margin-bottom: 10px; box-shadow: 0 2px 8px rgba(15,23,42,0.06); }
+  .icon { width: 48px; height: 48px; border-radius: 14px; display: flex; align-items: center; justify-content: center; font-size: 22px; margin-right: 12px; flex-shrink: 0; }
+  .card-body { flex: 1; }
+  .card-label { font-weight: 600; font-size: 15px; }
+  .card-sub { font-size: 12px; color: #64748B; margin-top: 3px; }
+  .pill { min-width: 22px; height: 22px; border-radius: 11px; color: #fff; font-size: 11px; font-weight: 700; display: flex; align-items: center; justify-content: center; padding: 0 7px; margin-right: 6px; }
+  .chev { color: #94A3B8; font-size: 18px; }
+  .tabbar { display: flex; justify-content: space-around; padding: 10px 0 14px; background: #fff; border-top: 1px solid #F1F5F9; font-size: 10px; color: #94A3B8; }
+  .tabbar .active { color: #2563EB; font-weight: 600; }
+  .nav-header { background: #0A1628; color: #fff; padding: 12px 16px; font-weight: 700; font-size: 16px; display: flex; align-items: center; gap: 8px; }
+  .nav-back { opacity: 0.8; font-size: 18px; }
+  .badge-row { display: flex; gap: 8px; margin: 10px 0 16px; flex-wrap: wrap; }
+  .badge { display: inline-flex; align-items: center; padding: 5px 10px; border-radius: 999px; font-size: 12px; font-weight: 600; }
+  .badge-active { background: #ECFDF5; color: #059669; }
+  .badge-memory { background: #EFF6FF; color: #2563EB; }
+  .section { background: #fff; border: 1px solid #F1F5F9; border-radius: 16px; padding: 14px; margin-bottom: 14px; }
+  .section-title { font-size: 11px; text-transform: uppercase; color: #94A3B8; font-weight: 600; margin-bottom: 10px; letter-spacing: 0.4px; }
+  .info-row { display: flex; justify-content: space-between; padding: 6px 0; font-size: 13px; border-bottom: 1px solid #F8FAFC; }
+  .info-key { color: #64748B; text-transform: capitalize; }
+  .info-val { font-weight: 600; text-align: right; }
+  .cap-row { display: flex; align-items: center; gap: 10px; padding: 12px 0; border-bottom: 1px solid #F1F5F9; font-size: 14px; font-weight: 500; }
+  .cap-row:last-child { border-bottom: none; }
+  .event-row { display: flex; align-items: flex-start; gap: 12px; padding: 10px 0; border-bottom: 1px solid #F1F5F9; font-size: 13px; }
+  .dot { width: 10px; height: 10px; border-radius: 5px; background: #2563EB; margin-top: 4px; flex-shrink: 0; }
+  .event-date { font-size: 11px; color: #94A3B8; margin-top: 2px; }
+  .status-dot { width: 8px; height: 8px; border-radius: 4px; display: inline-block; margin-right: 6px; }
+  @media print { body { background: #fff; padding: 16px; } .grid { grid-template-columns: 1fr 1fr; } }
+</style>
+</head>
+<body>
+<h1>Audit Wallet Engine — Interface utilisateur (mockups)</h1>
+<p class="intro">Représentations fidèles au design system THEME et aux écrans React Native implémentés. Données : seed de démonstration (<code>seed-wallet-demo.js</code>). Document compagnon de <strong>AUDIT_WALLET_ENGINE_MAZONE.md</strong>.</p>
+
+<div class="grid">
+
+  <!-- 1. Page principale -->
+  <div class="panel">
+    <h2>1. Page principale — WalletScreen</h2>
+    <div class="phone">
+      <div class="statusbar"></div>
+      <div class="screen">
+        <div class="hero">Mon Wallet</div>
+        <div class="sub">Vos objets numériques, organisés par famille</div>
+        <div class="card"><div class="icon" style="background:#2563EB15">🎫</div><div class="card-body"><div class="card-label">Billets</div><div class="card-sub">1 objet</div></div><div class="pill" style="background:#2563EB">1</div><span class="chev">›</span></div>
+        <div class="card"><div class="icon" style="background:#05966915">📦</div><div class="card-body"><div class="card-label">Retraits</div><div class="card-sub">1 objet · 1 actif</div></div><div class="pill" style="background:#059669">1</div><span class="chev">›</span></div>
+        <div class="card"><div class="icon" style="background:#DC262615">🏷</div><div class="card-body"><div class="card-label">Promotions</div><div class="card-sub">1 objet · 1 actif</div></div><div class="pill" style="background:#DC2626">1</div><span class="chev">›</span></div>
+        <div class="card"><div class="icon" style="background:#DB277715">❤</div><div class="card-body"><div class="card-label">Fidélité</div><div class="card-sub">1 objet · 1 actif</div></div><div class="pill" style="background:#DB2777">1</div><span class="chev">›</span></div>
+        <div class="card"><div class="icon" style="background:#D9770615">🎀</div><div class="card-body"><div class="card-label">Badges</div><div class="card-sub">1 objet · 1 actif</div></div><div class="pill" style="background:#D97706">1</div><span class="chev">›</span></div>
+        <div class="card"><div class="icon" style="background:#16A34A15">🌿</div><div class="card-body"><div class="card-label">Points civiques</div><div class="card-sub">1 objet · 1 actif</div></div><div class="pill" style="background:#16A34A">1</div><span class="chev">›</span></div>
+      </div>
+      <div class="tabbar"><span>Home</span><span>Messagerie</span><span class="active">Wallet</span><span>Panier</span></div>
+    </div>
+  </div>
+
+  <!-- 2. Famille Billets -->
+  <div class="panel">
+    <h2>2. Famille — WalletFamilyScreen (Billets)</h2>
+    <div class="phone">
+      <div class="statusbar"></div>
+      <div class="nav-header"><span class="nav-back">‹</span> Billets</div>
+      <div class="screen">
+        <div class="card">
+          <div class="icon" style="background:#2563EB15">✨</div>
+          <div class="card-body">
+            <div class="card-label">Billet d'événement</div>
+            <div class="card-sub"><span class="status-dot" style="background:#94A3B8"></span>Souvenir</div>
+          </div>
+          <span class="chev">›</span>
+        </div>
+        <p style="font-size:12px;color:#64748B;margin-top:16px;padding:0 4px;">Le billet consommé apparaît avec l'icône souvenir (sparkles) et le statut « Souvenir » — consommation non destructive (B+).</p>
+      </div>
+    </div>
+  </div>
+
+  <!-- 3. Fiche billet actif -->
+  <div class="panel">
+    <h2>3. Fiche objet actif — capabilities menu</h2>
+    <div class="phone">
+      <div class="statusbar"></div>
+      <div class="nav-header"><span class="nav-back">‹</span> Ticket de retrait</div>
+      <div class="screen">
+        <div class="hero" style="font-size:22px">Ticket de retrait</div>
+        <div class="badge-row">
+          <span class="badge badge-active"><span class="status-dot" style="background:#059669"></span> Actif</span>
+        </div>
+        <div class="section">
+          <div class="info-row"><span class="info-key">store</span><span class="info-val">Épicerie du coin</span></div>
+          <div class="info-row"><span class="info-key">orderRef</span><span class="info-val">CMD-1042</span></div>
+        </div>
+        <div class="section-title">Gérer cet objet numérique</div>
+        <div class="section">
+          <div class="cap-row">📱 Afficher mon QR <span class="chev" style="margin-left:auto">›</span></div>
+          <div class="cap-row">🏪 Voir le commerce <span class="chev" style="margin-left:auto">›</span></div>
+          <div class="cap-row">💬 Contacter le commerçant <span class="chev" style="margin-left:auto">›</span></div>
+        </div>
+        <div class="section-title">Histoire de l'objet</div>
+        <div class="section">
+          <div class="event-row"><div class="dot"></div><div><strong>Créé</strong><div class="event-date">2026-07-14 09:40:00</div></div></div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- 4. Fiche souvenir + menu -->
+  <div class="panel">
+    <h2>4. Fiche souvenir — post-consommation</h2>
+    <div class="phone">
+      <div class="statusbar"></div>
+      <div class="nav-header"><span class="nav-back">‹</span> Billet d'événement</div>
+      <div class="screen">
+        <div class="hero" style="font-size:22px">Billet d'événement</div>
+        <div class="badge-row">
+          <span class="badge" style="background:#f1f5f9;color:#64748B"><span class="status-dot" style="background:#94A3B8"></span> Utilisé</span>
+          <span class="badge badge-memory">✨ Souvenir</span>
+        </div>
+        <div class="section">
+          <div class="info-row"><span class="info-key">title</span><span class="info-val">Concert de quartier</span></div>
+          <div class="info-row"><span class="info-key">venue</span><span class="info-val">Place centrale</span></div>
+          <div class="info-row"><span class="info-key">date</span><span class="info-val">2026-08-15</span></div>
+        </div>
+        <div class="section-title">Gérer cet objet numérique</div>
+        <div class="section">
+          <div class="cap-row">🖼 Revoir le souvenir <span class="chev" style="margin-left:auto">›</span></div>
+        </div>
+        <div class="section-title">Histoire de l'objet</div>
+        <div class="section">
+          <div class="event-row"><div class="dot"></div><div><strong>Créé</strong><div class="event-date">2026-07-14 09:40:00</div></div></div>
+          <div class="event-row"><div class="dot"></div><div><strong>Utilisé</strong><div class="event-date">2026-07-14 09:40:01</div></div></div>
+        </div>
+        <p style="font-size:11px;color:#94A3B8;margin-top:8px;">Actions « Offrir / Calendrier » absentes — capacités recalculées par état (active → consumed).</p>
+      </div>
+    </div>
+  </div>
+
+</div>
+</body>
+</html>

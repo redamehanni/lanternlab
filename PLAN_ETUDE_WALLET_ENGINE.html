@@ -1,0 +1,455 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Plan d'étude — Wallet Engine (Phase II)</title>
+<style>
+  @page { margin: 16mm 14mm; }
+  body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Helvetica, Arial, sans-serif; font-size: 10.5pt; line-height: 1.45; color: #1a1a1a; max-width: 100%; }
+  h1 { font-size: 20pt; border-bottom: 2px solid #0f2d5c; padding-bottom: 8px; color: #0f2d5c; page-break-after: avoid; }
+  h2 { font-size: 14pt; margin-top: 22px; color: #0f2d5c; border-bottom: 1px solid #e5e7eb; padding-bottom: 4px; page-break-after: avoid; }
+  h3 { font-size: 11.5pt; margin-top: 14px; color: #1a4a8a; page-break-after: avoid; }
+  table { border-collapse: collapse; width: 100%; margin: 10px 0; font-size: 9pt; page-break-inside: avoid; }
+  th, td { border: 1px solid #d1d5db; padding: 5px 7px; text-align: left; vertical-align: top; }
+  th { background: #f3f4f6; font-weight: 600; }
+  code { background: #f3f4f6; padding: 1px 4px; border-radius: 3px; font-size: 8.5pt; }
+  pre { background: #f8fafc; border: 1px solid #e5e7eb; border-radius: 6px; padding: 10px; overflow-x: auto; font-size: 8pt; line-height: 1.35; white-space: pre-wrap; word-break: break-word; page-break-inside: avoid; }
+  pre code { background: none; padding: 0; }
+  blockquote { border-left: 4px solid #0f2d5c; margin: 10px 0; padding: 6px 14px; background: #f0f4f8; color: #1e3a5f; }
+  hr { border: none; border-top: 1px solid #e5e7eb; margin: 18px 0; }
+  ul, ol { padding-left: 22px; }
+  li { margin-bottom: 3px; }
+  p { margin: 8px 0; }
+  .pdf-note { display: none; }
+  @media screen {
+    .pdf-note { display: block; background: #eff6ff; border: 1px solid #bfdbfe; border-radius: 8px; padding: 12px 16px; margin-bottom: 24px; color: #1e3a8a; }
+  }
+</style>
+</head>
+<body>
+<div class="pdf-note">
+  <strong>Lecture dans Cursor / navigateur :</strong> ce fichier HTML est la version lisible du plan.
+  Pour le PDF, ouvrez <code>PLAN_ETUDE_WALLET_ENGINE.pdf</code> depuis le Finder (clic droit → Ouvrir avec Aperçu)
+  ou double-cliquez le fichier <code>Ouvrir_*_PDF.command</code> correspondant à la racine du projet.
+</div>
+<h1>Plan d'étude — Wallet Engine (Phase II)</h1>
+<p><strong>Date :</strong> 14 juillet 2026<br />
+<strong>Statut :</strong> Proposition à valider — aucune implémentation<br />
+<strong>Version Ma Zone de référence :</strong> v0.8.9 (Bouclier stable)</p>
+<hr />
+<h2>Objet de ce document</h2>
+<p>Ce document présente le <strong>plan de l'étude de conception</strong> du Wallet Engine, premier organe transversal de Ma Zone (Phase II). Il ne constitue pas l'étude complète : c'est la proposition de cadrage, d'architecture recommandée et de livrables que vous devez valider avant la rédaction du rapport définitif.</p>
+<p><strong>Aucun code. Aucune implémentation. Réflexion architecturale uniquement.</strong></p>
+<hr />
+<h2>Positionnement conceptuel (référentiel Constitution)</h2>
+<table>
+<thead>
+<tr>
+<th>Principe</th>
+<th>Implication pour le Wallet</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Le Wallet <strong>stocke</strong> ; le QR Identity <strong>identifie</strong></td>
+<td>Organe distinct du QR — pas de scan, pas d'identité physique</td>
+</tr>
+<tr>
+<td>Organe <strong>transversal</strong></td>
+<td>Consommé par de nombreux moteurs, dépendant d'aucun</td>
+</tr>
+<tr>
+<td><strong>Générique</strong></td>
+<td>Accueillir des usages non encore imaginés sans refonte</td>
+</tr>
+<tr>
+<td><strong>Zone-aware, jamais Zone-bound</strong></td>
+<td>La Zone est une entité abstraite configurable (quartier, ville, festival…)</td>
+</tr>
+<tr>
+<td><strong>Un organe = une responsabilité</strong></td>
+<td>Registre des droits numériques du citoyen, pas un fourre-tout</td>
+</tr>
+</tbody>
+</table>
+<p>Le Wallet n'est pas un portefeuille. C'est le <strong>registre personnel des droits numériques</strong> du citoyen : billets, réservations, promotions, fidélité, badges, accès, retraits Click &amp; Collect, points civiques (forme technique ouverte), etc.</p>
+<hr />
+<h2>Mission de l'étude complète (après validation)</h2>
+<p>Répondre aux <strong>15 questions</strong> posées :</p>
+<ol>
+<li>Responsabilité exacte du Wallet Engine  </li>
+<li>Responsabilités explicitement refusées (anti-fourre-tout)  </li>
+<li>Architecture idéale  </li>
+<li>Services internes de l'organe  </li>
+<li>Objets métier manipulés  </li>
+<li>États possibles d'un droit numérique  </li>
+<li>Communication des autres organes avec le Wallet  </li>
+<li>Enregistrement seul vs consommation — raisonnement  </li>
+<li>Risques d'architecture identifiés dès aujourd'hui  </li>
+<li>Concevoir pour des usages inconnus dans plusieurs années  </li>
+<li>Architecture « grande entreprise » très évolutive  </li>
+<li>Principes SOLID, DDD et bonnes pratiques  </li>
+<li>Éléments réutilisables de l'architecture Ma Zone actuelle  </li>
+<li>Nouveaux composants à prévoir  </li>
+<li>Pièges classiques des systèmes de droits numériques  </li>
+</ol>
+<p>Plus : comparaison d'approches, schémas, interfaces publiques conceptuelles, interactions avec les moteurs existants et futurs, vision 5 ans / 20 moteurs.</p>
+<hr />
+<h2>Comparaison des trois approches architecturales</h2>
+<h3>Approche A — CRUD simple</h3>
+<p><strong>Description :</strong> Table <code>wallet_items</code> avec <code>owner_id</code>, <code>kind</code>, <code>status</code>, <code>payload</code> JSON, dates.</p>
+<table>
+<thead>
+<tr>
+<th>Avantages</th>
+<th>Inconvénients</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Simple, rapide à prototyper</td>
+<td>Faible auditabilité</td>
+</tr>
+<tr>
+<td>Peu de tables</td>
+<td>Pas d'historique des transitions</td>
+</tr>
+<tr>
+<td>Familier pour l'équipe</td>
+<td>Risqué pour droits à valeur (double-dépense)</td>
+</tr>
+<tr>
+<td></td>
+<td>Difficile à faire évoluer sans migration lourde</td>
+</tr>
+<tr>
+<td></td>
+<td>Chaque nouveau type peut polluer le noyau</td>
+</tr>
+</tbody>
+</table>
+<p><strong>Verdict :</strong> Rejetée comme architecture cible. Acceptable uniquement comme spike temporaire.</p>
+<hr />
+<h3>Approche B — Droit générique + registre + machine à états + ledger (RECOMMANDÉE)</h3>
+<p><strong>Description :</strong></p>
+<ul>
+<li>Objet central <strong><code>DigitalRight</code></strong> : générique, <code>kind</code> + <code>payload</code> opaque</li>
+<li><strong>Registre de types</strong> (<code>RightKind</code>) : métadonnées par kind (transitions autorisées, consommable oui/non, expiration…)</li>
+<li><strong>Machine à états</strong> : transitions validées par le noyau</li>
+<li><strong>Journal append-only</strong> (<code>right_events</code> / ledger) : chaque transition inscrite, immuable</li>
+<li><strong>Projection d'état courant</strong> : table/ligne dénormalisée pour lectures rapides</li>
+</ul>
+<table>
+<thead>
+<tr>
+<th>Avantages</th>
+<th>Inconvénients</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Auditable, traçable</td>
+<td>Plus de tables qu'en CRUD simple</td>
+</tr>
+<tr>
+<td>Extensible (Open/Closed)</td>
+<td>Courbe d'apprentissage modérée</td>
+</tr>
+<tr>
+<td>Sûr pour consommation (atomicité, idempotence)</td>
+<td>Nécessite discipline sur le registre de kinds</td>
+</tr>
+<tr>
+<td>Compatible SQLite actuel</td>
+<td></td>
+</tr>
+<tr>
+<td>Précurseur naturel vers event sourcing</td>
+<td></td>
+</tr>
+<tr>
+<td>Aligné DDD (contexte borné)</td>
+<td></td>
+</tr>
+</tbody>
+</table>
+<p><strong>Verdict :</strong> Architecture recommandée pour Ma Zone MVP → scale.</p>
+<hr />
+<h3>Approche C — Event Sourcing complet + CQRS</h3>
+<p><strong>Description :</strong> État = replay d'événements ; lectures via projections séparées ; bus d'événements central.</p>
+<table>
+<thead>
+<tr>
+<th>Avantages</th>
+<th>Inconvénients</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Flexibilité et audit maximaux</td>
+<td>Surdimensionné pour MVP actuel</td>
+</tr>
+<tr>
+<td>Reconstruction d'état à tout instant</td>
+<td>Complexité opérationnelle élevée</td>
+</tr>
+<tr>
+<td>Idéal à très grande échelle</td>
+<td>SQLite moins adapté qu'à PostgreSQL/event store</td>
+</tr>
+<tr>
+<td></td>
+<td>Coût de développement et maintenance</td>
+</tr>
+</tbody>
+</table>
+<p><strong>Verdict :</strong> Cible d'évolution long terme. L'approche B en est un précurseur compatible sans refonte du noyau.</p>
+<hr />
+<h2>Architecture recommandée (à valider)</h2>
+<pre><code>Architecture retenue :
+  DigitalRight (objet générique)
+  + RightKind Registry (registre de types)
+  + State Machine (transitions)
+  + Ledger append-only (journal immuable)
+  + Projection (état courant pour lecture)
+</code></pre>
+<h3>Décisions structurantes</h3>
+<p><strong>1. Stocker ET gouverner la consommation</strong></p>
+<p>Consommer un droit = transition d'état (<code>active → consumed</code>). Le Wallet garantit l'intégrité (usage unique, idempotence, atomicité) <strong>sans connaître le sens métier</strong> du droit. Ce que le droit « octroie » appartient au moteur émetteur (Marketing, Event, Orders…).</p>
+<p><strong>2. Payload opaque + versionné</strong></p>
+<p>Les champs spécifiques à un type (ex. <code>seat_number</code> pour un billet) restent dans <code>payload</code>. Le noyau Wallet ne les interprète jamais.</p>
+<p><strong>3. Communication inter-organes</strong></p>
+<ul>
+<li><strong>Commandes synchrones</strong> (API) : <code>issue</code>, <code>consume</code>, <code>revoke</code>, <code>reserve</code>, <code>release</code></li>
+<li><strong>Événements de domaine</strong> : <code>wallet:right_issued</code>, <code>wallet:right_consumed</code>… (prépare l'Event Engine futur)</li>
+<li><strong>Jamais</strong> d'accès direct à la base du Wallet par un autre organe</li>
+</ul>
+<p><strong>4. Cycle de vie d'un droit</strong></p>
+<pre><code>pending → active → (reserved/held) → consumed
+                  ↘ expired
+                  ↘ revoked
+</code></pre>
+<p>Transférabilité : option encadrée, non par défaut.</p>
+<hr />
+<h2>Schéma — place du Wallet dans l'écosystème</h2>
+<pre><code>                    ┌─────────────────┐
+                    │  QR Identity    │  (identifie)
+                    └────────┬────────┘
+                             │ scan → userId
+                             ▼
+┌──────────────┐    ┌─────────────────┐    ┌──────────────┐
+│  Marketing   │───▶│  Wallet Engine  │◀───│    Event     │
+│   Engine     │    │  (registre des  │    │   Engine     │
+└──────────────┘    │   droits)       │    └──────────────┘
+                    └────────┬────────┘
+┌──────────────┐             │
+│   Dispatch   │─────────────┤ issue / consume
+│   / Orders   │             │
+└──────────────┘             ▼
+                    ┌─────────────────┐
+                    │     Citoyen     │
+                    │   (propriétaire)│
+                    └─────────────────┘
+</code></pre>
+<p>Le Wallet est au centre des <strong>droits</strong> ; le QR est la <strong>clé d'accès</strong> ; les moteurs métier <strong>émettent et consomment</strong> via l'API publique.</p>
+<hr />
+<h2>Services internes envisagés (organe Wallet)</h2>
+<table>
+<thead>
+<tr>
+<th>Service</th>
+<th>Responsabilité</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><strong>RightKindRegistry</strong></td>
+<td>Déclaration et métadonnées des types de droits</td>
+</tr>
+<tr>
+<td><strong>IssuanceService</strong></td>
+<td>Création d'un droit (<code>issue</code>)</td>
+</tr>
+<tr>
+<td><strong>LifecycleService</strong></td>
+<td>Transitions d'état validées</td>
+</tr>
+<tr>
+<td><strong>ConsumptionService</strong></td>
+<td>Consommation atomique, idempotente</td>
+</tr>
+<tr>
+<td><strong>QueryService</strong></td>
+<td>Lecture droits par owner, filtres kind/status/zone</td>
+</tr>
+<tr>
+<td><strong>LedgerService</strong></td>
+<td>Append-only, audit trail</td>
+</tr>
+<tr>
+<td><strong>PolicyService</strong></td>
+<td>Règles transversales (expiration, révocation bulk…)</td>
+</tr>
+</tbody>
+</table>
+<hr />
+<h2>Interfaces publiques conceptuelles (sans implémentation)</h2>
+<pre><code>// Commandes (sync)
+issueRight({ ownerId, kind, payload, zoneId?, expiresAt?, sourceEngine, sourceRef })
+consumeRight({ rightId, consumerEngine, idempotencyKey, context? })
+revokeRight({ rightId, reason, actorEngine })
+reserveRight({ rightId, holdDuration? })   // optionnel
+releaseReservation({ rightId })
+
+// Queries
+getRightsByOwner(ownerId, filters?)
+getRightById(rightId)
+getRightsByKind(ownerId, kind)
+canConsume(rightId) → boolean + reason
+
+// Événements émis (async)
+wallet:right_issued
+wallet:right_consumed
+wallet:right_revoked
+wallet:right_expired
+</code></pre>
+<hr />
+<h2>Principes de conception non négociables</h2>
+<ol>
+<li>Le Wallet <strong>stocke et gouverne</strong> des droits — jamais la logique métier d'un type.</li>
+<li><strong>Générique</strong> et piloté par <strong>registre de kinds</strong> (Open/Closed).</li>
+<li><strong>Journal append-only</strong> pour chaque transition (auditabilité).</li>
+<li><strong>Payloads opaques</strong> au noyau Wallet.</li>
+<li>Accès <strong>uniquement via interface publique</strong> — pas d'accès DB par les autres organes.</li>
+<li>Consommation <strong>idempotente</strong> et <strong>atomique</strong>.</li>
+<li>Centré sur le <strong>propriétaire</strong> (citoyen), <strong>Zone-aware</strong> mais non lié à une Zone fixe.</li>
+<li><strong>Ne pas toucher</strong> Dispatch Engine ni Communication Engine pour intégrer le Wallet.</li>
+</ol>
+<hr />
+<h2>Éléments réutilisables de Ma Zone (v0.8.9)</h2>
+<table>
+<thead>
+<tr>
+<th>Existant</th>
+<th>Réutilisation</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Pattern organe <code>backend/src/lib/*.js</code></td>
+<td>Modèle pour <code>walletEngine.js</code></td>
+</tr>
+<tr>
+<td>Migrations SQLite boot (<code>db/index.js</code>)</td>
+<td>Nouvelles tables wallet</td>
+</tr>
+<tr>
+<td>Auth JWT + <code>requireRole</code></td>
+<td>Guards routes wallet</td>
+</tr>
+<tr>
+<td>Socket.io (<code>io</code> sur app)</td>
+<td>Émission événements wallet</td>
+</tr>
+<tr>
+<td><code>communicationEngine.js</code></td>
+<td>Référence d'organe bien découpé</td>
+</tr>
+<tr>
+<td>Structure routes <code>/api/*</code></td>
+<td><code>/api/wallet</code></td>
+</tr>
+</tbody>
+</table>
+<hr />
+<h2>Nouveaux composants à prévoir (ultérieurement, pas maintenant)</h2>
+<ul>
+<li><code>backend/src/lib/walletEngine.js</code> (+ policies, registry)</li>
+<li><code>backend/src/routes/wallet.js</code></li>
+<li>Tables : <code>digital_rights</code>, <code>right_events</code>, <code>right_kinds</code> (noms à affiner)</li>
+<li>Mobile : <code>WalletContext</code>, écran Wallet (Phase ultérieure)</li>
+<li>Documentation : <code>ORGANE_WALLET.md</code></li>
+</ul>
+<hr />
+<h2>Risques identifiés dès la conception</h2>
+<table>
+<thead>
+<tr>
+<th>Risque</th>
+<th>Mitigation</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Wallet devient fourre-tout</td>
+<td>Responsabilités refusées explicites, revue architecture</td>
+</tr>
+<tr>
+<td>Double consommation</td>
+<td>Ledger + transaction atomique + idempotency key</td>
+</tr>
+<tr>
+<td>Payload schema drift</td>
+<td>Versioning payload, registre kinds</td>
+</tr>
+<tr>
+<td>Couplage moteurs → Wallet</td>
+<td>API stable, events decoupled</td>
+</tr>
+<tr>
+<td>Points Civiques : moteur ou Wallet ?</td>
+<td>Décision différée ; Wallet peut héberger le solde si choix fait</td>
+</tr>
+<tr>
+<td>SQLite limits à scale</td>
+<td>Projection + ledger ; migration PostgreSQL si besoin</td>
+</tr>
+</tbody>
+</table>
+<hr />
+<h2>Vision 5 ans — 20 moteurs</h2>
+<p>Le <strong>noyau Wallet</strong> (DigitalRight + Registry + StateMachine + Ledger) reste stable. Chaque nouveau moteur :</p>
+<ul>
+<li>enregistre un ou plusieurs <code>kind</code> dans le registre ;</li>
+<li>appelle <code>issue</code> / <code>consume</code> via l'API ;</li>
+<li>écoute les événements wallet si réaction nécessaire.</li>
+</ul>
+<p>Aucune modification du cœur transactionnel du Wallet pour ajouter un type de droit.</p>
+<hr />
+<h2>Livrables après validation de ce plan</h2>
+<table>
+<thead>
+<tr>
+<th>Fichier</th>
+<th>Contenu</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>ETUDE_ARCHITECTURE_WALLET_ENGINE.md</code></td>
+<td>Rapport complet (15 questions, comparaison détaillée, schémas Mermaid)</td>
+</tr>
+<tr>
+<td><code>ETUDE_ARCHITECTURE_WALLET_ENGINE.pdf</code></td>
+<td>Version archivée bibliothèque de conception</td>
+</tr>
+<tr>
+<td><code>Ouvrir_ETUDE_WALLET_PDF.command</code></td>
+<td>Raccourci macOS</td>
+</tr>
+</tbody>
+</table>
+<p><strong>Hors périmètre immédiat :</strong> tout fichier de code du Wallet Engine.</p>
+<hr />
+<h2>Prochaine étape</h2>
+<ol>
+<li>Vous analysez ce plan (PDF).  </li>
+<li>Vous validez, amendez ou challengez la recommandation (Approche B).  </li>
+<li>Sur validation : rédaction du rapport d'étude complet + PDF définitif.  </li>
+<li>Ensuite seulement : chapitre d'implémentation du Wallet Engine.</li>
+</ol>
+<hr />
+<p><em>Document généré le 14 juillet 2026 — Plan d'étude Phase II, à valider avant rédaction du rapport complet.</em></p>
+</body>
+</html>

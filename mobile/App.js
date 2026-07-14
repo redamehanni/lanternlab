@@ -9,6 +9,7 @@ import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import { AppProvider, useApp } from './src/context/AppContext';
 import { CommunicationProvider } from './src/context/CommunicationContext';
 import { CartProvider } from './src/context/CartContext';
+import { WalletProvider } from './src/context/WalletContext';
 import { ToastProvider } from './src/components/ui/Toast';
 import { DriverProvider } from './src/context/DriverContext';
 import AppNavigator from './src/navigation';
@@ -40,9 +41,11 @@ export default function App() {
         <CommunicationProvider>
         <DriverProvider>
           <CartProvider>
-            <ToastProvider>
-              <Root />
-            </ToastProvider>
+            <WalletProvider>
+              <ToastProvider>
+                <Root />
+              </ToastProvider>
+            </WalletProvider>
           </CartProvider>
         </DriverProvider>
         </CommunicationProvider>

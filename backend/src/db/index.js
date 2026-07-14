@@ -335,6 +335,48 @@ if (merchantNotifCount.n === 0) {
   `).run(uuidv4(), 'Bienvenue sur Ma Zone', 'Votre espace commerçant est prêt. Gérez vos commandes et promotions ici.');
 }
 
+// ── Wallet Engine : registre des objets numériques du citoyen ─────────────────
+// digital_objects       : projection d'état courant (lecture rapide).
+// digital_object_events : journal append-only (biographie + audit, immuable).
+db.exec(`
+  CREATE TABLE IF NOT EXISTS digital_objects (
+    id TEXT PRIMARY KEY,
+    owner_id TEXT NOT NULL REFERENCES users(id),
+    kind TEXT NOT NULL,
+    family TEXT,
+    status TEXT NOT NULL,
+    retention TEXT NOT NULL DEFAULT 'entitlement_only',
+    payload TEXT,
+    source_engine TEXT NOT NULL,
+    source_ref TEXT,
+    zone_id TEXT,
+    expires_at TEXT,
+    created_at TEXT NOT NULL DEFAULT (datetime('now')),
+    updated_at TEXT NOT NULL DEFAULT (datetime('now'))
+  );
+
+  CREATE INDEX IF NOT EXISTS idx_digital_objects_owner ON digital_objects(owner_id);
+  CREATE INDEX IF NOT EXISTS idx_digital_objects_owner_family ON digital_objects(owner_id, family);
+  CREATE INDEX IF NOT EXISTS idx_digital_objects_owner_status ON digital_objects(owner_id, status);
+
+  CREATE TABLE IF NOT EXISTS digital_object_events (
+    id TEXT PRIMARY KEY,
+    object_id TEXT NOT NULL REFERENCES digital_objects(id),
+    type TEXT NOT NULL,
+    from_status TEXT,
+    to_status TEXT,
+    payload TEXT,
+    actor_engine TEXT,
+    idempotency_key TEXT,
+    created_at TEXT NOT NULL DEFAULT (datetime('now'))
+  );
+
+  CREATE INDEX IF NOT EXISTS idx_object_events_object ON digital_object_events(object_id, created_at);
+  CREATE UNIQUE INDEX IF NOT EXISTS idx_object_events_idempotency
+    ON digital_object_events(object_id, idempotency_key)
+    WHERE idempotency_key IS NOT NULL;
+`);
+
 db.generateId = () => uuidv4();
 
 // Migration vers statuts stables (pending_driver / driver_assigned)

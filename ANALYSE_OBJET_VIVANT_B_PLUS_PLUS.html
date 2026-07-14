@@ -1,0 +1,546 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Analyse architecturale B++ — Comportement vivant, contexte, relations, patrimoine</title>
+<style>
+  @page { margin: 16mm 14mm; }
+  body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Helvetica, Arial, sans-serif; font-size: 10.5pt; line-height: 1.45; color: #1a1a1a; max-width: 100%; }
+  h1 { font-size: 20pt; border-bottom: 2px solid #0f2d5c; padding-bottom: 8px; color: #0f2d5c; page-break-after: avoid; }
+  h2 { font-size: 14pt; margin-top: 22px; color: #0f2d5c; border-bottom: 1px solid #e5e7eb; padding-bottom: 4px; page-break-after: avoid; }
+  h3 { font-size: 11.5pt; margin-top: 14px; color: #1a4a8a; page-break-after: avoid; }
+  table { border-collapse: collapse; width: 100%; margin: 10px 0; font-size: 9pt; page-break-inside: avoid; }
+  th, td { border: 1px solid #d1d5db; padding: 5px 7px; text-align: left; vertical-align: top; }
+  th { background: #f3f4f6; font-weight: 600; }
+  code { background: #f3f4f6; padding: 1px 4px; border-radius: 3px; font-size: 8.5pt; }
+  pre { background: #f8fafc; border: 1px solid #e5e7eb; border-radius: 6px; padding: 10px; overflow-x: auto; font-size: 8pt; line-height: 1.35; white-space: pre-wrap; word-break: break-word; page-break-inside: avoid; }
+  pre code { background: none; padding: 0; }
+  blockquote { border-left: 4px solid #0f2d5c; margin: 10px 0; padding: 6px 14px; background: #f0f4f8; color: #1e3a5f; }
+  hr { border: none; border-top: 1px solid #e5e7eb; margin: 18px 0; }
+  ul, ol { padding-left: 22px; }
+  li { margin-bottom: 3px; }
+  p { margin: 8px 0; }
+  .pdf-note { display: none; }
+  @media screen {
+    .pdf-note { display: block; background: #eff6ff; border: 1px solid #bfdbfe; border-radius: 8px; padding: 12px 16px; margin-bottom: 24px; color: #1e3a8a; }
+  }
+</style>
+</head>
+<body>
+<div class="pdf-note">
+  <strong>Lecture dans Cursor / navigateur :</strong> ce fichier HTML est la version lisible du plan.
+  Pour le PDF, ouvrez <code>ANALYSE_OBJET_VIVANT_B_PLUS_PLUS.pdf</code> depuis le Finder (clic droit → Ouvrir avec Aperçu)
+  ou double-cliquez le fichier <code>Ouvrir_*_PDF.command</code> correspondant à la racine du projet.
+</div>
+<h1>Analyse architecturale B++ — Comportement vivant, contexte, relations, patrimoine</h1>
+<p><strong>Date :</strong> 14 juillet 2026<br />
+<strong>Statut :</strong> Compte rendu d'architecte — à valider — aucune implémentation<br />
+<strong>Références :</strong> <a href="PLAN_ETUDE_WALLET_ENGINE.md">PLAN_ETUDE_WALLET_ENGINE.md</a> (B) · <a href="ANALYSE_OBJET_NUMERIQUE_VIVANT.md">ANALYSE_OBJET_NUMERIQUE_VIVANT.md</a> (B+)</p>
+<hr />
+<h2>Résumé exécutif</h2>
+<p>Suite à l'adoption de l'architecture B+ (séparation Entitlement / DigitalObject, capacités déclaratives, facette souvenir, enrichissement gouverné), quatre nouvelles réflexions émergent : le <strong>comportement vivant</strong>, la <strong>réactivité au contexte</strong>, les <strong>relations entre objets</strong>, et le <strong>patrimoine numérique</strong> du citoyen. Une question philosophique clôt la réflexion : le Wallet devient-il le protocole de communication de Ma Zone ?</p>
+<p><strong>Verdict d'architecte :</strong> B+ reste la référence. Les quatre réflexions s'intègrent par des mécanismes <strong>déclaratifs et émergents</strong>, sans logique nouvelle dans le noyau. On nomme cette évolution <strong>B++</strong>.</p>
+<p><strong>Point critique :</strong> le Wallet n'est pas le protocole de communication (anti-pattern organe-dieu). Le <code>DigitalObject</code> devient le <strong>contrat d'interaction partagé</strong> — un langage commun, pas un routeur de messages.</p>
+<hr />
+<h2>1. Rappel du socle B+</h2>
+<table>
+<thead>
+<tr>
+<th>Couche</th>
+<th>Rôle</th>
+<th>Exemples</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><strong>Dure (Entitlement)</strong></td>
+<td>Créance porteuse de valeur, transactionnelle</td>
+<td>issue, consume, revoke, transfer</td>
+</tr>
+<tr>
+<td><strong>Souple (DigitalObject)</strong></td>
+<td>Contenant vivant, face citoyen</td>
+<td>capacités, présentation, souvenir, références live</td>
+</tr>
+<tr>
+<td><strong>Registre de types</strong></td>
+<td>Déclare kinds, transitions, capacités, facettes</td>
+<td>sans toucher au noyau</td>
+</tr>
+<tr>
+<td><strong>Ledger append-only</strong></td>
+<td>Audit + biographie de l'objet</td>
+<td>chaque transition journalisée</td>
+</tr>
+<tr>
+<td><strong>API publique + événements</strong></td>
+<td>Séparation des organes</td>
+<td>jamais d'accès DB direct</td>
+</tr>
+</tbody>
+</table>
+<p>B++ n'ajoute aucune brique transactionnelle. Elle formalise et étend la couche déclarative.</p>
+<hr />
+<h2>2. Réflexion 1 — Le comportement vivant</h2>
+<h3>Intuition</h3>
+<p>Un billet avant concert propose Offrir, Partager, Ajouter au calendrier. Après le concert, ces actions disparaissent et de nouvelles apparaissent : Voir les photos, Revoir le programme, Partager son souvenir, Voir les autres éditions.</p>
+<p>Ce n'est plus seulement un enrichissement de contenu. L'objet <strong>adapte les interactions</strong> qu'il propose.</p>
+<h3>Analyse</h3>
+<p><strong>Bonne nouvelle : ce mécanisme est déjà dans B+.</strong> Les descripteurs de capacités étaient déclarés par état (<code>availableInStates</code>). Un objet <code>active</code> expose un menu ; le même objet <code>consumed</code> en expose un autre.</p>
+<p>Le comportement n'est pas un attribut figé de l'objet. C'est une <strong>fonction de son état</strong> :</p>
+<pre><code>Capacités disponibles = f(kind, état, contexte)
+</code></pre>
+<p>La variable <code>contexte</code> est nouvelle — et fait l'objet de la réflexion 2.</p>
+<h3>Formalisation B++</h3>
+<table>
+<thead>
+<tr>
+<th>Élément</th>
+<th>Statut</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Capacités par état</td>
+<td>Déjà dans B+ — à nommer explicitement</td>
+</tr>
+<tr>
+<td>Recalcul à chaque transition</td>
+<td>Déjà prévu (machine à états → projection)</td>
+</tr>
+<tr>
+<td>Comportement = f(état)</td>
+<td>Formalisation B++</td>
+</tr>
+<tr>
+<td>Comportement = f(état, contexte)</td>
+<td>Extension B++ (voir §3)</td>
+</tr>
+</tbody>
+</table>
+<p><strong>Aucune modification du noyau transactionnel requise.</strong></p>
+<hr />
+<h2>3. Réflexion 2 — Réagir au contexte</h2>
+<h3>Intuition</h3>
+<ul>
+<li>À 150 m du lieu, le bouton principal du billet devient « Scanner mon QR ».</li>
+<li>Quand le commerçant prépare la commande, le ticket Click &amp; Collect change.</li>
+<li>Quand le retrait est effectué, l'objet devient automatiquement un souvenir d'achat.</li>
+</ul>
+<p>Le contexte semble faire évoluer les objets naturellement.</p>
+<h3>Analyse critique — deux natures de contexte</h3>
+<table>
+<thead>
+<tr>
+<th>Type</th>
+<th>Exemples</th>
+<th>Nature</th>
+<th>Qui gère</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><strong>Contexte ambiant</strong></td>
+<td>GPS, proximité, heure locale, état du device</td>
+<td>Volatil, propre au terminal</td>
+<td><strong>Bord</strong> (client mobile)</td>
+</tr>
+<tr>
+<td><strong>Contexte de domaine</strong></td>
+<td>Commande préparée, retrait effectué, événement commencé</td>
+<td>Transition d'état provoquée par un organe</td>
+<td><strong>Organe émetteur</strong> via API Wallet</td>
+</tr>
+</tbody>
+</table>
+<p><strong>Erreur à éviter :</strong> faire du Wallet un « Context Engine » qui connaît le GPS, calcule des proximités, ou ingère des signaux du device. Cela le couplerait au terminal, le rendrait intestable et violerait la séparation des responsabilités.</p>
+<h3>Solution B++ : guards contextuels déclaratifs, évalués au bord</h3>
+<p>Le registre déclare des <strong>guards</strong> sur les capacités :</p>
+<pre><code class="language-json">{
+  &quot;id&quot;: &quot;scan_qr&quot;,
+  &quot;label&quot;: &quot;Scanner mon QR&quot;,
+  &quot;availableInStates&quot;: [&quot;active&quot;],
+  &quot;primaryWhen&quot;: &quot;proximity &lt; 150m &amp;&amp; eventStarted&quot;,
+  &quot;handledBy&quot;: &quot;qr_identity&quot;,
+  &quot;invocation&quot;: &quot;qr_identity.scan&quot;
+}
+</code></pre>
+<ul>
+<li>Le <strong>Wallet</strong> expose les capacités et leurs guards (déclaratifs).</li>
+<li>Le <strong>client mobile</strong> évalue le contexte ambiant (GPS, heure) et détermine l'action primaire.</li>
+<li>Les <strong>organes</strong> provoquent les transitions de domaine via l'API (<code>consume</code>, <code>enrichObject</code>).</li>
+</ul>
+<h3>Schéma — répartition des responsabilités</h3>
+<pre><code>┌─────────────────────────────────────────────────────────────┐
+│  BORD (client mobile)                                       │
+│  ┌──────────────────┐    ┌─────────────────────────────┐ │
+│  │ Contexte ambiant   │───▶│ Évaluateur de guards        │ │
+│  │ (GPS, heure, etc.) │    │ (primaryWhen → action UI)   │ │
+│  └──────────────────┘    └─────────────────────────────┘ │
+└─────────────────────────────────────────────────────────────┘
+                              ▲ capacités + guards
+┌─────────────────────────────┴───────────────────────────────┐
+│  COEUR (Wallet)                                             │
+│  Registre : capacités déclaratives + guards par kind/état  │
+│  État de l'objet (projection)                               │
+└─────────────────────────────┬───────────────────────────────┘
+                              ▲ transitions d'état
+┌─────────────────────────────┴───────────────────────────────┐
+│  ORGANES (Orders, Event, Marketing…)                        │
+│  Contexte de domaine → issue / consume / enrichObject       │
+└─────────────────────────────────────────────────────────────┘
+</code></pre>
+<h3>Verdict</h3>
+<p>Le contexte <strong>mérite d'exister architecturalement</strong>, mais uniquement comme <strong>guards déclaratifs évalués au bord</strong>. Pas de Context Engine dans le Wallet.</p>
+<p><strong>Danger signalé :</strong> un moteur de contexte dans le cœur Wallet = couplage terminal, complexité, violation SRP.</p>
+<hr />
+<h2>4. Réflexion 3 — Relations entre objets</h2>
+<h3>Intuition</h3>
+<ul>
+<li>Un billet est associé à un coupon boisson.</li>
+<li>Une réservation est liée à un badge obtenu.</li>
+<li>Une commande génère ensuite une carte de fidélité.</li>
+</ul>
+<p>Les objets racontent une histoire commune.</p>
+<h3>Analyse critique</h3>
+<p>L'intuition est juste. Le risque est réel : transformer le Wallet en <strong>base de graphe</strong> avec traversées, cascades et règles inter-objets. Ce serait une explosion de complexité.</p>
+<h3>Solution B++ : relations légères, typées, unidirectionnelles</h3>
+<p>Table conceptuelle <code>object_relations</code> :</p>
+<pre><code>{ fromId, toId, relationType, createdBy, createdAt }
+</code></pre>
+<p>Types de relation :</p>
+<table>
+<thead>
+<tr>
+<th>relationType</th>
+<th>Exemple</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>bundledWith</code></td>
+<td>Billet + coupon boisson</td>
+</tr>
+<tr>
+<td><code>derivedFrom</code></td>
+<td>Carte fidélité issue d'une commande</td>
+</tr>
+<tr>
+<td><code>unlocks</code></td>
+<td>Badge débloqué par une réservation</td>
+</tr>
+<tr>
+<td><code>relatedTo</code></td>
+<td>Lien générique</td>
+</tr>
+</tbody>
+</table>
+<h3>Règles dures</h3>
+<ol>
+<li>Le Wallet stocke <strong>qu'une relation existe</strong> et <strong>son type</strong>. Il n'interprète pas son sens métier.</li>
+<li><strong>Pas de cascade</strong> dans le cœur (« si A consommé alors B change »). Cette logique appartient à l'organe émetteur, via événements.</li>
+<li><strong>Pas de traversée profonde</strong> (pas de requête graphe N niveaux).</li>
+<li>Une relation est un <strong>enrichissement</strong> comme un autre — append-only, journalisé.</li>
+</ol>
+<h3>Verdict</h3>
+<p>Relations <strong>modélisables dès maintenant, activables plus tard</strong>. Pas dans le premier périmètre d'implémentation. L'histoire commune <strong>émerge</strong> des références, sans moteur dédié.</p>
+<p><strong>Danger signalé :</strong> moteur de graphe avec cascades = complexité exponentielle, couplage inter-objets dans le cœur.</p>
+<hr />
+<h2>5. Réflexion 4 — Patrimoine numérique du citoyen</h2>
+<h3>Intuition</h3>
+<p>Tous les objets n'ont pas la même destinée. Une procuration disparaîtra. Un billet de festival, un badge, un achat marquant pourraient devenir une <strong>collection personnelle</strong> — une mémoire numérique de la vie de quartier. Le Wallet deviendrait le patrimoine numérique du citoyen.</p>
+<h3>Analyse</h3>
+<p>La bibliothèque de souvenirs <strong>émerge naturellement</strong> de B+ :</p>
+<ul>
+<li>Distinction Entitlement / DigitalObject</li>
+<li>Consommation non destructive</li>
+<li>Facette souvenir</li>
+<li>Ledger = biographie</li>
+</ul>
+<p>C'est une <strong>projection / requête</strong> sur les objets du citoyen. Pas besoin d'un organe « Collection » séparé.</p>
+<h3>Extension B++ : politique de rétention déclarée par kind</h3>
+<table>
+<thead>
+<tr>
+<th>retention</th>
+<th>Exemple</th>
+<th>Destinée</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>ephemeral</code></td>
+<td>Procuration, ticket retrait consommé</td>
+<td>Disparaît ou archivé silencieusement</td>
+</tr>
+<tr>
+<td><code>keepsake</code></td>
+<td>Billet festival, badge, achat marquant</td>
+<td>Persiste comme patrimoine</td>
+</tr>
+<tr>
+<td><code>entitlement_only</code></td>
+<td>Droit purement fonctionnel</td>
+<td>Pas de facette souvenir</td>
+</tr>
+</tbody>
+</table>
+<p>Le « patrimoine numérique » = filtre <code>retention = keepsake</code> sur les objets du citoyen.</p>
+<h3>Verdict</h3>
+<p><strong>Émergence + un attribut déclaratif (<code>retention</code>).</strong> C'est une vue, pas une nouvelle structure. Rien de plus.</p>
+<hr />
+<h2>6. Question philosophique — Le Wallet est-il le protocole de communication ?</h2>
+<h3>L'impression</h3>
+<p>Au fil des réflexions, le Wallet semble devenir le langage commun entre tous les organes : vivre, évoluer, proposer des actions, dialoguer, changer de propriétaire, devenir souvenir.</p>
+<h3>Analyse — l'impression est à moitié juste</h3>
+<p>Il faut séparer deux choses :</p>
+<table>
+<thead>
+<tr>
+<th>Concept</th>
+<th>Rôle</th>
+<th>Qui le porte</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><strong>Couche des noms</strong></td>
+<td>Ce que le citoyen possède, comment ça se présente et agit</td>
+<td><strong>Wallet</strong> — le <code>DigitalObject</code> est le <strong>contrat d'interaction partagé</strong></td>
+</tr>
+<tr>
+<td><strong>Couche des verbes</strong></td>
+<td>Comment les organes se notifient mutuellement</td>
+<td><strong>Event Engine</strong> (futur) — le bus de messages</td>
+</tr>
+</tbody>
+</table>
+<h3>Ce que le Wallet EST</h3>
+<ul>
+<li>Le <strong>standard d'objets vivants</strong> de Ma Zone</li>
+<li>Le <strong>vocabulaire commun</strong> : issue, consume, enrich, transfer, memory, capabilities</li>
+<li>Le <strong>registre des droits</strong> du citoyen</li>
+</ul>
+<h3>Ce que le Wallet N'EST PAS</h3>
+<ul>
+<li>Le <strong>routeur de messages</strong> entre organes</li>
+<li>Le <strong>bus d'événements</strong> (rôle du futur Event Engine)</li>
+<li>L'<strong>organe-dieu</strong> dont tout dépend</li>
+</ul>
+<p>Si tout transite par le Wallet, il viole le principe transversal (transversal = dépend d'aucun, mais si tout en dépend, il devient central de fait).</p>
+<h3>Schéma — deux couches distinctes</h3>
+<pre><code>┌─────────────────────────────────────────────────────────────┐
+│  COUCHE DES NOMS (Wallet)                                   │
+│  DigitalObject = contrat d'interaction partagé              │
+│  « Ce que le citoyen possède et comment il interagit »      │
+└─────────────────────────────┬───────────────────────────────┘
+                              │ expose au citoyen
+                              ▼
+                        ┌──────────┐
+                        │ Citoyen  │
+                        └──────────┘
+
+┌─────────────────────────────────────────────────────────────┐
+│  COUCHE DES VERBES (Event Engine — futur)                   │
+│  Bus d'événements inter-organes                             │
+│  « Comment les organes se notifient »                       │
+└─────────────────────────────┬───────────────────────────────┘
+                              │
+        Marketing ──▶ Event Engine ◀── Event
+        Orders    ──▶           ◀── Dispatch
+                              │
+                              ▼ notifie (wallet:object_*)
+                        Wallet Engine
+</code></pre>
+<h3>Verdict</h3>
+<p><strong>Oui</strong>, vous construisez plus qu'un portefeuille : un <strong>standard d'objets vivants</strong>.<br />
+<strong>Non</strong>, ce n'est pas le protocole de communication — c'est le <strong>vocabulaire commun</strong>. La nuance protège l'écosystème.</p>
+<hr />
+<h2>7. Synthèse B++ — ce qui s'ajoute à B+</h2>
+<table>
+<thead>
+<tr>
+<th>Extension</th>
+<th>Mécanisme</th>
+<th>Où vit</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Comportement vivant</td>
+<td>Capacités = f(kind, état, contexte)</td>
+<td>Registre (déclaratif)</td>
+</tr>
+<tr>
+<td>Contexte ambiant</td>
+<td>Guards <code>primaryWhen</code></td>
+<td>Registre + évaluation au bord</td>
+</tr>
+<tr>
+<td>Contexte de domaine</td>
+<td>Transitions d'état</td>
+<td>Organes → API Wallet</td>
+</tr>
+<tr>
+<td>Relations</td>
+<td>Arêtes typées append-only</td>
+<td>Table <code>object_relations</code> (future)</td>
+</tr>
+<tr>
+<td>Patrimoine</td>
+<td>Attribut <code>retention</code> par kind</td>
+<td>Registre + projection/requête</td>
+</tr>
+<tr>
+<td>Contrat partagé</td>
+<td>DigitalObject comme lingua franca</td>
+<td>Wallet (couche des noms)</td>
+</tr>
+</tbody>
+</table>
+<p><strong>Tout est déclaratif ou émergent. Rien n'ajoute de logique métier dans le cœur.</strong></p>
+<hr />
+<h2>8. Dangers architecturaux signalés</h2>
+<table>
+<thead>
+<tr>
+<th>Danger</th>
+<th>Conséquence</th>
+<th>Mitigation</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Context Engine dans le Wallet</td>
+<td>Couplage terminal, intestable</td>
+<td>Guards évalués au bord uniquement</td>
+</tr>
+<tr>
+<td>Graphe de relations avec cascades</td>
+<td>Complexité exponentielle</td>
+<td>Relations légères, pas de cascade dans le cœur</td>
+</tr>
+<tr>
+<td>Wallet = routeur de messages</td>
+<td>Organe-dieu, violation transversalité</td>
+<td>Event Engine pour le bus ; Wallet pour les noms</td>
+</tr>
+<tr>
+<td>Confondre contexte ambiant et domaine</td>
+<td>Logique GPS dans le cœur</td>
+<td>Séparation stricte bord / organes</td>
+</tr>
+<tr>
+<td>Patrimoine = nouvel organe</td>
+<td>Sur-ingénierie</td>
+<td>Projection sur objets existants + <code>retention</code></td>
+</tr>
+</tbody>
+</table>
+<hr />
+<h2>9. Impact sur les principes non négociables</h2>
+<table>
+<thead>
+<tr>
+<th>Principe</th>
+<th>Impact B++</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Wallet stocke et gouverne des droits</td>
+<td>Conservé</td>
+</tr>
+<tr>
+<td>Générique, piloté par registre</td>
+<td><strong>Renforcé</strong> (guards, retention, relations déclaratives)</td>
+</tr>
+<tr>
+<td>Journal append-only</td>
+<td>Conservé</td>
+</tr>
+<tr>
+<td>Payloads opaques</td>
+<td>Conservé</td>
+</tr>
+<tr>
+<td>API publique uniquement</td>
+<td>Conservé</td>
+</tr>
+<tr>
+<td>Consommation idempotente et atomique</td>
+<td>Conservé</td>
+</tr>
+<tr>
+<td>Centré propriétaire, Zone-aware</td>
+<td>Conservé</td>
+</tr>
+<tr>
+<td>Ne pas toucher Dispatch / Communication</td>
+<td>Conservé</td>
+</tr>
+<tr>
+<td>Organe transversal (dépend d'aucun)</td>
+<td><strong>Clarifié</strong> — Wallet ≠ bus de communication</td>
+</tr>
+</tbody>
+</table>
+<p>Aucun principe affaibli. Deux clarifiés, un renforcé.</p>
+<hr />
+<h2>10. Interfaces conceptuelles enrichies (B++)</h2>
+<pre><code>// Existant B+ (inchangé dans l'esprit)
+issueObject({ ownerId, kind, payload, zoneId?, expiresAt?, sourceEngine, sourceRef })
+consumeObject({ objectId, consumerEngine, idempotencyKey })
+enrichObject({ objectId, enrichmentPayload, sourceEngine, idempotencyKey })
+getCapabilities(objectId) → [{ id, label, icon, handledBy, invocation, primaryWhen?, guard? }]
+
+// Nouveau B++
+linkObjects({ fromId, toId, relationType, sourceEngine, idempotencyKey })
+getRelatedObjects(objectId, relationType?) → [{ objectId, relationType }]
+
+// Registre enrichi (déclaratif, pas d'API runtime)
+ObjectKind {
+  kind, retention, transferable, memoryEnabled,
+  capabilities: [{ id, label, availableInStates, primaryWhen?, handledBy, invocation }],
+  transitions: [...]
+}
+</code></pre>
+<hr />
+<h2>11. Ce qui reste rigide vs ce qui devient souple</h2>
+<h3>Rigide (couche dure — inchangé)</h3>
+<ul>
+<li>Transactions d'entitlement (issue, consume, revoke, transfer)</li>
+<li>Atomicité, idempotence, anti double-dépense</li>
+<li>Journal append-only</li>
+<li>Accès uniquement via API publique</li>
+</ul>
+<h3>Souple (couche déclarative — étendue en B++)</h3>
+<ul>
+<li>Présentation et contenu riche (résolution live)</li>
+<li>Menu d'actions (capacités + guards contextuels)</li>
+<li>Facette souvenir post-consommation</li>
+<li>Enrichissement par les organes émetteurs</li>
+<li>Relations légères entre objets (future)</li>
+<li>Politique de rétention (patrimoine vs éphémère)</li>
+<li>Évaluation du contexte ambiant (au bord, pas dans le cœur)</li>
+</ul>
+<hr />
+<h2>12. Recommandation finale</h2>
+<h3>Verdict</h3>
+<p><strong>B+ est adopté comme référence.</strong> B++ formalise et étend la couche déclarative sans toucher au noyau transactionnel. Les quatre réflexions sont saines, adoptables, et protégées des pièges identifiés.</p>
+<h3>Architecture retenue : B++</h3>
+<pre><code>B+ (référence adoptée)
+  + Comportement = f(kind, état, contexte) — formalisation explicite
+  + Guards contextuels déclaratifs, évalués au bord (pas de Context Engine)
+  + Relations légères typées, append-only, sans cascade (modélisable, activable plus tard)
+  + Attribut retention par kind → patrimoine émerge comme projection
+  + DigitalObject nommé comme contrat d'interaction partagé (couche des noms)
+  + Event Engine (futur) porte la couche des verbes — distinct du Wallet
+</code></pre>
+<h3>Prochaine étape</h3>
+<p>Sur validation de cette analyse B++, intégrer l'ensemble (B → B+ → B++) dans l'étude complète <code>ETUDE_ARCHITECTURE_WALLET_ENGINE.md</code> avant tout chapitre d'implémentation.</p>
+<hr />
+<p><em>Document généré le 14 juillet 2026 — Analyse architecturale B++, design uniquement, aucune implémentation.</em></p>
+</body>
+</html>
