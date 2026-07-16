@@ -42,9 +42,11 @@ import SettingsScreen from '../screens/client/SettingsScreen';
 import WalletScreen from '../screens/client/WalletScreen';
 import WalletFamilyScreen from '../screens/client/WalletFamilyScreen';
 import WalletObjectDetailScreen from '../screens/client/WalletObjectDetailScreen';
+import IdentityScreen from '../screens/client/IdentityScreen';
 
-// Merchant
-import DashboardScreen      from '../screens/merchant/DashboardScreen';
+// Merchant — Épée (poste de travail)
+import MerchantCockpitScreen from '../screens/merchant/MerchantCockpitScreen';
+import MerchantStatsScreen    from '../screens/merchant/MerchantStatsScreen';
 import CreateStoreScreen    from '../screens/merchant/CreateStoreScreen';
 import AddProductScreen     from '../screens/merchant/AddProductScreen';
 import ManageStockScreen    from '../screens/merchant/ManageStockScreen';
@@ -55,6 +57,7 @@ import PromotionDetailScreen  from '../screens/merchant/PromotionDetailScreen';
 import MerchantInboxScreen    from '../screens/merchant/MerchantInboxScreen';
 import MesClientsScreen         from '../screens/merchant/MesClientsScreen';
 import MerchantSupportChatScreen from '../screens/merchant/MerchantSupportChatScreen';
+import MerchantDrawerContent from '../components/merchant/MerchantDrawerContent';
 
 // Driver — rework premium
 import DriverHomeScreen     from '../screens/driver/DriverHomeScreen';
@@ -294,59 +297,60 @@ function ClientTabs() {
   );
 }
 
-// ── Merchant ──────────────────────────────────────────────────────────────────
-function MerchantDashStack() {
+// Racine client : les onglets + l'identité numérique en plein écran (canal QR).
+// L'emplacement définitif dans la navigation évoluera lors du chantier UX
+// « Double Identité » ; cette racine permet d'ouvrir l'identité depuis partout.
+function ClientRoot() {
+  return (
+    <Stack.Navigator screenOptions={{ headerShown: false }}>
+      <Stack.Screen name="ClientTabs" component={ClientTabs} />
+      <Stack.Screen
+        name="Identity"
+        component={IdentityScreen}
+        options={{ presentation: 'fullScreenModal', animation: 'slide_from_bottom' }}
+      />
+    </Stack.Navigator>
+  );
+}
+
+// ── Merchant — Épée (Shell : Cockpit + registre de modules) ────────────────────
+// Un seul stack contient tous les écrans d'organes du commerçant ; le Cockpit en
+// est l'accueil. Le menu latéral (drawer) navigue vers ces écrans via le registre.
+function EpeeStack() {
   return (
     <Stack.Navigator screenOptions={screenOptions}>
-      <Stack.Screen name="Dashboard" component={DashboardScreen} options={{ title: 'Mon Commerce' }} />
-      <Stack.Screen name="CreateStore" component={CreateStoreScreen} options={{ title: 'Ma boutique' }} />
+      <Stack.Screen name="Cockpit" component={MerchantCockpitScreen} options={{ headerShown: false }} />
+      <Stack.Screen name="CreateStore" component={CreateStoreScreen} options={{ title: 'Mon commerce' }} />
       <Stack.Screen name="AddProduct" component={AddProductScreen} options={{ title: 'Produit' }} />
-      <Stack.Screen name="ManageStock" component={ManageStockScreen} options={{ title: 'Gérer les stocks' }} />
+      <Stack.Screen name="ManageStock" component={ManageStockScreen} options={{ title: 'Catalogue & stock' }} />
       <Stack.Screen name="ManagePromotions" component={ManagePromotionsScreen} options={{ title: 'Promotions' }} />
       <Stack.Screen name="CreatePromotion" component={CreatePromotionScreen} options={{ title: 'Nouvelle promotion' }} />
       <Stack.Screen name="PromotionDetail" component={PromotionDetailScreen} options={{ title: 'Détail promotion' }} />
       <Stack.Screen name="MerchantOrders" component={MerchantOrdersScreen} options={{ title: 'Commandes reçues' }} />
-      <Stack.Screen name="Chat" component={ChatScreen} options={{ title: 'Messages' }} />
-    </Stack.Navigator>
-  );
-}
-
-function MerchantOrdersStack() {
-  return (
-    <Stack.Navigator screenOptions={screenOptions}>
-      <Stack.Screen name="MerchantOrders" component={MerchantOrdersScreen} options={{ title: 'Commandes reçues' }} />
-      <Stack.Screen name="Chat" component={ChatScreen} options={{ title: 'Messages' }} />
-    </Stack.Navigator>
-  );
-}
-
-function MerchantInboxStack() {
-  return (
-    <Stack.Navigator screenOptions={screenOptions}>
-      <Stack.Screen name="MerchantInbox" component={MerchantInboxScreen} options={{ headerShown: false }} />
       <Stack.Screen name="MesClients" component={MesClientsScreen} options={{ title: 'Mes clients' }} />
+      <Stack.Screen name="MerchantInbox" component={MerchantInboxScreen} options={{ title: 'Messages' }} />
       <Stack.Screen name="MerchantSupportChat" component={MerchantSupportChatScreen} options={{ title: 'Assistance Ma Zone' }} />
+      <Stack.Screen name="MerchantStats" component={MerchantStatsScreen} options={{ title: 'Statistiques' }} />
+      <Stack.Screen name="Profile" component={ProfileScreen} options={{ title: 'Mon profil' }} />
       <Stack.Screen name="Chat" component={ChatScreen} options={{ title: 'Messages' }} />
     </Stack.Navigator>
   );
 }
 
-function MerchantProfileStack() {
+function MerchantRoot() {
   return (
-    <Stack.Navigator screenOptions={screenOptions}>
-      <Stack.Screen name="Profile" component={ProfileScreen} options={{ title: 'Mon profil' }} />
-    </Stack.Navigator>
-  );
-}
-
-function MerchantTabs() {
-  return (
-    <Tab.Navigator screenOptions={tabOptions}>
-      <Tab.Screen name="DashTab" component={MerchantDashStack} options={{ title: 'Boutique', tabBarIcon: ({ focused }) => <TabIcon name={focused ? 'storefront' : 'storefront-outline'} focused={focused} /> }} />
-      <Tab.Screen name="OrdersTab" component={MerchantOrdersStack} options={{ title: 'Commandes', tabBarIcon: ({ focused }) => <TabIcon name={focused ? 'receipt' : 'receipt-outline'} focused={focused} /> }} />
-      <Tab.Screen name="InboxTab" component={MerchantInboxStack} options={{ title: 'Boîte de réception', tabBarIcon: ({ focused }) => <TabIcon name={focused ? 'mail' : 'mail-outline'} focused={focused} /> }} />
-      <Tab.Screen name="ProfileTab" component={MerchantProfileStack} options={{ title: 'Profil', tabBarIcon: ({ focused }) => <TabIcon name={focused ? 'person' : 'person-outline'} focused={focused} /> }} />
-    </Tab.Navigator>
+    <Drawer.Navigator
+      drawerContent={(props) => <MerchantDrawerContent {...props} />}
+      screenOptions={{
+        headerShown: false,
+        drawerType: 'front',
+        overlayColor: THEME.colors.overlay,
+        drawerStyle: { width: '86%' },
+        drawerItemStyle: { display: 'none' },
+      }}
+    >
+      <Drawer.Screen name="EpeeMain" component={EpeeStack} />
+    </Drawer.Navigator>
   );
 }
 
@@ -423,8 +427,8 @@ export default function AppNavigator() {
     );
   }
 
-  if (user.role === 'client') return <ClientTabs />;
-  if (user.role === 'merchant') return <MerchantTabs />;
+  if (user.role === 'client') return <ClientRoot />;
+  if (user.role === 'merchant') return <MerchantRoot />;
   return <DriverTabs />;
 }
 

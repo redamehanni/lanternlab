@@ -1,0 +1,259 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Chantier livré — Wallet Engine · ADR-002 & ADR-005</title>
+<style>
+  @page { margin: 16mm 14mm; }
+  body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Helvetica, Arial, sans-serif; font-size: 10.5pt; line-height: 1.45; color: #1a1a1a; max-width: 100%; }
+  h1 { font-size: 20pt; border-bottom: 2px solid #0f2d5c; padding-bottom: 8px; color: #0f2d5c; page-break-after: avoid; }
+  h2 { font-size: 14pt; margin-top: 22px; color: #0f2d5c; border-bottom: 1px solid #e5e7eb; padding-bottom: 4px; page-break-after: avoid; }
+  h3 { font-size: 11.5pt; margin-top: 14px; color: #1a4a8a; page-break-after: avoid; }
+  table { border-collapse: collapse; width: 100%; margin: 10px 0; font-size: 9pt; page-break-inside: avoid; }
+  th, td { border: 1px solid #d1d5db; padding: 5px 7px; text-align: left; vertical-align: top; }
+  th { background: #f3f4f6; font-weight: 600; }
+  code { background: #f3f4f6; padding: 1px 4px; border-radius: 3px; font-size: 8.5pt; }
+  pre { background: #f8fafc; border: 1px solid #e5e7eb; border-radius: 6px; padding: 10px; overflow-x: auto; font-size: 8pt; line-height: 1.35; white-space: pre-wrap; word-break: break-word; page-break-inside: avoid; }
+  pre code { background: none; padding: 0; }
+  blockquote { border-left: 4px solid #0f2d5c; margin: 10px 0; padding: 6px 14px; background: #f0f4f8; color: #1e3a5f; }
+  hr { border: none; border-top: 1px solid #e5e7eb; margin: 18px 0; }
+  ul, ol { padding-left: 22px; }
+  li { margin-bottom: 3px; }
+  p { margin: 8px 0; }
+  .pdf-note { display: none; }
+  @media screen {
+    .pdf-note { display: block; background: #eff6ff; border: 1px solid #bfdbfe; border-radius: 8px; padding: 12px 16px; margin-bottom: 24px; color: #1e3a8a; }
+  }
+</style>
+</head>
+<body>
+<div class="pdf-note">
+  <strong>Lecture dans Cursor / navigateur :</strong> ce fichier HTML est la version lisible du plan.
+  Pour le PDF, ouvrez <code>CHANTIER_WALLET_ADR_002_005.pdf</code> depuis le Finder (clic droit → Ouvrir avec Aperçu)
+  ou double-cliquez le fichier <code>Ouvrir_*_PDF.command</code> correspondant à la racine du projet.
+</div>
+<h1>Chantier livré — Wallet Engine · ADR-002 &amp; ADR-005</h1>
+<p><strong>Date :</strong> 15 juillet 2026
+<strong>Statut :</strong> Livré et vérifié — évolutions additives, rétrocompatibles
+<strong>Références :</strong> <a href="REVUE_ARCHITECTURE_WALLET_N2.md">REVUE_ARCHITECTURE_WALLET_N2.md</a> · <a href="AUDIT_WALLET_ENGINE_MAZONE.md">AUDIT_WALLET_ENGINE_MAZONE.md</a>
+<strong>Public :</strong> Architectes Ma Zone — compte rendu d'implémentation après validation de la revue n°2</p>
+<hr />
+<h2>Résumé exécutif</h2>
+<p>Suite à la validation de la revue d'architecture n°2, deux décisions actées comme <strong>prioritaires, additives et non-bloquantes</strong> ont été implémentées sur le Wallet Engine :</p>
+<ul>
+<li><strong>ADR-002</strong> — un espace <code>display</code> distinct du <code>payload</code>, pour débloquer listes, recherche et interface sans jamais exposer le sens métier de l'objet.</li>
+<li><strong>ADR-005</strong> — un contrat de capabilities <code>handledBy: 'wallet'</code> vérifié au chargement du registre, garde-fou empêchant le Wallet de devenir un « super-moteur ».</li>
+</ul>
+<p>Les deux évolutions sont <strong>rétrocompatibles</strong> : aucune donnée existante n'est cassée, la migration DB est non destructive, le moteur a été testé bout-en-bout, et les lints sont propres.</p>
+<p><strong>Volontairement hors périmètre</strong> (à valider séparément) : branchement Orders → <code>pickup_ticket</code>, migration familles → vues, relations entre objets.</p>
+<hr />
+<h2>ADR-002 — Espace <code>display</code> séparé du <code>payload</code></h2>
+<h3>Problème traité</h3>
+<p>Le <code>payload</code> d'un objet numérique est <strong>opaque</strong> : le Wallet ne l'interprète jamais (principe fondateur). Mais les interfaces (listes, recherche, fiches) ont besoin de quelques métadonnées communes de présentation. Les extraire du payload aurait forcé le moteur à connaître le métier — anti-pattern.</p>
+<h3>Décision</h3>
+<p>Introduire un descripteur <strong><code>display</code></strong> structuré, léger et distinct, à côté du <code>payload</code> :</p>
+<table>
+<thead>
+<tr>
+<th>Champ</th>
+<th>Rôle</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>title</code></td>
+<td>Titre affiché (remplace le <code>label</code> générique du registre)</td>
+</tr>
+<tr>
+<td><code>subtitle</code></td>
+<td>Ligne secondaire (lieu, date, code…)</td>
+</tr>
+<tr>
+<td><code>category</code></td>
+<td>Catégorie visuelle indicative (<code>culture</code>, <code>commerce</code>, <code>ville</code>…)</td>
+</tr>
+<tr>
+<td><code>primaryDate</code></td>
+<td>Date principale pour tri/affichage</td>
+</tr>
+<tr>
+<td><code>thumbnail</code> / <code>icon</code></td>
+<td>Illustration éventuelle</td>
+</tr>
+</tbody>
+</table>
+<p>Le moteur <strong>stocke et restitue</strong> ce descripteur sans jamais l'interpréter : c'est l'organe émetteur qui le remplit. L'UI se replie automatiquement sur le <code>label</code> du registre quand <code>display</code> est absent → <strong>zéro régression</strong> sur les objets déjà émis.</p>
+<h3>Modifications</h3>
+<p><strong>Backend</strong></p>
+<ul>
+<li><code>backend/src/db/index.js</code></li>
+<li>Colonne <code>display TEXT</code> ajoutée à <code>digital_objects</code> (dans le <code>CREATE TABLE</code> pour les bases neuves).</li>
+<li>Migration non destructive <code>addColumnIfMissing('digital_objects', 'display', 'TEXT')</code> pour les bases existantes (appliquée automatiquement au boot).</li>
+<li><code>backend/src/lib/walletEngine.js</code></li>
+<li><code>issueObject({ display })</code> sérialise le descripteur (JSON) en base.</li>
+<li><code>rowToObject</code> renvoie <code>display</code> parsé, en <strong>champ distinct</strong> du <code>payload</code>.</li>
+</ul>
+<p><strong>Mobile</strong></p>
+<ul>
+<li><code>mobile/src/screens/client/WalletFamilyScreen.js</code></li>
+<li>Affiche <code>display.title</code> / <code>display.subtitle</code>, repli sur <code>label</code>.</li>
+<li><code>mobile/src/screens/client/WalletObjectDetailScreen.js</code></li>
+<li>Titre depuis <code>display.title</code>, sous-titre si présent, repli sur <code>label</code>.</li>
+</ul>
+<p><strong>Démo</strong></p>
+<ul>
+<li><code>backend/scripts/seed-wallet-demo.js</code></li>
+<li>Objets de démonstration enrichis d'un <code>display</code> pour rendre l'amélioration visible immédiatement.</li>
+</ul>
+<h3>Extrait — moteur</h3>
+<pre><code class="language-js">const obj = wallet.issueObject({
+  ownerId,
+  kind: 'event_ticket',
+  payload: { seat: 'A1' },              // opaque, jamais lu par le moteur
+  display: {                            // présentation, stockée/restituée telle quelle
+    title: 'Concert de quartier',
+    subtitle: 'Place centrale · 15 août',
+    category: 'culture',
+    primaryDate: '2026-08-15',
+  },
+  sourceEngine: 'event',
+});
+</code></pre>
+<hr />
+<h2>ADR-005 — Contrat de capabilities (garde-fou anti « super-moteur »)</h2>
+<h3>Problème traité</h3>
+<p>Les capabilities décrivent ce qu'un objet <strong>propose</strong> (« Que puis-je faire avec toi ? »). Le risque architectural : qu'une capacité déclarée <code>handledBy: 'wallet'</code> embarque peu à peu de la logique métier, transformant le Wallet en moteur applicatif.</p>
+<h3>Décision</h3>
+<p>Une capacité ne peut être <code>handledBy: 'wallet'</code> <strong>que</strong> si elle appartient à l'une de ces deux catégories strictement bornées :</p>
+<ol>
+<li><strong>Transition d'état</strong> sur l'objet lui-même (<code>offer</code>/<code>transfer</code>, <code>revoke</code>, <code>reserve</code>, <code>release</code>) ;</li>
+<li><strong>Affichage pur</strong> de données déjà stockées (<code>show_qr</code>, <code>show_code</code>, <code>view_memory</code>, <code>view_receipt</code>).</li>
+</ol>
+<p>Toute autre action doit être déléguée à <code>source</code> (organe émetteur) ou <code>device</code>. Cette règle est <strong>exécutée</strong>, pas seulement documentée : une allowlist est vérifiée au <strong>chargement du registre</strong> (fail-fast).</p>
+<h3>Modifications</h3>
+<ul>
+<li><code>backend/src/lib/walletRegistry.js</code></li>
+<li><code>WALLET_HANDLED_ALLOWLIST</code> : ensemble des identifiants de capacités autorisés en <code>handledBy: 'wallet'</code>.</li>
+<li><code>validateCapabilityContract()</code> : parcourt tous les <code>kinds</code> au chargement ; si une capacité <code>handledBy: 'wallet'</code> n'est pas dans l'allowlist, <strong>le serveur refuse de démarrer</strong> avec un message explicite.</li>
+<li>Contrat et validateur exportés pour transparence et testabilité.</li>
+</ul>
+<h3>Extrait — validation fail-fast</h3>
+<pre><code class="language-js">function validateCapabilityContract() {
+  for (const def of Object.values(KINDS)) {
+    for (const cap of def.capabilities) {
+      if (cap.handledBy === 'wallet' &amp;&amp; !WALLET_HANDLED_ALLOWLIST.has(cap.id)) {
+        throw new Error(
+          `[WalletRegistry] Violation du contrat de capacités : &quot;${cap.id}&quot; ` +
+          `du kind &quot;${def.kind}&quot; est handledBy: 'wallet' hors allowlist. ` +
+          `Déléguez-la à 'source' ou 'device'.`
+        );
+      }
+    }
+  }
+}
+
+validateCapabilityContract(); // au chargement du module
+</code></pre>
+<p>Le registre actuel passe la validation : toutes les capacités Wallet existantes sont des transitions ou de l'affichage de données stockées.</p>
+<hr />
+<h2>Vérifications effectuées</h2>
+<table>
+<thead>
+<tr>
+<th>Vérification</th>
+<th>Résultat</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Lints (backend + mobile)</td>
+<td>Aucune erreur</td>
+</tr>
+<tr>
+<td>Migration DB au boot</td>
+<td><code>display</code> ajoutée automatiquement</td>
+</tr>
+<tr>
+<td>Chargement du registre</td>
+<td>Contrat de capacités validé (OK)</td>
+</tr>
+<tr>
+<td><code>issueObject({ display })</code> → relecture</td>
+<td><code>display.title</code> / <code>subtitle</code> intacts</td>
+</tr>
+<tr>
+<td>Séparation <code>display</code> / <code>payload</code></td>
+<td><code>payload</code> restitué intact et distinct</td>
+</tr>
+<tr>
+<td>Allowlist</td>
+<td>Accepte <code>show_qr</code>, rejette une capacité métier arbitraire</td>
+</tr>
+</tbody>
+</table>
+<hr />
+<h2>Fichiers modifiés</h2>
+<table>
+<thead>
+<tr>
+<th>Fichier</th>
+<th>Nature</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>backend/src/db/index.js</code></td>
+<td>Colonne <code>display</code> + migration non destructive</td>
+</tr>
+<tr>
+<td><code>backend/src/lib/walletEngine.js</code></td>
+<td><code>issueObject</code>/<code>rowToObject</code> gèrent <code>display</code></td>
+</tr>
+<tr>
+<td><code>backend/src/lib/walletRegistry.js</code></td>
+<td>Allowlist + validation du contrat de capabilities</td>
+</tr>
+<tr>
+<td><code>backend/scripts/seed-wallet-demo.js</code></td>
+<td>Objets de démo enrichis d'un <code>display</code></td>
+</tr>
+<tr>
+<td><code>mobile/src/screens/client/WalletFamilyScreen.js</code></td>
+<td>Affichage <code>display.title</code>/<code>subtitle</code></td>
+</tr>
+<tr>
+<td><code>mobile/src/screens/client/WalletObjectDetailScreen.js</code></td>
+<td>Titre/sous-titre depuis <code>display</code></td>
+</tr>
+</tbody>
+</table>
+<hr />
+<h2>Hors périmètre (à valider séparément)</h2>
+<table>
+<thead>
+<tr>
+<th>Chantier</th>
+<th>Raison du report</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Branchement Orders → <code>pickup_ticket</code></td>
+<td>Touche un flux en production ; validation dédiée souhaitable</td>
+</tr>
+<tr>
+<td>Familles → vues (ADR-001)</td>
+<td>Migration additive, à traiter lors du chantier UX global</td>
+</tr>
+<tr>
+<td>Relations entre objets (ADR-004)</td>
+<td>Reporté jusqu'à l'Event Engine, comme acté dans la revue n°2</td>
+</tr>
+</tbody>
+</table>
+<hr />
+<h2>Conclusion</h2>
+<p>Les deux évolutions renforcent la fondation sans en altérer la simplicité : le <code>display</code> sépare proprement présentation et entitlement, et le contrat de capabilities transforme un principe (« le Wallet n'est pas un moteur métier ») en <strong>garantie vérifiée à l'exécution</strong>. Aucune régression, aucune dette introduite. Le Wallet Engine reste un organe transversal, plus lisible et mieux protégé qu'avant ce chantier.</p>
+</body>
+</html>

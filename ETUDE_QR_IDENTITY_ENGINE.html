@@ -1,0 +1,1166 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Étude d'architecture — QR Identity Engine (Phase II)</title>
+<style>
+  @page { margin: 16mm 14mm; }
+  body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Helvetica, Arial, sans-serif; font-size: 10.5pt; line-height: 1.45; color: #1a1a1a; max-width: 100%; }
+  h1 { font-size: 20pt; border-bottom: 2px solid #0f2d5c; padding-bottom: 8px; color: #0f2d5c; page-break-after: avoid; }
+  h2 { font-size: 14pt; margin-top: 22px; color: #0f2d5c; border-bottom: 1px solid #e5e7eb; padding-bottom: 4px; page-break-after: avoid; }
+  h3 { font-size: 11.5pt; margin-top: 14px; color: #1a4a8a; page-break-after: avoid; }
+  table { border-collapse: collapse; width: 100%; margin: 10px 0; font-size: 9pt; page-break-inside: avoid; }
+  th, td { border: 1px solid #d1d5db; padding: 5px 7px; text-align: left; vertical-align: top; }
+  th { background: #f3f4f6; font-weight: 600; }
+  code { background: #f3f4f6; padding: 1px 4px; border-radius: 3px; font-size: 8.5pt; }
+  pre { background: #f8fafc; border: 1px solid #e5e7eb; border-radius: 6px; padding: 10px; overflow-x: auto; font-size: 8pt; line-height: 1.35; white-space: pre-wrap; word-break: break-word; page-break-inside: avoid; }
+  pre code { background: none; padding: 0; }
+  blockquote { border-left: 4px solid #0f2d5c; margin: 10px 0; padding: 6px 14px; background: #f0f4f8; color: #1e3a5f; }
+  hr { border: none; border-top: 1px solid #e5e7eb; margin: 18px 0; }
+  ul, ol { padding-left: 22px; }
+  li { margin-bottom: 3px; }
+  p { margin: 8px 0; }
+  .pdf-note { display: none; }
+  @media screen {
+    .pdf-note { display: block; background: #eff6ff; border: 1px solid #bfdbfe; border-radius: 8px; padding: 12px 16px; margin-bottom: 24px; color: #1e3a8a; }
+  }
+</style>
+</head>
+<body>
+<div class="pdf-note">
+  <strong>Lecture dans Cursor / navigateur :</strong> ce fichier HTML est la version lisible du plan.
+  Pour le PDF, ouvrez <code>ETUDE_QR_IDENTITY_ENGINE.pdf</code> depuis le Finder (clic droit → Ouvrir avec Aperçu)
+  ou double-cliquez le fichier <code>Ouvrir_*_PDF.command</code> correspondant à la racine du projet.
+</div>
+<h1>Étude d'architecture — QR Identity Engine (Phase II)</h1>
+<p><strong>Date :</strong> 15 juillet 2026
+<strong>Statut :</strong> Proposition à valider — aucune implémentation
+<strong>Version Ma Zone de référence :</strong> v9.0 (Wallet Engine intégré)
+<strong>Références :</strong> <a href="PLAN_ETUDE_WALLET_ENGINE.md">PLAN_ETUDE_WALLET_ENGINE.md</a> · <a href="REVUE_ARCHITECTURE_WALLET_N2.md">REVUE_ARCHITECTURE_WALLET_N2.md</a> · <a href="CHANTIER_WALLET_ADR_002_005.md">CHANTIER_WALLET_ADR_002_005.md</a></p>
+<hr />
+<h2>Objet de ce document</h2>
+<p>Ce document présente l'<strong>étude de conception</strong> du QR Identity Engine, deuxième organe transversal de Ma Zone (Phase II). Il développe la vision d'architecte, les propositions d'architecture, les flux, les risques et les décisions à valider avant toute implémentation.</p>
+<p><strong>Aucun code. Aucune implémentation. Réflexion architecturale uniquement.</strong></p>
+<hr />
+<h2>Résumé exécutif</h2>
+<p>Le Wallet Engine répond à la question : <em>« Quels sont mes droits numériques ? »</em></p>
+<p>Le QR Identity Engine répond à une autre : <em>« Qui est la personne qui souhaite exercer ces droits ? »</em></p>
+<p><strong>Verdict d'architecte :</strong> le QR Identity doit être un organe <strong>minimal, transversal et asymétrique</strong> — il produit et valide des preuves d'identité, sans jamais accorder un droit ni prendre une décision métier. L'architecture recommandée <strong>miroir le Wallet Engine</strong> (registre déclaratif + moteur transactionnel + journal append-only + routes HTTP bornées), avec une approche de sécurité <strong>handle opaque + validation serveur</strong> (Approche C).</p>
+<p><strong>Point critique :</strong> le QR n'est pas un billet, pas une promotion, pas un Wallet. C'est uniquement une <strong>identité numérique sécurisée</strong>. Les autres organes décident.</p>
+<hr />
+<h2>Positionnement dans l'écosystème Ma Zone</h2>
+<table>
+<thead>
+<tr>
+<th>Organe</th>
+<th>Question</th>
+<th>Responsabilité</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><strong>Wallet Engine</strong></td>
+<td>« Quels droits ai-je ? »</td>
+<td>Registre des objets numériques du citoyen, cycle de vie des entitlements</td>
+</tr>
+<tr>
+<td><strong>QR Identity Engine</strong></td>
+<td>« Qui suis-je physiquement ? »</td>
+<td>Preuve d'identité présentable et vérifiable</td>
+</tr>
+<tr>
+<td><strong>Event / Orders / Marketing…</strong></td>
+<td>« Que faire de cette personne ? »</td>
+<td>Logique métier, décisions, consommation des droits</td>
+</tr>
+</tbody>
+</table>
+<pre><code class="language-mermaid">flowchart LR
+  Citizen[&quot;App citoyen&quot;] --&gt;|&quot;GET /identity/token&quot;| Engine[&quot;QR Identity Engine&quot;]
+  Engine --&gt;|&quot;handle opaque rotatif&quot;| Citizen
+  Citizen --&gt;|&quot;affiche QR&quot;| Verifier[&quot;App verificateur&quot;]
+  Verifier --&gt;|&quot;POST /identity/verify&quot;| Engine
+  Engine --&gt;|&quot;revendication identite verifiee&quot;| Verifier
+  Verifier --&gt;|&quot;decision metier&quot;| BizOrgan[&quot;Organe metier&quot;]
+  BizOrgan --&gt;|&quot;consumeObject si pertinent&quot;| Wallet[&quot;Wallet Engine&quot;]
+</code></pre>
+<hr />
+<h2>1. Vision générale</h2>
+<h3>Mission exacte</h3>
+<p>Le QR Identity Engine est le <strong>pont entre le citoyen réel et son identité numérique</strong>. Sa mission unique :</p>
+<ol>
+<li><strong>Produire</strong> une preuve d'identité présentable (QR) pour un citoyen authentifié ;</li>
+<li><strong>Valider</strong> une preuve présentée par un vérificateur autorisé ;</li>
+<li><strong>Retourner</strong> une revendication d'identité vérifiée — jamais un droit, jamais une décision.</li>
+</ol>
+<p>Une revendication d'identité vérifiée ressemble conceptuellement à :</p>
+<pre><code class="language-json">{
+  &quot;subjectId&quot;: &quot;uuid-utilisateur&quot;,
+  &quot;displayName&quot;: &quot;Marie Dupont&quot;,
+  &quot;photoUrl&quot;: &quot;/uploads/...&quot;,
+  &quot;purpose&quot;: &quot;identity&quot;,
+  &quot;verifiedAt&quot;: &quot;2026-07-15T10:30:00Z&quot;,
+  &quot;verificationId&quot;: &quot;uuid-evenement-audit&quot;
+}
+</code></pre>
+<p>C'est tout. Pas de liste de billets. Pas de statut de commande. Pas de « accès autorisé ».</p>
+<h3>Responsabilités explicitement refusées</h3>
+<table>
+<thead>
+<tr>
+<th>Hors périmètre</th>
+<th>Pourquoi</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Consommer un billet / un droit</td>
+<td>C'est le Wallet + l'organe métier</td>
+</tr>
+<tr>
+<td>Connaître les commandes, événements, promotions</td>
+<td>Couplage interdit — organe transversal</td>
+</tr>
+<tr>
+<td>Décider d'autoriser un accès, un retrait, une procuration</td>
+<td>Décision métier</td>
+</tr>
+<tr>
+<td>Stocker des droits numériques</td>
+<td>C'est le Wallet</td>
+</tr>
+<tr>
+<td>Générer des QR de billets (v1)</td>
+<td>Extension future — QR d'objet, pas QR d'identité</td>
+</tr>
+</tbody>
+</table>
+<h3>Positionnement architectural</h3>
+<ul>
+<li><strong>Organe transversal</strong> : consommé par de nombreux moteurs, dépendant d'<strong>aucun</strong>.</li>
+<li><strong>Dépendances autorisées</strong> : <code>users</code> (table existante), <code>auth</code> (JWT middleware).</li>
+<li><strong>Dépendances interdites</strong> : Wallet, Orders, Event, Marketing, Dispatch, Communication.</li>
+<li><strong>Direction des appels</strong> : les organes métier consomment le QR Identity ; le QR Identity ne les appelle jamais.</li>
+</ul>
+<hr />
+<h2>2. Architecture proposée</h2>
+<h3>Principe directeur : miroir du Wallet Engine</h3>
+<p>Le Wallet Engine a établi des conventions éprouvées dans Ma Zone. Le QR Identity Engine les reproduit fidèlement :</p>
+<table>
+<thead>
+<tr>
+<th>Couche Wallet</th>
+<th>Couche QR Identity</th>
+<th>Rôle</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>walletRegistry.js</code></td>
+<td><code>qrIdentityRegistry.js</code></td>
+<td>Métadonnées déclaratives, point d'extension Open/Closed</td>
+</tr>
+<tr>
+<td><code>walletEngine.js</code></td>
+<td><code>qrIdentityEngine.js</code></td>
+<td>Logique transactionnelle, journal, API in-process</td>
+</tr>
+<tr>
+<td><code>routes/wallet.js</code></td>
+<td><code>routes/identity.js</code></td>
+<td>Routes HTTP bornées</td>
+</tr>
+<tr>
+<td><code>digital_objects</code> + <code>digital_object_events</code></td>
+<td><code>identity_presentations</code> + <code>identity_events</code></td>
+<td>Projection d'état + ledger append-only</td>
+</tr>
+<tr>
+<td>Socket <code>wallet:object_*</code></td>
+<td>Socket <code>identity:*</code></td>
+<td>Notifications temps réel</td>
+</tr>
+</tbody>
+</table>
+<h3>Arborescence prévue</h3>
+<pre><code>backend/src/
+├── lib/
+│   ├── qrIdentityRegistry.js    # Usages (purpose), TTL, rôles vérificateurs, contrat de divulgation
+│   └── qrIdentityEngine.js      # Génération, validation, rotation, révocation, audit
+├── routes/
+│   └── identity.js              # GET /token (citoyen), POST /verify (vérificateur)
+└── db/index.js                  # Tables identity_presentations + identity_events
+
+mobile/src/
+├── screens/client/
+│   └── IdentityScreen.js        # QR plein écran (nom, photo, code rotatif)
+├── context/
+│   └── QrIdentityContext.js     # (optionnel) rotation + socket
+├── components/client/
+│   └── ClientDrawerContent.js   # pictogramme QR à côté de l'avatar
+└── api/index.js                 # getIdentityToken(), verifyIdentity()
+</code></pre>
+<h3>Modèle de données</h3>
+<h4>Table <code>identity_presentations</code> (projection d'état courant)</h4>
+<table>
+<thead>
+<tr>
+<th>Colonne</th>
+<th>Type</th>
+<th>Rôle</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>id</code></td>
+<td>TEXT PK</td>
+<td>Identifiant du jeton (jti)</td>
+</tr>
+<tr>
+<td><code>user_id</code></td>
+<td>TEXT FK → users</td>
+<td>Citoyen propriétaire</td>
+</tr>
+<tr>
+<td><code>handle</code></td>
+<td>TEXT UNIQUE</td>
+<td>Valeur encodée dans le QR (opaque, aléatoire)</td>
+</tr>
+<tr>
+<td><code>purpose</code></td>
+<td>TEXT</td>
+<td>Usage déclaré (<code>identity</code>, futur : <code>access</code>, <code>pickup</code>…)</td>
+</tr>
+<tr>
+<td><code>status</code></td>
+<td>TEXT</td>
+<td><code>active</code> · <code>used</code> · <code>expired</code> · <code>revoked</code></td>
+</tr>
+<tr>
+<td><code>expires_at</code></td>
+<td>TEXT</td>
+<td>Expiration absolue (TTL court)</td>
+</tr>
+<tr>
+<td><code>created_at</code></td>
+<td>TEXT</td>
+<td>Horodatage de création</td>
+</tr>
+</tbody>
+</table>
+<p>Index : <code>(user_id, status)</code>, <code>(handle)</code> unique.</p>
+<h4>Table <code>identity_events</code> (journal append-only)</h4>
+<table>
+<thead>
+<tr>
+<th>Colonne</th>
+<th>Type</th>
+<th>Rôle</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>id</code></td>
+<td>TEXT PK</td>
+<td>UUID événement</td>
+</tr>
+<tr>
+<td><code>presentation_id</code></td>
+<td>TEXT FK</td>
+<td>Jeton concerné</td>
+</tr>
+<tr>
+<td><code>subject_id</code></td>
+<td>TEXT</td>
+<td>Citoyen identifié</td>
+</tr>
+<tr>
+<td><code>verifier_id</code></td>
+<td>TEXT</td>
+<td>Utilisateur ayant scanné (si applicable)</td>
+</tr>
+<tr>
+<td><code>verifier_role</code></td>
+<td>TEXT</td>
+<td>Rôle du vérificateur</td>
+</tr>
+<tr>
+<td><code>purpose</code></td>
+<td>TEXT</td>
+<td>Usage au moment de l'événement</td>
+</tr>
+<tr>
+<td><code>type</code></td>
+<td>TEXT</td>
+<td><code>issued</code> · <code>validated</code> · <code>rejected</code> · <code>expired</code> · <code>revoked</code> · <code>rotated</code></td>
+</tr>
+<tr>
+<td><code>outcome</code></td>
+<td>TEXT</td>
+<td>Résultat (validated, replay, expired, unauthorized…)</td>
+</tr>
+<tr>
+<td><code>reason</code></td>
+<td>TEXT</td>
+<td>Motif de rejet (optionnel)</td>
+</tr>
+<tr>
+<td><code>idempotency_key</code></td>
+<td>TEXT</td>
+<td>Clé anti-rejeu (scan)</td>
+</tr>
+<tr>
+<td><code>created_at</code></td>
+<td>TEXT</td>
+<td>Horodatage immuable</td>
+</tr>
+</tbody>
+</table>
+<p>Index : <code>(presentation_id, created_at)</code>, index unique partiel sur <code>(idempotency_key)</code> si non null.</p>
+<h3>API publique du moteur (in-process)</h3>
+<p><strong>Commandes (écritures) :</strong></p>
+<table>
+<thead>
+<tr>
+<th>Fonction</th>
+<th>Signature</th>
+<th>Rôle</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>issuePresentation</code></td>
+<td><code>({ userId, purpose }, io?)</code></td>
+<td>Crée un jeton de présentation actif</td>
+</tr>
+<tr>
+<td><code>rotatePresentation</code></td>
+<td><code>({ userId, purpose }, io?)</code></td>
+<td>Invalide l'ancien, émet un nouveau (rotation)</td>
+</tr>
+<tr>
+<td><code>verifyPresentation</code></td>
+<td><code>({ handle, verifierId, verifierRole, purpose, idempotencyKey? }, io?)</code></td>
+<td>Valide ou rejette ; retourne revendication ou erreur</td>
+</tr>
+<tr>
+<td><code>revokeAll</code></td>
+<td><code>({ userId, reason? }, io?)</code></td>
+<td>Invalide tous les jetons actifs (logout, incident)</td>
+</tr>
+</tbody>
+</table>
+<p><strong>Requêtes (lectures) :</strong></p>
+<table>
+<thead>
+<tr>
+<th>Fonction</th>
+<th>Rôle</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>getActivePresentation(userId, purpose?)</code></td>
+<td>Jeton actif courant (pour l'écran QR)</td>
+</tr>
+<tr>
+<td><code>getPresentationEvents(presentationId)</code></td>
+<td>Historique audit d'un jeton</td>
+</tr>
+<tr>
+<td><code>getVerificationHistory(userId, filters?)</code></td>
+<td>Historique des scans pour un citoyen</td>
+</tr>
+</tbody>
+</table>
+<p><strong>Registre (lecture pure) :</strong></p>
+<table>
+<thead>
+<tr>
+<th>Fonction</th>
+<th>Rôle</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>getPurpose(purposeId)</code></td>
+<td>Métadonnées d'un usage</td>
+</tr>
+<tr>
+<td><code>listPurposes()</code></td>
+<td>Catalogue des usages déclarés</td>
+</tr>
+<tr>
+<td><code>getDisclosureContract(purposeId)</code></td>
+<td>Champs d'identité autorisés à divulguer</td>
+</tr>
+<tr>
+<td><code>getVerifierRoles(purposeId)</code></td>
+<td>Rôles admis à vérifier</td>
+</tr>
+</tbody>
+</table>
+<h3>Routes HTTP</h3>
+<table>
+<thead>
+<tr>
+<th>Méthode</th>
+<th>Route</th>
+<th>Auth</th>
+<th>Rôle</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>GET</code></td>
+<td><code>/api/identity/token</code></td>
+<td><code>verifyToken</code></td>
+<td>Propriétaire (citoyen) — retourne handle + métadonnées d'affichage</td>
+</tr>
+<tr>
+<td><code>POST</code></td>
+<td><code>/api/identity/verify</code></td>
+<td><code>verifyToken</code> + rôle vérificateur</td>
+<td>Reçoit <code>{ handle, purpose }</code>, retourne revendication ou rejet</td>
+</tr>
+<tr>
+<td><code>GET</code></td>
+<td><code>/api/identity/history</code></td>
+<td><code>verifyToken</code></td>
+<td>Propriétaire — historique de ses vérifications</td>
+</tr>
+</tbody>
+</table>
+<p><strong>Ce qui n'est PAS exposé en HTTP :</strong> <code>revokeAll</code> (appelé en interne au logout), <code>rotatePresentation</code> (déclenché par le client via refresh du token).</p>
+<h3>Événements Socket.io</h3>
+<table>
+<thead>
+<tr>
+<th>Événement</th>
+<th>Cible</th>
+<th>Quand</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>identity:presentation_rotated</code></td>
+<td><code>user_{userId}</code></td>
+<td>Nouveau jeton émis (rotation)</td>
+</tr>
+<tr>
+<td><code>identity:verified</code></td>
+<td><code>user_{userId}</code></td>
+<td>Scan réussi (notification citoyen)</td>
+</tr>
+<tr>
+<td><code>identity:revoked</code></td>
+<td><code>user_{userId}</code></td>
+<td>Tous les jetons invalidés</td>
+</tr>
+</tbody>
+</table>
+<h3>Intégration mobile (UX — hors cœur, mais anticipée)</h3>
+<p>L'utilisateur accède à son identité numérique via un <strong>pictogramme QR</strong> à côté de sa photo de profil (drawer <code>ClientDrawerContent.js</code>). Un clic ouvre <code>IdentityScreen</code> en plein écran : QR rotatif, nom, photo, indication de validité.</p>
+<p>Cette décision UX n'impacte pas l'architecture interne : le moteur expose <code>GET /api/identity/token</code>, l'écran consomme et rafraîchit périodiquement (rotation ~30–60 s).</p>
+<hr />
+<h2>3. Communication avec les autres organes</h2>
+<h3>Principe : faible couplage, sens unique</h3>
+<p>Le QR Identity Engine ne <code>require</code> aucun organe métier. Les organes métier (ou leurs applications vérificatrices) consomment une <strong>revendication d'identité vérifiée</strong> produite par <code>verifyPresentation</code>.</p>
+<pre><code class="language-mermaid">flowchart TB
+  subgraph identity [QR Identity Engine]
+    reg[&quot;qrIdentityRegistry.js&quot;]
+    eng[&quot;qrIdentityEngine.js&quot;]
+    routes[&quot;routes/identity.js&quot;]
+  end
+  Users[&quot;users + auth JWT&quot;] --&gt; eng
+  eng --&gt;|&quot;n appelle jamais&quot;| BizOrgans[&quot;Organes metier&quot;]
+  BizOrgans --&gt;|&quot;consomment revendication&quot;| eng
+</code></pre>
+<h3>Par organe</h3>
+<table>
+<thead>
+<tr>
+<th>Organe</th>
+<th>Interaction</th>
+<th>Qui décide ?</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><strong>Wallet</strong></td>
+<td>Après identification, l'organe métier appelle <code>wallet.consumeObject({ objectId, consumerEngine: 'event', idempotencyKey })</code></td>
+<td>L'organe métier (Event, Orders…) — pas le QR</td>
+</tr>
+<tr>
+<td><strong>Marketplace</strong></td>
+<td>Identification du client en point de vente physique (futur)</td>
+<td>Marketplace vérifie l'identité, applique sa logique commerciale</td>
+</tr>
+<tr>
+<td><strong>Orders</strong></td>
+<td>Retrait Click &amp; Collect : identifier le client au comptoir</td>
+<td>Orders vérifie identité + objet Wallet <code>pickup_ticket</code></td>
+</tr>
+<tr>
+<td><strong>Dispatch</strong></td>
+<td>Identification livreur/client (futur, si scan physique)</td>
+<td>Dispatch applique sa logique de mission</td>
+</tr>
+<tr>
+<td><strong>Communication</strong></td>
+<td>Aucune dépendance directe</td>
+<td>—</td>
+</tr>
+<tr>
+<td><strong>Event Engine</strong></td>
+<td>Contrôle d'accès : identifier le porteur avant consommation du billet</td>
+<td>Event vérifie identité, puis consomme l'objet Wallet</td>
+</tr>
+<tr>
+<td><strong>Marketing</strong></td>
+<td>Attribution promotionnelle en point de vente (futur)</td>
+<td>Marketing applique ses règles</td>
+</tr>
+<tr>
+<td><strong>Futurs organes</strong></td>
+<td>Consomment <code>verifyPresentation</code> via registre de <code>purpose</code></td>
+<td>Chaque organe reste décideur</td>
+</tr>
+</tbody>
+</table>
+<h3>Flux type — contrôle d'accès événement</h3>
+<pre><code>1. Citoyen ouvre IdentityScreen → GET /api/identity/token → QR affiché
+2. Agent scanne le QR → POST /api/identity/verify { handle, purpose: &quot;access&quot; }
+3. QR Identity retourne { subjectId, displayName, verifiedAt, verificationId }
+4. App agent appelle Event Engine : &quot;subjectId X se présente pour l'événement Y&quot;
+5. Event Engine vérifie le billet Wallet de X pour Y
+6. Si billet valide → Event appelle wallet.consumeObject(...)
+7. Event décide : accès autorisé ou refusé
+</code></pre>
+<p>Le QR Identity n'a participé qu'à l'étape 3. Il ignore l'existence de l'événement, du billet, et de la décision.</p>
+<h3>Flux type — retrait Click &amp; Collect</h3>
+<pre><code>1. Client présente son QR d'identité au comptoir
+2. Commerçant scanne → revendication d'identité vérifiée
+3. App commerçant cherche les objets Wallet `pickup_ticket` actifs de subjectId
+4. Commerçant confirme le retrait → Orders appelle wallet.consumeObject
+</code></pre>
+<p>Encore une fois : le QR identifie. Orders et Wallet gèrent le droit.</p>
+<hr />
+<h2>4. Sécurité</h2>
+<h3>Comparaison des trois approches</h3>
+<h4>Approche A — QR = JWT de session</h4>
+<p>Le QR encode le JWT d'authentification actuel (<code>{ id, name, email, role }</code>, expiry 30 jours).</p>
+<table>
+<thead>
+<tr>
+<th>Avantages</th>
+<th>Inconvénients</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Simple à implémenter</td>
+<td><strong>Rejetée</strong> : une photo du QR = compromission totale du compte</td>
+</tr>
+<tr>
+<td>Pas de round-trip serveur pour afficher</td>
+<td>Jeton longue durée, plein accès API</td>
+</tr>
+<tr>
+<td></td>
+<td>Impossible de révoquer sans invalider toute la session</td>
+</tr>
+<tr>
+<td></td>
+<td>Divulgation maximale (email, rôle)</td>
+</tr>
+</tbody>
+</table>
+<p><strong>Verdict : rejetée.</strong> Le JWT de session sert à authentifier l'app, pas à prouver une présence physique.</p>
+<h4>Approche B — Jeton signé auto-porté (JWT court / TOTP)</h4>
+<p>Le QR encode un JWT signé courte durée contenant <code>subjectId</code> + <code>purpose</code> + <code>exp</code>. Le vérificateur valide la signature localement (clé publique partagée).</p>
+<table>
+<thead>
+<tr>
+<th>Avantages</th>
+<th>Inconvénients</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Vérifiable hors-ligne (portiques, zones sans réseau)</td>
+<td>Révocation difficile (jeton valide jusqu'à expiry)</td>
+</tr>
+<tr>
+<td>Pas de round-trip serveur au scan</td>
+<td>Nécessite de distribuer une clé aux vérificateurs</td>
+</tr>
+<tr>
+<td></td>
+<td>Risque de rejeu si pas de nonce serveur</td>
+</tr>
+<tr>
+<td></td>
+<td>Complexité de rotation des clés</td>
+</tr>
+</tbody>
+</table>
+<p><strong>Verdict : réservée comme extension future</strong> (mode hors-ligne), pas comme fondation v1.</p>
+<h4>Approche C — Handle opaque + validation serveur (RECOMMANDÉE)</h4>
+<p>Le QR encode uniquement un <strong>handle aléatoire opaque</strong> (ex. <code>mz:id:7f3a9c2e</code>). Le vérificateur appelle <code>POST /api/identity/verify</code> ; le serveur résout l'identité, marque le jeton comme utilisé, journalise l'événement.</p>
+<table>
+<thead>
+<tr>
+<th>Avantages</th>
+<th>Inconvénients</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Révocable instantanément</td>
+<td>Nécessite connectivité au scan</td>
+</tr>
+<tr>
+<td>Rotatable (nouveau handle toutes les 30–60 s)</td>
+<td>Round-trip serveur obligatoire</td>
+</tr>
+<tr>
+<td>Aucun secret dans le QR</td>
+<td></td>
+</tr>
+<tr>
+<td>Anti-rejeu : usage unique + TTL court</td>
+<td></td>
+</tr>
+<tr>
+<td>Divulgation minimale (contrat par purpose)</td>
+<td></td>
+</tr>
+<tr>
+<td>Audit complet (qui a scanné qui, quand)</td>
+<td></td>
+</tr>
+</tbody>
+</table>
+<p><strong>Verdict : fondation v1.</strong> Le format de handle est conçu pour accueillir plus tard un préfixe <code>mz:signed:</code> (mode B) sans migration de schéma.</p>
+<h3>Principes de sécurité retenus</h3>
+<table>
+<thead>
+<tr>
+<th>Principe</th>
+<th>Mécanisme</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><strong>Authenticité</strong></td>
+<td>Validation serveur exclusive — jamais de confiance au contenu client</td>
+</tr>
+<tr>
+<td><strong>Anti-falsification</strong></td>
+<td>Handle aléatoire cryptographiquement sûr (<code>crypto.randomBytes</code>)</td>
+</tr>
+<tr>
+<td><strong>Anti-rejeu</strong></td>
+<td>Usage unique par jeton + TTL court (60–120 s) + idempotency_key sur scan</td>
+</tr>
+<tr>
+<td><strong>Rotation</strong></td>
+<td>Nouveau handle émis périodiquement ; ancien invalidé</td>
+</tr>
+<tr>
+<td><strong>Révocation</strong></td>
+<td><code>revokeAll(userId)</code> au logout ou incident ; statut <code>revoked</code> en base</td>
+</tr>
+<tr>
+<td><strong>Vie privée</strong></td>
+<td>Revendication minimale bornée par <code>getDisclosureContract(purpose)</code></td>
+</tr>
+<tr>
+<td><strong>Autorisation</strong></td>
+<td><code>POST /verify</code> réservé aux rôles déclarés dans le registre</td>
+</tr>
+<tr>
+<td><strong>Audit</strong></td>
+<td>Chaque tentative (succès ou échec) inscrite dans <code>identity_events</code></td>
+</tr>
+</tbody>
+</table>
+<h3>Contrat de divulgation (miroir ADR-005 du Wallet)</h3>
+<p>Le registre déclare, par <code>purpose</code>, quels champs d'identité peuvent être exposés lors d'une vérification :</p>
+<pre><code class="language-js">// Exemple conceptuel — qrIdentityRegistry.js
+definePurpose({
+  id: 'identity',
+  label: 'Identification personnelle',
+  ttlSeconds: 60,
+  rotationSeconds: 30,
+  verifierRoles: ['merchant', 'driver'],
+  disclosure: ['displayName', 'photoUrl'],  // PAS email, PAS role, PAS id interne
+});
+</code></pre>
+<p>Validation au chargement du module (fail-fast) : si un <code>purpose</code> tente d'exposer un champ hors allowlist globale, le serveur refuse de démarrer.</p>
+<hr />
+<h2>5. Cycle de vie</h2>
+<h3>Naissance de l'identité</h3>
+<p>L'<strong>identité numérique</strong> n'est pas un objet à créer : elle <strong>est</strong> l'utilisateur (<code>users.id</code>). Dès qu'un compte client existe, l'identité existe. Aucune table supplémentaire « profil d'identité » n'est nécessaire en v1.</p>
+<h3>Naissance d'un jeton de présentation</h3>
+<p>Un jeton est créé <strong>à la demande</strong>, lorsque le citoyen ouvre l'écran QR :</p>
+<pre><code>GET /api/identity/token
+  → issuePresentation({ userId, purpose: 'identity' })
+  → handle opaque, expires_at = now + 60s
+  → événement ledger : type = 'issued'
+</code></pre>
+<h3>Rotation</h3>
+<p>Tant que l'écran QR est ouvert, le client rafraîchit périodiquement (toutes les ~30 s) :</p>
+<pre><code>rotatePresentation({ userId, purpose: 'identity' })
+  → ancien jeton : status = 'expired'
+  → nouveau jeton : status = 'active'
+  → événement ledger : type = 'rotated'
+</code></pre>
+<h3>Utilisation (scan)</h3>
+<pre><code>verifyPresentation({ handle, verifierId, verifierRole, purpose, idempotencyKey })
+  → si valide : status = 'used', retourne revendication
+  → si rejeu (idempotency_key connu) : retourne replay sans double-comptage
+  → si expiré/révoqué : rejet + événement 'rejected'
+</code></pre>
+<h3>Expiration</h3>
+<p>Un job périodique (ou vérification lazy au prochain <code>issuePresentation</code>) marque les jetons dépassés en <code>expired</code>.</p>
+<h3>Révocation globale</h3>
+<p>Au logout, changement de mot de passe, ou incident de sécurité :</p>
+<pre><code>revokeAll({ userId, reason: 'logout' })
+  → tous les jetons actifs : status = 'revoked'
+  → socket : identity:revoked → user_{userId}
+</code></pre>
+<h3>Régénération</h3>
+<p>Le citoyen peut à tout moment rouvrir l'écran QR → nouveau jeton. Aucune « identité figée » : seuls les jetons de présentation sont éphémères ; l'identité sous-jacente est permanente.</p>
+<hr />
+<h2>6. Philosophie — garantir la séparation sur le long terme</h2>
+<h3>Le QR n'accorde jamais un droit</h3>
+<p>Ce principe doit être <strong>structurel</strong>, pas seulement documenté. Trois garde-fous architecturaux :</p>
+<p><strong>1. Contrat de divulgation (registre)</strong></p>
+<p>Le moteur ne peut retourner que les champs déclarés dans <code>disclosure</code> pour un <code>purpose</code>. Pas de champ métier (billets, commandes, promotions) dans la revendication.</p>
+<p><strong>2. Aucune dépendance vers les organes métier</strong></p>
+<p><code>qrIdentityEngine.js</code> ne contient aucun <code>require('../lib/walletEngine')</code>, aucun <code>require('../routes/orders')</code>. Si un développeur tente d'ajouter une telle dépendance, c'est une violation architecturale visible en revue de code.</p>
+<p><strong>3. Validation fail-fast au chargement (miroir ADR-005)</strong></p>
+<p>Comme <code>validateCapabilityContract()</code> pour le Wallet, le registre QR Identity valide au démarrage que :
+- chaque <code>purpose</code> respecte le contrat de divulgation ;
+- aucun champ interdit n'est exposé ;
+- les rôles vérificateurs sont des rôles Ma Zone connus.</p>
+<h3>Analogie avec le Wallet</h3>
+<table>
+<thead>
+<tr>
+<th>Wallet</th>
+<th>QR Identity</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>« Cet objet propose cette action » (capabilities descriptives)</td>
+<td>« Cette personne est identifiée » (revendication descriptive)</td>
+</tr>
+<tr>
+<td>Le Wallet n'exécute pas la logique métier des actions <code>handledBy: 'source'</code></td>
+<td>Le QR Identity ne décide pas de l'issue du scan</td>
+</tr>
+<tr>
+<td>ADR-005 : allowlist <code>handledBy: 'wallet'</code></td>
+<td>Contrat de divulgation par <code>purpose</code></td>
+</tr>
+</tbody>
+</table>
+<h3>Distinction structurante : deux QR différents</h3>
+<table>
+<thead>
+<tr>
+<th></th>
+<th>QR d'identité personnelle (v1)</th>
+<th>QR d'objet / entitlement (futur)</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><strong>Référence</strong></td>
+<td>L'utilisateur (<code>users.id</code>)</td>
+<td>Un objet Wallet (<code>digital_objects.id</code>)</td>
+</tr>
+<tr>
+<td><strong>Question</strong></td>
+<td>« Qui êtes-vous ? »</td>
+<td>« Quel droit présentez-vous ? »</td>
+</tr>
+<tr>
+<td><strong>Accès UX</strong></td>
+<td>À côté de la photo de profil</td>
+<td>Via capability <code>show_qr</code> d'un objet Wallet</td>
+</tr>
+<tr>
+<td><strong>Consommation</strong></td>
+<td>Ne consomme rien</td>
+<td>L'organe métier consomme l'objet Wallet après identification</td>
+</tr>
+<tr>
+<td><strong>Périmètre v1</strong></td>
+<td>Oui</td>
+<td>Préparé, non développé</td>
+</tr>
+</tbody>
+</table>
+<p>Confondre les deux est le piège classique qui transforme le QR Identity en « générateur de billets ». La v1 se concentre exclusivement sur le QR d'identité personnelle.</p>
+<hr />
+<h2>7. Évolutivité</h2>
+<h3>Extension par le registre (Open/Closed)</h3>
+<p>Comme <code>defineKind()</code> pour le Wallet, <code>definePurpose()</code> dans <code>qrIdentityRegistry.js</code> permet d'ajouter de nouveaux usages sans modifier le cœur :</p>
+<pre><code class="language-js">// Futurs usages — déclaratifs uniquement, pas de code métier dans le moteur
+definePurpose({ id: 'access', verifierRoles: ['merchant'], ttlSeconds: 30, disclosure: ['displayName'] });
+definePurpose({ id: 'pickup', verifierRoles: ['merchant'], ttlSeconds: 60, disclosure: ['displayName', 'photoUrl'] });
+definePurpose({ id: 'civic', verifierRoles: ['merchant', 'driver'], ttlSeconds: 120, disclosure: ['displayName'] });
+</code></pre>
+<p>Chaque <code>purpose</code> reste <strong>identifiant</strong> : il précise le contexte de la vérification, pas la décision.</p>
+<h3>Usages futurs anticipés</h3>
+<table>
+<thead>
+<tr>
+<th>Usage</th>
+<th>Purpose</th>
+<th>Vérificateur</th>
+<th>Ce que le QR fait</th>
+<th>Ce que l'organe métier fait</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><strong>Procuration</strong></td>
+<td><code>proxy</code></td>
+<td><code>merchant</code></td>
+<td>Identifie le porteur</td>
+<td>Vérifie l'objet Wallet <code>proxy</code> du porteur</td>
+</tr>
+<tr>
+<td><strong>Événement</strong></td>
+<td><code>access</code></td>
+<td><code>merchant</code></td>
+<td>Identifie le porteur</td>
+<td>Vérifie et consomme le billet Wallet</td>
+</tr>
+<tr>
+<td><strong>Retrait</strong></td>
+<td><code>pickup</code></td>
+<td><code>merchant</code></td>
+<td>Identifie le client</td>
+<td>Vérifie et consomme le <code>pickup_ticket</code></td>
+</tr>
+<tr>
+<td><strong>Réservation</strong></td>
+<td><code>reservation</code></td>
+<td><code>merchant</code></td>
+<td>Identifie le client</td>
+<td>Vérifie la réservation dans son moteur</td>
+</tr>
+<tr>
+<td><strong>Points civiques</strong></td>
+<td><code>civic</code></td>
+<td><code>merchant</code></td>
+<td>Identifie le citoyen</td>
+<td>Applique la règle d'attribution</td>
+</tr>
+<tr>
+<td><strong>Badge / fidélité</strong></td>
+<td><code>loyalty</code></td>
+<td><code>merchant</code></td>
+<td>Identifie le client</td>
+<td>Met à jour l'objet Wallet <code>loyalty_card</code></td>
+</tr>
+</tbody>
+</table>
+<p>Dans tous les cas : le QR Identity identifie. L'organe métier décide et agit sur le Wallet si nécessaire.</p>
+<h3>Mode hors-ligne (extension sans refonte)</h3>
+<p>Le schéma <code>identity_presentations</code> peut accueillir un champ <code>mode: 'online' | 'signed'</code> sans migration destructive. En mode <code>signed</code>, le handle devient un JWT court signé (Approche B) pour les portiques à faible connectivité. La validation serveur reste le mode par défaut.</p>
+<h3>QR d'objet (extension sans refonte)</h3>
+<p>La primitive <code>verifyPresentation</code> peut être généralisée en <code>verifyToken({ handle, expectedRef?, purpose })</code> où <code>expectedRef</code> pointe vers un <code>digital_objects.id</code>. Le moteur vérifie que le handle correspond à l'objet attendu — toujours sans consommer. La consommation reste à l'organe métier via <code>wallet.consumeObject</code>.</p>
+<hr />
+<h2>8. Risques architecturaux et parades</h2>
+<table>
+<thead>
+<tr>
+<th>Risque</th>
+<th>Gravité</th>
+<th>Parade dès v1</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><strong>JWT de session dans le QR</strong></td>
+<td>Critique</td>
+<td>Approche C uniquement ; revue de code explicite</td>
+</tr>
+<tr>
+<td><strong>Rejeu par capture d'écran</strong></td>
+<td>Haute</td>
+<td>Usage unique + TTL 60 s + rotation 30 s</td>
+</tr>
+<tr>
+<td><strong>Dérive en « organe-dieu »</strong> (retourne droits, décisions)</td>
+<td>Haute</td>
+<td>Contrat de divulgation + zéro dépendance métier + fail-fast</td>
+</tr>
+<tr>
+<td><strong>Vie privée du citoyen</strong></td>
+<td>Haute</td>
+<td>Revendication minimale ; pas d'email/rôle dans disclosure</td>
+</tr>
+<tr>
+<td><strong>QR Identity appelle le Wallet</strong></td>
+<td>Haute</td>
+<td>Interdit par architecture ; revue systématique</td>
+</tr>
+<tr>
+<td><strong>Confusion QR identité / QR billet</strong></td>
+<td>Moyenne</td>
+<td>Deux concepts nommés distinctement ; v1 = identité seule</td>
+</tr>
+<tr>
+<td><strong>Besoin hors-ligne imprévu</strong></td>
+<td>Moyenne</td>
+<td>Format handle extensible ; mode <code>signed</code> préparé</td>
+</tr>
+<tr>
+<td><strong>Scan non autorisé</strong></td>
+<td>Moyenne</td>
+<td>Rôle vérificateur requis + audit complet</td>
+</tr>
+<tr>
+<td><strong>Pas de révocation</strong></td>
+<td>Moyenne</td>
+<td><code>revokeAll</code> au logout ; statut <code>revoked</code></td>
+</tr>
+<tr>
+<td><strong>Sur-ingénierie v1</strong></td>
+<td>Moyenne</td>
+<td>Un seul <code>purpose: 'identity'</code> ; registre prêt, usages futurs déclaratifs</td>
+</tr>
+</tbody>
+</table>
+<h3>Pièges classiques à éviter</h3>
+<ol>
+<li><strong>« Le QR ouvre la porte »</strong> — Non. Le QR identifie. L'Event Engine ouvre la porte.</li>
+<li><strong>« Le scan consomme le billet »</strong> — Non. Le scan identifie. L'organe métier consomme via Wallet.</li>
+<li><strong>« Le QR contient la liste des droits »</strong> — Non. C'est le Wallet qui liste les droits.</li>
+<li><strong>« Un QR unique permanent par utilisateur »</strong> — Non. Jetons éphémères rotatifs uniquement.</li>
+<li><strong>« Le commerçant scanne et c'est réglé »</strong> — Non. Le commerçant obtient une identité vérifiée, puis son application applique la logique métier.</li>
+</ol>
+<hr />
+<h2>Décisions architecturales proposées (ADR)</h2>
+<table>
+<thead>
+<tr>
+<th>ID</th>
+<th>Décision</th>
+<th>Statut proposé</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><strong>ADR-QR-001</strong></td>
+<td>Le QR Identity identifie uniquement ; jamais de décision métier</td>
+<td>À valider</td>
+</tr>
+<tr>
+<td><strong>ADR-QR-002</strong></td>
+<td>Approche C (handle opaque + validation serveur) comme fondation v1</td>
+<td>À valider</td>
+</tr>
+<tr>
+<td><strong>ADR-QR-003</strong></td>
+<td>Architecture miroir du Wallet (registry + engine + ledger + routes)</td>
+<td>À valider</td>
+</tr>
+<tr>
+<td><strong>ADR-QR-004</strong></td>
+<td>v1 = QR d'identité personnelle uniquement ; QR d'objet = extension</td>
+<td>À valider</td>
+</tr>
+<tr>
+<td><strong>ADR-QR-005</strong></td>
+<td>Contrat de divulgation par <code>purpose</code>, validé au chargement (fail-fast)</td>
+<td>À valider</td>
+</tr>
+<tr>
+<td><strong>ADR-QR-006</strong></td>
+<td>Zéro dépendance du QR Identity vers les organes métier</td>
+<td>À valider</td>
+</tr>
+<tr>
+<td><strong>ADR-QR-007</strong></td>
+<td>Mode hors-ligne (Approche B) préparé mais non développé en v1</td>
+<td>À valider</td>
+</tr>
+</tbody>
+</table>
+<hr />
+<h2>Ce qui est préparé mais non développé en v1</h2>
+<table>
+<thead>
+<tr>
+<th>Élément</th>
+<th>Préparation</th>
+<th>Développement</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>QR d'objet / entitlement (<code>show_qr</code> Wallet)</td>
+<td>Format handle extensible, <code>expectedRef</code></td>
+<td>Après v1 identité</td>
+</tr>
+<tr>
+<td>Purposes multiples (<code>access</code>, <code>pickup</code>, <code>civic</code>…)</td>
+<td><code>definePurpose()</code> dans le registre</td>
+<td>À la demande des organes</td>
+</tr>
+<tr>
+<td>Mode hors-ligne signé</td>
+<td>Champ <code>mode</code> dans le schéma</td>
+<td>Si besoin terrain confirmé</td>
+</tr>
+<tr>
+<td>Scanner mobile (expo-camera)</td>
+<td>Route <code>POST /verify</code> prête</td>
+<td>App vérificateur par organe</td>
+</tr>
+<tr>
+<td>Procuration</td>
+<td>Objet Wallet <code>proxy</code> (futur) + purpose <code>proxy</code></td>
+<td>Event / Orders Engine</td>
+</tr>
+<tr>
+<td>QrIdentityContext + socket</td>
+<td>Événements <code>identity:*</code> définis</td>
+<td>Si UX temps réel requise</td>
+</tr>
+</tbody>
+</table>
+<hr />
+<h2>Prochaines étapes (après validation)</h2>
+<ol>
+<li>Valider les 7 ADR proposées.</li>
+<li>Développer le noyau backend (<code>qrIdentityRegistry</code> + <code>qrIdentityEngine</code> + tables + routes).</li>
+<li>Développer l'écran mobile <code>IdentityScreen</code> + pictogramme drawer.</li>
+<li>Brancher le premier cas d'usage réel (ex. retrait Click &amp; Collect via Orders).</li>
+<li>Documenter le contrat d'intégration pour les futurs organes émetteurs/vérificateurs.</li>
+</ol>
+<hr />
+<h2>Auto-évaluation (note CTO préliminaire)</h2>
+<table>
+<thead>
+<tr>
+<th>Critère</th>
+<th>Évaluation</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Simplicité</td>
+<td>Forte — un seul purpose v1, moteur minimal</td>
+</tr>
+<tr>
+<td>Robustesse</td>
+<td>Forte — validation serveur, anti-rejeu, audit</td>
+</tr>
+<tr>
+<td>Évolutivité</td>
+<td>Forte — registre déclaratif, format extensible</td>
+</tr>
+<tr>
+<td>Séparation des responsabilités</td>
+<td>Forte — garde-fous structurels (ADR-QR-005/006)</td>
+</tr>
+<tr>
+<td>Risque principal</td>
+<td>Tentation de faire « tout en un scan » — mitigé par ADR et documentation</td>
+</tr>
+</tbody>
+</table>
+<p><strong>Note préliminaire :</strong> architecture saine, alignée sur les conventions Ma Zone et le Wallet Engine. Prête pour validation avant développement.</p>
+<hr />
+<h2>Annexes</h2>
+<h3>Arborescence cible</h3>
+<pre><code>backend/src/lib/qrIdentityRegistry.js
+backend/src/lib/qrIdentityEngine.js
+backend/src/routes/identity.js
+backend/src/db/index.js                    (tables identity_*)
+mobile/src/screens/client/IdentityScreen.js
+mobile/src/context/QrIdentityContext.js    (optionnel)
+mobile/src/components/client/ClientDrawerContent.js  (modification)
+mobile/src/api/index.js                    (endpoints identity)
+</code></pre>
+<h3>Dépendances npm à prévoir (implémentation)</h3>
+<table>
+<thead>
+<tr>
+<th>Package</th>
+<th>Usage</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>react-native-qrcode-svg</code> + <code>react-native-svg</code></td>
+<td>Affichage QR (mobile)</td>
+</tr>
+<tr>
+<td><code>expo-camera</code></td>
+<td>Scanner (futur, app vérificateur)</td>
+</tr>
+<tr>
+<td><code>crypto</code> (Node built-in)</td>
+<td>Génération handle aléatoire (backend)</td>
+</tr>
+</tbody>
+</table>
+<p>Aucune nouvelle dépendance backend critique : <code>crypto</code> est natif Node.js.</p>
+<h3>Références croisées Wallet ↔ QR Identity</h3>
+<table>
+<thead>
+<tr>
+<th>Concept Wallet</th>
+<th>Équivalent QR Identity</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>DigitalObject</code></td>
+<td>Jeton de présentation (<code>identity_presentations</code>)</td>
+</tr>
+<tr>
+<td><code>digital_object_events</code></td>
+<td><code>identity_events</code></td>
+</tr>
+<tr>
+<td><code>walletRegistry.js</code> / <code>defineKind</code></td>
+<td><code>qrIdentityRegistry.js</code> / <code>definePurpose</code></td>
+</tr>
+<tr>
+<td><code>issueObject</code></td>
+<td><code>issuePresentation</code></td>
+</tr>
+<tr>
+<td><code>consumeObject</code></td>
+<td><code>verifyPresentation</code> (identifie, ne consomme pas)</td>
+</tr>
+<tr>
+<td><code>WALLET_HANDLED_ALLOWLIST</code></td>
+<td>Contrat de divulgation par purpose</td>
+</tr>
+<tr>
+<td><code>show_qr</code> capability</td>
+<td>QR d'objet (extension future)</td>
+</tr>
+<tr>
+<td><code>wallet:object_*</code> socket</td>
+<td><code>identity:*</code> socket</td>
+</tr>
+</tbody>
+</table>
+</body>
+</html>

@@ -1,0 +1,450 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Plan d'implémentation — Fondations backend du Bac à Sable</title>
+<style>
+  @page { margin: 16mm 14mm; }
+  body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Helvetica, Arial, sans-serif; font-size: 10.5pt; line-height: 1.45; color: #1a1a1a; max-width: 100%; }
+  h1 { font-size: 20pt; border-bottom: 2px solid #0f2d5c; padding-bottom: 8px; color: #0f2d5c; page-break-after: avoid; }
+  h2 { font-size: 14pt; margin-top: 22px; color: #0f2d5c; border-bottom: 1px solid #e5e7eb; padding-bottom: 4px; page-break-after: avoid; }
+  h3 { font-size: 11.5pt; margin-top: 14px; color: #1a4a8a; page-break-after: avoid; }
+  table { border-collapse: collapse; width: 100%; margin: 10px 0; font-size: 9pt; page-break-inside: avoid; }
+  th, td { border: 1px solid #d1d5db; padding: 5px 7px; text-align: left; vertical-align: top; }
+  th { background: #f3f4f6; font-weight: 600; }
+  code { background: #f3f4f6; padding: 1px 4px; border-radius: 3px; font-size: 8.5pt; }
+  pre { background: #f8fafc; border: 1px solid #e5e7eb; border-radius: 6px; padding: 10px; overflow-x: auto; font-size: 8pt; line-height: 1.35; white-space: pre-wrap; word-break: break-word; page-break-inside: avoid; }
+  pre code { background: none; padding: 0; }
+  blockquote { border-left: 4px solid #0f2d5c; margin: 10px 0; padding: 6px 14px; background: #f0f4f8; color: #1e3a5f; }
+  hr { border: none; border-top: 1px solid #e5e7eb; margin: 18px 0; }
+  ul, ol { padding-left: 22px; }
+  li { margin-bottom: 3px; }
+  p { margin: 8px 0; }
+  .pdf-note { display: none; }
+  @media screen {
+    .pdf-note { display: block; background: #eff6ff; border: 1px solid #bfdbfe; border-radius: 8px; padding: 12px 16px; margin-bottom: 24px; color: #1e3a8a; }
+  }
+</style>
+</head>
+<body>
+<div class="pdf-note">
+  <strong>Lecture dans Cursor / navigateur :</strong> ce fichier HTML est la version lisible du plan.
+  Pour le PDF, ouvrez <code>PLAN_FONDEATIONS_BAC_A_SABLE.pdf</code> depuis le Finder (clic droit → Ouvrir avec Aperçu)
+  ou double-cliquez le fichier <code>Ouvrir_*_PDF.command</code> correspondant à la racine du projet.
+</div>
+<h1>Plan d'implémentation — Fondations backend du Bac à Sable</h1>
+<p><strong>Date :</strong> 15 juillet 2026
+<strong>Statut :</strong> Plan à valider avant développement — aucune implémentation dans ce document
+<strong>Références :</strong> <a href="ETUDE_BAC_A_SABLE_MAZONE.md">ETUDE_BAC_A_SABLE_MAZONE.md</a> · Wallet Engine · Identity Engine
+<strong>Public :</strong> Architectes Ma Zone — premier incrément du Bac à Sable</p>
+<hr />
+<h2>Objet de ce document</h2>
+<p>Ce document présente le <strong>plan d'implémentation</strong> du premier incrément du Bac à Sable : les <strong>fondations backend</strong> (World Factory + auth admin séparée + <code>/api/admin</code>).</p>
+<p><strong>Aucune UI.</strong> Tout sera testable en headless. Ce choix (fondations backend d'abord) a été validé explicitement.</p>
+<p>Le Bac à Sable fait désormais partie intégrante de l'architecture Ma Zone. Il n'est pas un utilitaire temporaire : c'est l'environnement dans lequel naîtront et seront testés tous les futurs organes.</p>
+<hr />
+<h2>Résumé exécutif</h2>
+<p><strong>Incrément :</strong> construire un moteur capable de peupler un monde de démonstration <strong>sans connaître à l'avance</strong> tous les types de mondes futurs — + une identité admin hors de l'écosystème citoyen.</p>
+<p><strong>Verdict :</strong> architecture miroir des organes déjà validés (registre déclaratif + moteur + provenance auditée), faible couplage, zéro UI, zéro sur-ingénierie des scénarios.</p>
+<p><strong>Débloqué immédiatement après livraison :</strong> démo peuplée, dogfooding des contrats Wallet, terrain pour Event / Marketing / Collaboration.</p>
+<hr />
+<h2>Philosophie rappelée</h2>
+<p>Le Bac à Sable ne sert pas uniquement à vérifier que du code fonctionne. Il doit permettre de :</p>
+<ul>
+<li>tester une vision ;</li>
+<li>tester des interactions et parcours ;</li>
+<li>tester des organes et des collaborations ;</li>
+<li>expérimenter de nouveaux concepts sans reconstruire le monde à chaque fois.</li>
+</ul>
+<p>Question directrice pour chaque choix technique :</p>
+<blockquote>
+<p>« Est-ce que cette architecture facilitera le développement des cinq prochaines années ? »</p>
+</blockquote>
+<hr />
+<h2>Les trois piliers (inchangés)</h2>
+<table>
+<thead>
+<tr>
+<th>Pilier</th>
+<th>Rôle</th>
+<th>Dans cet incrément</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><strong>Back Office</strong></td>
+<td>Outil web de l'équipe Ma Zone</td>
+<td>Auth + API admin uniquement (pas d'UI)</td>
+</tr>
+<tr>
+<td><strong>Épée</strong></td>
+<td>Bureau du commerçant</td>
+<td>Hors périmètre (shell Cockpit = incrément suivant)</td>
+</tr>
+<tr>
+<td><strong>World Factory</strong></td>
+<td>Peupler / reset le monde de démo</td>
+<td><strong>Cœur de cet incrément</strong></td>
+</tr>
+</tbody>
+</table>
+<hr />
+<h2>Enrichissement Cockpit (philosophie — pour plus tard)</h2>
+<p>Validé conceptuellement, <strong>non développé</strong> dans cet incrément. Le shell Épée devra accueillir :</p>
+<table>
+<thead>
+<tr>
+<th>Notion</th>
+<th>Intention</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><strong>Priorités</strong></td>
+<td>Hiérarchiser les actions (commandes, événements, collaborations…)</td>
+</tr>
+<tr>
+<td><strong>Vie du commerce</strong></td>
+<td>Raconter ce qui s'est passé pendant la fermeture</td>
+</tr>
+<tr>
+<td><strong>Objectifs</strong></td>
+<td>Emplacement prévu (mensuel / journalier) — sans intelligence aujourd'hui</td>
+</tr>
+<tr>
+<td><strong>Suggestions</strong></td>
+<td>Emplacement prévu pour recommandations des moteurs — sans IA aujourd'hui</td>
+</tr>
+<tr>
+<td><strong>Santé du commerce</strong></td>
+<td>Synthèse globale — non jugeante</td>
+</tr>
+</tbody>
+</table>
+<p>Ces notions guideront le contrat de cartes du Cockpit lors de l'incrément Épée. Le backend produit ici les <strong>données brutes</strong> (monde peuplé) que ce Cockpit consommera.</p>
+<hr />
+<h2>Décisions d'architecte (cet incrément)</h2>
+<table>
+<thead>
+<tr>
+<th>Décision</th>
+<th>Justification</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><strong>Admins hors <code>users</code> citoyens</strong></td>
+<td>Table <code>admin_users</code> + secret JWT distinct. Un admin n'apparaît jamais dans Wallet / Identity / listes clients.</td>
+</tr>
+<tr>
+<td><strong>World Factory = moteur générique + recettes pluggables</strong></td>
+<td>Open/Closed : peupler sans connaître les futurs types de mondes.</td>
+</tr>
+<tr>
+<td><strong>Provenance via <code>demo_entities</code></strong></td>
+<td>Pas de colonnes polluantes partout. Reset = supprimer par batch.</td>
+</tr>
+<tr>
+<td><strong>Orchestration des organes</strong></td>
+<td>Wallet via <code>walletEngine.issueObject</code>. Primitives pour users/stores/products (en attendant de vrais organes Catalog/Orders).</td>
+</tr>
+</tbody>
+</table>
+<hr />
+<h2>Architecture du moteur</h2>
+<pre><code class="language-mermaid">flowchart TB
+  FutureBO[&quot;Back Office futur&quot;] --&gt;|&quot;POST /api/admin/world/run&quot;| Routes[&quot;routes/admin.js&quot;]
+  Routes --&gt; Engine[&quot;lib/worldFactory&quot;]
+  Engine --&gt; Reg[&quot;recipeRegistry.js&quot;]
+  Engine --&gt; Ctx[&quot;context.js&quot;]
+  Reg --&gt; Recipe[&quot;recipes/quartierAnime.js&quot;]
+  Recipe --&gt; Ctx
+  Ctx --&gt; WE[&quot;walletEngine&quot;]
+  Ctx --&gt; Base[&quot;users stores products&quot;]
+  Ctx --&gt; Ledger[&quot;demo_entities&quot;]
+</code></pre>
+<hr />
+<h2>Modèle de données</h2>
+<h3><code>admin_users</code></h3>
+<table>
+<thead>
+<tr>
+<th>Colonne</th>
+<th>Rôle</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>id</code>, <code>email</code>, <code>password</code>, <code>name</code></td>
+<td>Identité admin</td>
+</tr>
+<tr>
+<td><code>level</code></td>
+<td><code>operator</code> (défaut)</td>
+</tr>
+<tr>
+<td><code>active</code></td>
+<td>Soft-disable</td>
+</tr>
+</tbody>
+</table>
+<h3><code>demo_batches</code></h3>
+<table>
+<thead>
+<tr>
+<th>Colonne</th>
+<th>Rôle</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>id</code>, <code>recipe_id</code>, <code>label</code>, <code>params</code></td>
+<td>Une exécution de recette</td>
+</tr>
+<tr>
+<td><code>status</code></td>
+<td><code>active</code> · <code>reverted</code></td>
+</tr>
+</tbody>
+</table>
+<h3><code>demo_entities</code></h3>
+<table>
+<thead>
+<tr>
+<th>Colonne</th>
+<th>Rôle</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>batch_id</code>, <code>entity_type</code>, <code>entity_id</code></td>
+<td>Provenance (tout ce que la factory a créé)</td>
+</tr>
+</tbody>
+</table>
+<p>Reset = supprimer les entités du batch (ordre de dépendance inverse) puis marquer le batch <code>reverted</code>. Les vrais comptes hors demo restent intacts.</p>
+<hr />
+<h2>Composants à créer</h2>
+<table>
+<thead>
+<tr>
+<th>Fichier</th>
+<th>Rôle</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>backend/src/middleware/adminAuth.js</code></td>
+<td><code>verifyAdmin</code>, <code>signAdminToken</code>, secret distinct</td>
+</tr>
+<tr>
+<td><code>backend/scripts/create-admin.js</code></td>
+<td>Bootstrap premier admin (idempotent)</td>
+</tr>
+<tr>
+<td><code>backend/src/lib/worldFactory/recipeRegistry.js</code></td>
+<td><code>defineRecipe</code>, list/get, fail-fast</td>
+</tr>
+<tr>
+<td><code>backend/src/lib/worldFactory/context.js</code></td>
+<td>Primitives auto-taguées (<code>createCitizen</code>, <code>createMerchantWithStore</code>, <code>createProduct</code>, <code>addFavorite</code>, <code>issueWalletObject</code>, <code>track</code>)</td>
+</tr>
+<tr>
+<td><code>backend/src/lib/worldFactory/index.js</code></td>
+<td><code>listRecipes</code>, <code>runRecipe</code>, <code>listBatches</code>, <code>resetBatch</code>, <code>resetAllDemo</code></td>
+</tr>
+<tr>
+<td><code>backend/src/lib/worldFactory/recipes/quartierAnime.js</code></td>
+<td>Première recette paramétrable</td>
+</tr>
+<tr>
+<td><code>backend/src/routes/admin.js</code></td>
+<td>Auth + world endpoints</td>
+</tr>
+<tr>
+<td><code>backend/src/db/index.js</code></td>
+<td>Tables (modifié)</td>
+</tr>
+<tr>
+<td><code>backend/src/index.js</code></td>
+<td>Montage <code>/api/admin</code> (modifié)</td>
+</tr>
+</tbody>
+</table>
+<hr />
+<h2>Routes HTTP</h2>
+<table>
+<thead>
+<tr>
+<th>Méthode</th>
+<th>Route</th>
+<th>Auth</th>
+<th>Rôle</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>POST</code></td>
+<td><code>/api/admin/auth/login</code></td>
+<td>Public</td>
+<td>Login admin → token admin</td>
+</tr>
+<tr>
+<td><code>GET</code></td>
+<td><code>/api/admin/world/recipes</code></td>
+<td><code>verifyAdmin</code></td>
+<td>Liste des recettes</td>
+</tr>
+<tr>
+<td><code>POST</code></td>
+<td><code>/api/admin/world/run</code></td>
+<td><code>verifyAdmin</code></td>
+<td><code>{ recipeId, params }</code> → résumé batch</td>
+</tr>
+<tr>
+<td><code>GET</code></td>
+<td><code>/api/admin/world/batches</code></td>
+<td><code>verifyAdmin</code></td>
+<td>Batches existants</td>
+</tr>
+<tr>
+<td><code>POST</code></td>
+<td><code>/api/admin/world/reset</code></td>
+<td><code>verifyAdmin</code></td>
+<td>Reset d'un batch ou de tout le demo</td>
+</tr>
+</tbody>
+</table>
+<p>Un token citoyen sur <code>/api/admin/*</code> doit être <strong>rejeté</strong>.</p>
+<hr />
+<h2>Première recette : <code>quartier_anime</code></h2>
+<p>Génère un petit quartier réaliste :</p>
+<ul>
+<li>N habitants (paramètre <code>residents</code>) ;</li>
+<li>M commerçants avec boutique + produits (paramètre <code>merchants</code>) ;</li>
+<li>quelques favoris ;</li>
+<li>objets Wallet peuplés via l'organe (<code>walletEngine</code>).</li>
+</ul>
+<p><strong>Sans effets de bord dispatch</strong> dans cette v1 (pas de commandes live). Les commandes / dispatch seront une extension gardée.</p>
+<hr />
+<h2>Vérifications prévues</h2>
+<table>
+<thead>
+<tr>
+<th>Vérification</th>
+<th>Attendu</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Boot DB + fail-fast registre</td>
+<td>OK</td>
+</tr>
+<tr>
+<td>Login admin</td>
+<td>Token admin émis</td>
+</tr>
+<tr>
+<td>Token citoyen sur route admin</td>
+<td>Rejeté</td>
+</tr>
+<tr>
+<td><code>runRecipe('quartier_anime')</code></td>
+<td>Entités créées + tracées dans <code>demo_entities</code></td>
+</tr>
+<tr>
+<td>Objets Wallet</td>
+<td>Émis via <code>walletEngine</code></td>
+</tr>
+<tr>
+<td><code>resetBatch</code></td>
+<td>Batch nettoyé, aucun résidu, comptes hors demo intacts</td>
+</tr>
+<tr>
+<td>Lints</td>
+<td>Propres</td>
+</tr>
+<tr>
+<td>Organes existants</td>
+<td>Sans régression</td>
+</tr>
+</tbody>
+</table>
+<hr />
+<h2>Hors périmètre de cet incrément</h2>
+<table>
+<thead>
+<tr>
+<th>Élément</th>
+<th>Pourquoi</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>UI Épée / Cockpit</td>
+<td>Incrément suivant (shell + contrat de cartes)</td>
+</tr>
+<tr>
+<td>UI Back Office web (React/Vite)</td>
+<td>Après le socle API</td>
+</tr>
+<tr>
+<td>Face Administration (gestion users, stats)</td>
+<td>Incrément ultérieur</td>
+</tr>
+<tr>
+<td>Commandes / dispatch dans les recettes</td>
+<td>Extension gardée</td>
+</tr>
+<tr>
+<td>Scénarios complets (au-delà de la génération de données)</td>
+<td>Accueillis par le registre, non développés</td>
+</tr>
+<tr>
+<td>Intelligence Priorités / Suggestions / Santé</td>
+<td>Architecture Cockpit plus tard ; pas d'IA aujourd'hui</td>
+</tr>
+</tbody>
+</table>
+<hr />
+<h2>Phasage global du Bac à Sable (rappel)</h2>
+<table>
+<thead>
+<tr>
+<th>Phase</th>
+<th>Contenu</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><strong>0 (ce plan)</strong></td>
+<td>World Factory + admin + <code>/api/admin</code></td>
+</tr>
+<tr>
+<td><strong>1</strong></td>
+<td>Shell Épée (cockpit + registre modules + notions prêtées)</td>
+</tr>
+<tr>
+<td><strong>2</strong></td>
+<td>Back Office web (admin + World Factory UI)</td>
+</tr>
+<tr>
+<td><strong>3+</strong></td>
+<td>Chaque moteur = organe + adaptateur Épée + recette World Factory</td>
+</tr>
+</tbody>
+</table>
+<hr />
+<h2>Critère de succès</h2>
+<p>À la fin de cet incrément, l'équipe Ma Zone doit pouvoir, depuis un script ou un appel HTTP admin :</p>
+<ol>
+<li>se authentifier comme admin ;</li>
+<li>lancer <code>quartier_anime</code> ;</li>
+<li>obtenir une ville peuplée (citoyens, commerces, Wallets) ;</li>
+<li>resetter proprement le batch ;</li>
+<li>ajouter demain une nouvelle recette <strong>sans modifier le cœur du moteur</strong>.</li>
+</ol>
+<p>C'est le terrain sur lequel Ma Zone pourra continuer à inventer Ma Zone.</p>
+</body>
+</html>

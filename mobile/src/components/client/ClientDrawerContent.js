@@ -26,13 +26,28 @@ export default function ClientDrawerContent({ navigation }) {
     navigation.navigate(screen);
   }
 
+  function openIdentity() {
+    navigation.closeDrawer();
+    navigation.navigate('Identity');
+  }
+
   return (
     <DrawerContentScrollView
       contentContainerStyle={[styles.container, { paddingTop: insets.top + 12 }]}
       showsVerticalScrollIndicator={false}
     >
       <View style={styles.header}>
-        <Avatar name={user.name} photoUrl={user.photo_url} role={user.role} size={64} />
+        <View style={styles.avatarWrap}>
+          <Avatar name={user.name} photoUrl={user.photo_url} role={user.role} size={64} />
+          <TouchableOpacity
+            style={styles.qrBadge}
+            onPress={openIdentity}
+            activeOpacity={0.85}
+            accessibilityLabel="Ouvrir mon identité numérique"
+          >
+            <Ionicons name="qr-code" size={16} color="#fff" />
+          </TouchableOpacity>
+        </View>
         <Text style={styles.name}>{user.first_name || user.name}</Text>
         <Text style={styles.email}>{user.email}</Text>
       </View>
@@ -65,6 +80,14 @@ export default function ClientDrawerContent({ navigation }) {
 const styles = StyleSheet.create({
   container: { flexGrow: 1, paddingHorizontal: THEME.spacing.md, paddingBottom: 32 },
   header: { alignItems: 'center', paddingVertical: THEME.spacing.md },
+  avatarWrap: { position: 'relative' },
+  qrBadge: {
+    position: 'absolute', right: -6, bottom: -2,
+    width: 28, height: 28, borderRadius: 14,
+    backgroundColor: THEME.colors.accent,
+    alignItems: 'center', justifyContent: 'center',
+    borderWidth: 2, borderColor: THEME.colors.bg,
+  },
   name: { ...THEME.typography.title, color: THEME.colors.text, marginTop: 12 },
   email: { color: THEME.colors.textSecondary, marginTop: 4, fontSize: 14 },
   profileCta: {

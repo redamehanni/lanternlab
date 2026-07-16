@@ -1,0 +1,365 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Chantier livré — Fondations backend du Bac à Sable (World Factory)</title>
+<style>
+  @page { margin: 16mm 14mm; }
+  body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Helvetica, Arial, sans-serif; font-size: 10.5pt; line-height: 1.45; color: #1a1a1a; max-width: 100%; }
+  h1 { font-size: 20pt; border-bottom: 2px solid #0f2d5c; padding-bottom: 8px; color: #0f2d5c; page-break-after: avoid; }
+  h2 { font-size: 14pt; margin-top: 22px; color: #0f2d5c; border-bottom: 1px solid #e5e7eb; padding-bottom: 4px; page-break-after: avoid; }
+  h3 { font-size: 11.5pt; margin-top: 14px; color: #1a4a8a; page-break-after: avoid; }
+  table { border-collapse: collapse; width: 100%; margin: 10px 0; font-size: 9pt; page-break-inside: avoid; }
+  th, td { border: 1px solid #d1d5db; padding: 5px 7px; text-align: left; vertical-align: top; }
+  th { background: #f3f4f6; font-weight: 600; }
+  code { background: #f3f4f6; padding: 1px 4px; border-radius: 3px; font-size: 8.5pt; }
+  pre { background: #f8fafc; border: 1px solid #e5e7eb; border-radius: 6px; padding: 10px; overflow-x: auto; font-size: 8pt; line-height: 1.35; white-space: pre-wrap; word-break: break-word; page-break-inside: avoid; }
+  pre code { background: none; padding: 0; }
+  blockquote { border-left: 4px solid #0f2d5c; margin: 10px 0; padding: 6px 14px; background: #f0f4f8; color: #1e3a5f; }
+  hr { border: none; border-top: 1px solid #e5e7eb; margin: 18px 0; }
+  ul, ol { padding-left: 22px; }
+  li { margin-bottom: 3px; }
+  p { margin: 8px 0; }
+  .pdf-note { display: none; }
+  @media screen {
+    .pdf-note { display: block; background: #eff6ff; border: 1px solid #bfdbfe; border-radius: 8px; padding: 12px 16px; margin-bottom: 24px; color: #1e3a8a; }
+  }
+</style>
+</head>
+<body>
+<div class="pdf-note">
+  <strong>Lecture dans Cursor / navigateur :</strong> ce fichier HTML est la version lisible du plan.
+  Pour le PDF, ouvrez <code>CHANTIER_WORLD_FACTORY_V1.pdf</code> depuis le Finder (clic droit → Ouvrir avec Aperçu)
+  ou double-cliquez le fichier <code>Ouvrir_*_PDF.command</code> correspondant à la racine du projet.
+</div>
+<h1>Chantier livré — Fondations backend du Bac à Sable (World Factory)</h1>
+<p><strong>Date :</strong> 15 juillet 2026
+<strong>Statut :</strong> Livré et vérifié — premier incrément du Bac à Sable
+<strong>Références :</strong> <a href="PLAN_FONDEATIONS_BAC_A_SABLE.md">PLAN_FONDEATIONS_BAC_A_SABLE.md</a> · <a href="ETUDE_BAC_A_SABLE_MAZONE.md">ETUDE_BAC_A_SABLE_MAZONE.md</a>
+<strong>Public :</strong> Architectes Ma Zone — compte rendu d'implémentation</p>
+<hr />
+<h2>Résumé exécutif</h2>
+<p>Les <strong>fondations backend</strong> du Bac à Sable sont en place : identité administrateur séparée de l'écosystème citoyen, namespace <code>/api/admin</code>, et moteur <strong>World Factory</strong> capable de peupler et réinitialiser un monde de démonstration via des recettes pluggables.</p>
+<p><strong>Aucune UI.</strong> Tout est testable en headless. 21 assertions vertes. Boot serveur OK. Lints propres.</p>
+<p><strong>Principe architectural acté et documenté dans le code :</strong></p>
+<blockquote>
+<p>Le World Factory n'est jamais un second moteur métier. Il orchestre les organes existants. Il ne réimplémente jamais leur logique.</p>
+</blockquote>
+<hr />
+<h2>Philosophie respectée</h2>
+<table>
+<thead>
+<tr>
+<th>Principe</th>
+<th>Implémentation</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Orchestrer, ne pas réécrire</td>
+<td>Wallet via <code>walletEngine.issueObject</code> / <code>consumeObject</code></td>
+</tr>
+<tr>
+<td>Admins hors citoyens</td>
+<td>Table <code>admin_users</code> + JWT secret distinct</td>
+</tr>
+<tr>
+<td>Provenance nettoyable</td>
+<td><code>demo_batches</code> + <code>demo_entities</code></td>
+</tr>
+<tr>
+<td>Open/Closed</td>
+<td>Nouvelles recettes sans toucher au cœur</td>
+</tr>
+<tr>
+<td>Évolution future ouverte</td>
+<td>Commentaires : avancées de temps / souvenirs possibles plus tard</td>
+</tr>
+<tr>
+<td>Pas de sur-ingénierie</td>
+<td>Une recette, pas de commandes/dispatch live, pas d'UI</td>
+</tr>
+</tbody>
+</table>
+<hr />
+<h2>Architecture livrée</h2>
+<pre><code>Back Office (futur)
+       │
+       ▼
+ /api/admin/*
+       │
+       ▼
+ lib/worldFactory/
+ ├── recipeRegistry.js   ← principe fondamental documenté
+ ├── context.js          ← primitives auto-taguées
+ ├── index.js            ← run / reset
+ └── recipes/
+     └── quartierAnime.js
+       │
+       ├──► walletEngine (organe)
+       └──► users / stores / products (primitives, taguées)
+</code></pre>
+<hr />
+<h2>Fichiers créés ou finalisés</h2>
+<table>
+<thead>
+<tr>
+<th>Fichier</th>
+<th>Rôle</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>backend/src/db/index.js</code></td>
+<td>Tables <code>admin_users</code>, <code>demo_batches</code>, <code>demo_entities</code></td>
+</tr>
+<tr>
+<td><code>backend/src/middleware/adminAuth.js</code></td>
+<td><code>verifyAdmin</code>, <code>signAdminToken</code>, secret admin</td>
+</tr>
+<tr>
+<td><code>backend/scripts/create-admin.js</code></td>
+<td>Bootstrap premier admin (idempotent)</td>
+</tr>
+<tr>
+<td><code>backend/src/lib/worldFactory/recipeRegistry.js</code></td>
+<td>Registre de recettes + principe fondamental</td>
+</tr>
+<tr>
+<td><code>backend/src/lib/worldFactory/context.js</code></td>
+<td><code>createCitizen</code>, <code>createMerchantWithStore</code>, <code>createProduct</code>, <code>addFavorite</code>, <code>issueWalletObject</code>, <code>consumeWalletObject</code></td>
+</tr>
+<tr>
+<td><code>backend/src/lib/worldFactory/index.js</code></td>
+<td><code>listRecipes</code>, <code>runRecipe</code>, <code>listBatches</code>, <code>resetBatch</code>, <code>resetAllDemo</code></td>
+</tr>
+<tr>
+<td><code>backend/src/lib/worldFactory/recipes/quartierAnime.js</code></td>
+<td>Première recette paramétrable</td>
+</tr>
+<tr>
+<td><code>backend/src/routes/admin.js</code></td>
+<td>Routes HTTP admin</td>
+</tr>
+<tr>
+<td><code>backend/src/index.js</code></td>
+<td>Montage <code>app.use('/api/admin', adminRoutes)</code></td>
+</tr>
+</tbody>
+</table>
+<hr />
+<h2>Modèle de données</h2>
+<h3><code>admin_users</code></h3>
+<p>Identité de l'équipe Ma Zone. <strong>Jamais</strong> dans <code>users</code> citoyens.</p>
+<table>
+<thead>
+<tr>
+<th>Colonne</th>
+<th>Rôle</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>id</code>, <code>email</code>, <code>password</code>, <code>name</code></td>
+<td>Authentification</td>
+</tr>
+<tr>
+<td><code>level</code></td>
+<td>Niveau (<code>operator</code>, <code>superadmin</code>…)</td>
+</tr>
+<tr>
+<td><code>active</code></td>
+<td>Soft-disable</td>
+</tr>
+</tbody>
+</table>
+<h3><code>demo_batches</code></h3>
+<p>Une exécution de recette (<code>active</code> ou <code>reverted</code>).</p>
+<h3><code>demo_entities</code></h3>
+<p>Provenance : chaque entité créée (<code>user</code>, <code>store</code>, <code>product</code>, <code>favorite</code>, <code>wallet_object</code>) est tracée pour un reset propre, sans colonnes polluantes sur les tables métier.</p>
+<hr />
+<h2>API admin</h2>
+<table>
+<thead>
+<tr>
+<th>Méthode</th>
+<th>Route</th>
+<th>Auth</th>
+<th>Rôle</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>POST</code></td>
+<td><code>/api/admin/auth/login</code></td>
+<td>Public</td>
+<td>Login → token admin</td>
+</tr>
+<tr>
+<td><code>GET</code></td>
+<td><code>/api/admin/me</code></td>
+<td>Admin</td>
+<td>Profil admin</td>
+</tr>
+<tr>
+<td><code>GET</code></td>
+<td><code>/api/admin/world/recipes</code></td>
+<td>Admin</td>
+<td>Liste des recettes</td>
+</tr>
+<tr>
+<td><code>POST</code></td>
+<td><code>/api/admin/world/run</code></td>
+<td>Admin</td>
+<td><code>{ recipeId, params }</code> → batch</td>
+</tr>
+<tr>
+<td><code>GET</code></td>
+<td><code>/api/admin/world/batches</code></td>
+<td>Admin</td>
+<td>Batches existants</td>
+</tr>
+<tr>
+<td><code>POST</code></td>
+<td><code>/api/admin/world/reset</code></td>
+<td>Admin</td>
+<td>Reset d'un batch (ou tout le demo)</td>
+</tr>
+</tbody>
+</table>
+<p>Un <strong>token citoyen</strong> est rejeté (secret JWT distinct + claim <code>type: 'admin'</code>).</p>
+<hr />
+<h2>Recette <code>quartier_anime</code></h2>
+<p>Génère un quartier réaliste paramétrable (<code>residents</code>, <code>merchants</code>) :</p>
+<ul>
+<li>habitants (clients) ;</li>
+<li>commerçants + boutiques + produits ;</li>
+<li>favoris ;</li>
+<li>objets Wallet via l'organe (billets, promos, fidélité) ;</li>
+<li>consommation d'un billet via <code>consumeWalletObject</code> (facette souvenir).</li>
+</ul>
+<p><strong>Sans</strong> commandes live / dispatch (extension gardée).</p>
+<hr />
+<h2>Utilisation immédiate</h2>
+<pre><code class="language-bash"># Créer l'admin (déjà fait une fois en vérif ; idempotent)
+cd backend &amp;&amp; node scripts/create-admin.js
+# Défauts : admin@mazone.local / admin1234
+</code></pre>
+<p>Puis :</p>
+<ol>
+<li><code>POST /api/admin/auth/login</code> <code>{ "email": "admin@mazone.local", "password": "admin1234" }</code></li>
+<li><code>POST /api/admin/world/run</code><br />
+<code>{ "recipeId": "quartier_anime", "params": { "residents": 5, "merchants": 3 } }</code><br />
+   Header : <code>Authorization: Bearer &lt;token_admin&gt;</code></li>
+<li><code>POST /api/admin/world/reset</code> <code>{ "batchId": "..." }</code> (ou sans <code>batchId</code> pour tout resetter)</li>
+</ol>
+<hr />
+<h2>Vérifications effectuées</h2>
+<table>
+<thead>
+<tr>
+<th>Vérification</th>
+<th>Résultat</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Registre <code>quartier_anime</code></td>
+<td>OK</td>
+</tr>
+<tr>
+<td>Token admin valide / token citoyen rejeté</td>
+<td>OK</td>
+</tr>
+<tr>
+<td>Run → résidents, commerçants, produits, Wallets</td>
+<td>OK</td>
+</tr>
+<tr>
+<td>Entités tracées dans <code>demo_entities</code></td>
+<td>OK</td>
+</tr>
+<tr>
+<td>Wallet via <code>source_engine = 'world_factory'</code></td>
+<td>OK</td>
+</tr>
+<tr>
+<td>Billets consommés via l'organe (souvenirs)</td>
+<td>OK</td>
+</tr>
+<tr>
+<td>Citoyen hors demo intact après run et reset</td>
+<td>OK</td>
+</tr>
+<tr>
+<td>Reset → zéro résidu demo</td>
+<td>OK</td>
+</tr>
+<tr>
+<td>Recette inconnue → 404</td>
+<td>OK</td>
+</tr>
+<tr>
+<td>Boot serveur + <code>/health</code></td>
+<td>OK</td>
+</tr>
+<tr>
+<td>Lints</td>
+<td>Aucune erreur</td>
+</tr>
+</tbody>
+</table>
+<p><strong>21 assertions</strong> — toutes passent. Script de vérification temporaire ensuite supprimé.</p>
+<hr />
+<h2>Décision technique notable</h2>
+<p><code>runRecipe</code> n'enveloppe <strong>pas</strong> toute la recette dans une transaction SQLite globale : les organes (Wallet) ont déjà leurs transactions, et <code>better-sqlite3</code> refuse les imbrications. En cas d'échec, un reset du batch partiel est tenté.</p>
+<hr />
+<h2>Hors périmètre (incréments suivants)</h2>
+<table>
+<thead>
+<tr>
+<th>Élément</th>
+<th>État</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>UI Back Office web (React/Vite)</td>
+<td>Non commencé</td>
+</tr>
+<tr>
+<td>Shell Épée / Cockpit commerçant</td>
+<td>Non commencé</td>
+</tr>
+<tr>
+<td>Face Administration (gestion users, stats)</td>
+<td>Non commencé</td>
+</tr>
+<tr>
+<td>Commandes / dispatch dans les recettes</td>
+<td>Extension gardée</td>
+</tr>
+<tr>
+<td>Évolution temporelle du monde</td>
+<td>Préparée conceptuellement, non développée</td>
+</tr>
+<tr>
+<td>Intelligence Priorités / Suggestions / Santé</td>
+<td>Pour le Cockpit, plus tard</td>
+</tr>
+</tbody>
+</table>
+<hr />
+<h2>Critère de succès — atteint</h2>
+<p>L'équipe Ma Zone peut désormais :</p>
+<ol>
+<li>s'authentifier comme admin ;</li>
+<li>lancer <code>quartier_anime</code> ;</li>
+<li>obtenir une ville peuplée (citoyens, commerces, Wallets) ;</li>
+<li>resetter proprement le batch ;</li>
+<li>ajouter demain une nouvelle recette <strong>sans modifier le cœur</strong> du moteur.</li>
+</ol>
+<p>C'est le terrain sur lequel les futurs organes (Event, Marketing, Collaboration…) pourront naître et être démontrés.</p>
+</body>
+</html>

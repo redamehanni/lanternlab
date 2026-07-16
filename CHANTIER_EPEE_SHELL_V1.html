@@ -1,0 +1,518 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Chantier livré — Phase 1 · Shell Épée (Merchant Workspace)</title>
+<style>
+  @page { margin: 16mm 14mm; }
+  body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Helvetica, Arial, sans-serif; font-size: 10.5pt; line-height: 1.45; color: #1a1a1a; max-width: 100%; }
+  h1 { font-size: 20pt; border-bottom: 2px solid #0f2d5c; padding-bottom: 8px; color: #0f2d5c; page-break-after: avoid; }
+  h2 { font-size: 14pt; margin-top: 22px; color: #0f2d5c; border-bottom: 1px solid #e5e7eb; padding-bottom: 4px; page-break-after: avoid; }
+  h3 { font-size: 11.5pt; margin-top: 14px; color: #1a4a8a; page-break-after: avoid; }
+  table { border-collapse: collapse; width: 100%; margin: 10px 0; font-size: 9pt; page-break-inside: avoid; }
+  th, td { border: 1px solid #d1d5db; padding: 5px 7px; text-align: left; vertical-align: top; }
+  th { background: #f3f4f6; font-weight: 600; }
+  code { background: #f3f4f6; padding: 1px 4px; border-radius: 3px; font-size: 8.5pt; }
+  pre { background: #f8fafc; border: 1px solid #e5e7eb; border-radius: 6px; padding: 10px; overflow-x: auto; font-size: 8pt; line-height: 1.35; white-space: pre-wrap; word-break: break-word; page-break-inside: avoid; }
+  pre code { background: none; padding: 0; }
+  blockquote { border-left: 4px solid #0f2d5c; margin: 10px 0; padding: 6px 14px; background: #f0f4f8; color: #1e3a5f; }
+  hr { border: none; border-top: 1px solid #e5e7eb; margin: 18px 0; }
+  ul, ol { padding-left: 22px; }
+  li { margin-bottom: 3px; }
+  p { margin: 8px 0; }
+  .pdf-note { display: none; }
+  @media screen {
+    .pdf-note { display: block; background: #eff6ff; border: 1px solid #bfdbfe; border-radius: 8px; padding: 12px 16px; margin-bottom: 24px; color: #1e3a8a; }
+  }
+</style>
+</head>
+<body>
+<div class="pdf-note">
+  <strong>Lecture dans Cursor / navigateur :</strong> ce fichier HTML est la version lisible du plan.
+  Pour le PDF, ouvrez <code>CHANTIER_EPEE_SHELL_V1.pdf</code> depuis le Finder (clic droit → Ouvrir avec Aperçu)
+  ou double-cliquez le fichier <code>Ouvrir_*_PDF.command</code> correspondant à la racine du projet.
+</div>
+<h1>Chantier livré — Phase 1 · Shell Épée (Merchant Workspace)</h1>
+<p><strong>Date :</strong> 16 juillet 2026<br />
+<strong>Statut :</strong> Livré — premier incrément UI du Bac à Sable (pilier Épée)<br />
+<strong>Références :</strong> <a href="PLAN_EPEE_SHELL_PHASE_1.md">PLAN_EPEE_SHELL_PHASE_1.md</a> · <a href="ETUDE_BAC_A_SABLE_MAZONE.md">ETUDE_BAC_A_SABLE_MAZONE.md</a> · <a href="CHANTIER_WORLD_FACTORY_V1.md">CHANTIER_WORLD_FACTORY_V1.md</a><br />
+<strong>Public :</strong> Architectes Ma Zone — compte rendu d'implémentation</p>
+<hr />
+<h2>Document de référence</h2>
+<table>
+<thead>
+<tr>
+<th>Format</th>
+<th>Fichier</th>
+<th>Usage</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><strong>HTML</strong></td>
+<td><code>CHANTIER_EPEE_SHELL_V1.html</code></td>
+<td>Lecture dans Cursor / navigateur</td>
+</tr>
+<tr>
+<td><strong>Markdown</strong></td>
+<td><code>CHANTIER_EPEE_SHELL_V1.md</code></td>
+<td>Partage / édition</td>
+</tr>
+<tr>
+<td><strong>PDF</strong></td>
+<td><code>CHANTIER_EPEE_SHELL_V1.pdf</code></td>
+<td>Impression / revue externe (Finder ou Aperçu)</td>
+</tr>
+</tbody>
+</table>
+<hr />
+<h2>Résumé exécutif</h2>
+<p>L'ancien <strong>tableau de bord commerçant monolithique</strong> (4 onglets) a été remplacé par le <strong>Shell Épée</strong> : un poste de travail modulaire dont l'accueil est un <strong>Cockpit de briefing</strong>, et dont les modules sont déclarés dans un <strong>registre unique</strong>.</p>
+<p><strong>Aucune logique métier nouvelle.</strong> L'Épée est une <strong>surface</strong> : elle orchestre les écrans et les données des organes existants (Orders, Promotions, Communication, Store). Les organes futurs (Événements, Fidélité, Collaborations) sont déjà déclarés en « Bientôt » sans code mort.</p>
+<p><strong>Principe architectural acté et documenté dans le code :</strong></p>
+<blockquote>
+<p>L'Épée n'est jamais un organe. Elle orchestre. Elle ne décide jamais.</p>
+</blockquote>
+<hr />
+<h2>Philosophie respectée</h2>
+<table>
+<thead>
+<tr>
+<th>Principe</th>
+<th>Implémentation</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Surface ≠ organe</td>
+<td>Aucune règle métier dans <code>epee/</code> ni dans le Cockpit</td>
+</tr>
+<tr>
+<td>Open/Closed</td>
+<td>Nouveau module = une entrée dans <code>moduleRegistry.js</code></td>
+</tr>
+<tr>
+<td>Briefing, pas exhaustif</td>
+<td>Sections plafonnées (max 4 cartes) dans <code>briefing.js</code></td>
+</tr>
+<tr>
+<td>Familles renommables</td>
+<td>Libellés centralisés dans <code>FAMILIES</code></td>
+</tr>
+<tr>
+<td>Organs futurs visibles</td>
+<td>Modules <code>comingSoon</code> dans le drawer, sans route</td>
+</tr>
+<tr>
+<td>Capacité <code>store</code></td>
+<td>Modules verrouillés tant qu'aucune boutique n'existe</td>
+</tr>
+<tr>
+<td>Pas de sur-ingénierie</td>
+<td>Pas d'entitlements serveur, pas d'analytics organe</td>
+</tr>
+</tbody>
+</table>
+<hr />
+<h2>Architecture livrée</h2>
+<pre><code>MerchantRoot (Drawer)
+       │
+       ├── MerchantDrawerContent  ← lit le registre (familles + modules)
+       │
+       └── EpeeStack
+             ├── Cockpit (accueil)
+             │     ├── charge store / orders / promotions / unread
+             │     ├── buildBriefing(adapters)
+             │     └── tuiles Accès rapides (registre)
+             │
+             └── Écrans d'organes existants
+                   ManageStock · MerchantOrders · ManagePromotions
+                   MesClients · MerchantInbox · CreateStore
+                   MerchantStats · Profile · Chat · …
+</code></pre>
+<pre><code>mobile/src/epee/
+├── moduleRegistry.js     ← familles + modules déclaratifs
+├── briefing.js           ← agrège les adaptateurs
+└── adapters/
+    ├── index.js          ← point d'extension unique
+    ├── marketplace.js    ← commandes en cours → carte priorité
+    ├── messages.js       ← non-lus → carte priorité
+    ├── store.js          ← vitrine incomplète → carte vie
+    ├── promotions.js     ← promos actives / absentes → carte vie
+    └── clients.js        ← clients servis → carte vie
+</code></pre>
+<hr />
+<h2>Fichiers créés</h2>
+<table>
+<thead>
+<tr>
+<th>Fichier</th>
+<th>Rôle</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>mobile/src/epee/moduleRegistry.js</code></td>
+<td>Familles, modules, <code>isUnlocked</code>, <code>getModulesByFamily</code></td>
+</tr>
+<tr>
+<td><code>mobile/src/epee/briefing.js</code></td>
+<td><code>buildBriefing(ctx)</code> → <code>{ priorities, life }</code></td>
+</tr>
+<tr>
+<td><code>mobile/src/epee/adapters/*.js</code></td>
+<td>Adaptateurs purs <code>ctx → cartes[]</code></td>
+</tr>
+<tr>
+<td><code>mobile/src/screens/merchant/MerchantCockpitScreen.js</code></td>
+<td>Accueil Épée (briefing + accès rapides + stubs)</td>
+</tr>
+<tr>
+<td><code>mobile/src/screens/merchant/MerchantStatsScreen.js</code></td>
+<td>Module Piloter — agrégation lecture seule Orders</td>
+</tr>
+<tr>
+<td><code>mobile/src/components/merchant/BriefingCard.js</code></td>
+<td>Carte de briefing présentationnelle</td>
+</tr>
+<tr>
+<td><code>mobile/src/components/merchant/MerchantDrawerContent.js</code></td>
+<td>Menu latéral piloté par le registre</td>
+</tr>
+</tbody>
+</table>
+<h2>Fichiers modifiés</h2>
+<table>
+<thead>
+<tr>
+<th>Fichier</th>
+<th>Changement</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>mobile/src/navigation/index.js</code></td>
+<td><code>MerchantTabs</code> → <code>MerchantRoot</code> (Drawer + <code>EpeeStack</code>)</td>
+</tr>
+</tbody>
+</table>
+<h2>Fichier orphelin (non cassant)</h2>
+<table>
+<thead>
+<tr>
+<th>Fichier</th>
+<th>Note</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>mobile/src/screens/merchant/DashboardScreen.js</code></td>
+<td>Plus référencé ; conservé volontairement (suppression possible en nettoyage)</td>
+</tr>
+</tbody>
+</table>
+<hr />
+<h2>Registre des modules (Phase 1)</h2>
+<h3>Familles</h3>
+<table>
+<thead>
+<tr>
+<th>Id</th>
+<th>Libellé</th>
+<th>Icône</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>vendre</code></td>
+<td>Vendre</td>
+<td><code>pricetags-outline</code></td>
+</tr>
+<tr>
+<td><code>animer</code></td>
+<td>Animer</td>
+<td><code>megaphone-outline</code></td>
+</tr>
+<tr>
+<td><code>reseau</code></td>
+<td>Réseau</td>
+<td><code>people-outline</code></td>
+</tr>
+<tr>
+<td><code>piloter</code></td>
+<td>Piloter</td>
+<td><code>compass-outline</code></td>
+</tr>
+</tbody>
+</table>
+<h3>Modules branchés (<code>enabled: true</code>)</h3>
+<table>
+<thead>
+<tr>
+<th>Id</th>
+<th>Famille</th>
+<th>Écran</th>
+<th>Entitlement</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>catalog</code></td>
+<td>Vendre</td>
+<td><code>ManageStock</code></td>
+<td><code>store</code></td>
+</tr>
+<tr>
+<td><code>orders</code></td>
+<td>Vendre</td>
+<td><code>MerchantOrders</code></td>
+<td><code>store</code></td>
+</tr>
+<tr>
+<td><code>promotions</code></td>
+<td>Animer</td>
+<td><code>ManagePromotions</code></td>
+<td><code>store</code></td>
+</tr>
+<tr>
+<td><code>clients</code></td>
+<td>Réseau</td>
+<td><code>MesClients</code></td>
+<td><code>store</code></td>
+</tr>
+<tr>
+<td><code>messages</code></td>
+<td>Réseau</td>
+<td><code>MerchantInbox</code></td>
+<td>—</td>
+</tr>
+<tr>
+<td><code>store</code></td>
+<td>Piloter</td>
+<td><code>CreateStore</code></td>
+<td>—</td>
+</tr>
+<tr>
+<td><code>stats</code></td>
+<td>Piloter</td>
+<td><code>MerchantStats</code></td>
+<td><code>store</code></td>
+</tr>
+</tbody>
+</table>
+<h3>Modules « Bientôt » (<code>comingSoon</code>)</h3>
+<table>
+<thead>
+<tr>
+<th>Id</th>
+<th>Famille</th>
+<th>Organe futur</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>events</code></td>
+<td>Animer</td>
+<td>Event Engine</td>
+</tr>
+<tr>
+<td><code>loyalty</code></td>
+<td>Animer</td>
+<td>Loyalty</td>
+</tr>
+<tr>
+<td><code>collaborations</code></td>
+<td>Réseau</td>
+<td>Collaboration</td>
+</tr>
+</tbody>
+</table>
+<hr />
+<h2>Cockpit — composition UX</h2>
+<p>Règle actée : <strong>un briefing du matin, pas un tableau exhaustif.</strong></p>
+<ol>
+<li><strong>En-tête</strong> — greeting + nom du commerce + bouton menu (drawer)</li>
+<li><strong>Vos priorités</strong> — cartes urgentes (commandes, messages) ou état « Tout est sous contrôle »</li>
+<li><strong>Accès rapides</strong> — tuiles par famille (modules <code>enabled</code> uniquement)</li>
+<li><strong>Vie du commerce</strong> — contexte (vitrine, promos, clients)</li>
+<li><strong>Aller plus loin</strong> — stubs Objectifs / Suggestions / Santé (cadres posés, organes futurs)</li>
+</ol>
+<p>État vide dédié si aucune boutique : CTA « Créer mon commerce ».</p>
+<hr />
+<h2>Adaptateurs (contrat)</h2>
+<p>Chaque adaptateur expose :</p>
+<pre><code>{ id, build(ctx) → Card[] }
+</code></pre>
+<p>Une carte typique :</p>
+<table>
+<thead>
+<tr>
+<th>Champ</th>
+<th>Rôle</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>id</code></td>
+<td>Identifiant stable</td>
+</tr>
+<tr>
+<td><code>section</code></td>
+<td><code>priority</code> ou <code>life</code></td>
+</tr>
+<tr>
+<td><code>moduleId</code></td>
+<td>Lien vers le registre</td>
+</tr>
+<tr>
+<td><code>icon</code> / <code>tone</code></td>
+<td>Présentation</td>
+</tr>
+<tr>
+<td><code>title</code> / <code>subtitle</code> / <code>value</code></td>
+<td>Contenu</td>
+</tr>
+<tr>
+<td><code>route</code></td>
+<td>Écran cible dans <code>EpeeStack</code></td>
+</tr>
+<tr>
+<td><code>priority</code></td>
+<td>Tri décroissant dans la section</td>
+</tr>
+</tbody>
+</table>
+<p>Le Cockpit charge le contexte (<code>store</code>, <code>orders</code>, <code>promotions</code>, <code>unreadMessages</code>) et le passe à <code>buildBriefing</code>. <strong>Aucun adaptateur ne fait d'appel réseau.</strong></p>
+<hr />
+<h2>Navigation</h2>
+<h3>Avant (monolithe)</h3>
+<pre><code>MerchantTabs
+ ├── DashTab → Dashboard + stacks produits/promos
+ ├── OrdersTab
+ ├── InboxTab
+ └── ProfileTab
+</code></pre>
+<h3>Après (Shell Épée)</h3>
+<pre><code>MerchantRoot (Drawer)
+ └── EpeeMain → EpeeStack
+       Cockpit | CreateStore | ManageStock | MerchantOrders
+       ManagePromotions | MesClients | MerchantInbox
+       MerchantStats | Profile | Chat | …
+</code></pre>
+<p>Tous les parcours internes des écrans d'organes restent valides : ils cohabitent dans le <strong>même stack</strong>.</p>
+<hr />
+<h2>Points d'extension (prochaines étapes)</h2>
+<table>
+<thead>
+<tr>
+<th>Besoin</th>
+<th>Action</th>
+<th>Fichier touché</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Brancher Event Engine</td>
+<td><code>enabled: true</code> + <code>route</code> + adaptateur</td>
+<td><code>moduleRegistry.js</code> + <code>adapters/</code></td>
+</tr>
+<tr>
+<td>Renommer une famille</td>
+<td>Éditer <code>FAMILIES</code></td>
+<td><code>moduleRegistry.js</code></td>
+</tr>
+<tr>
+<td>Enrichir le briefing</td>
+<td>Ajouter un adaptateur</td>
+<td><code>adapters/index.js</code></td>
+</tr>
+<tr>
+<td>Objectifs / Santé</td>
+<td>Remplacer les stubs du Cockpit</td>
+<td><code>MerchantCockpitScreen.js</code></td>
+</tr>
+<tr>
+<td>Back Office web</td>
+<td>Surface admin séparée (hors mobile)</td>
+<td>Futur chantier</td>
+</tr>
+<tr>
+<td>Nettoyage</td>
+<td>Supprimer <code>DashboardScreen.js</code></td>
+<td>Optionnel</td>
+</tr>
+</tbody>
+</table>
+<hr />
+<h2>Vérifications</h2>
+<table>
+<thead>
+<tr>
+<th>Check</th>
+<th>Résultat</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Lints sur fichiers créés / modifiés</td>
+<td>Aucune erreur</td>
+</tr>
+<tr>
+<td>Routes Cockpit / drawer ↔ <code>EpeeStack</code></td>
+<td>Alignées</td>
+</tr>
+<tr>
+<td>Références <code>MerchantTabs</code> / <code>DashboardScreen</code> dans le code navigable</td>
+<td>Plus aucune (hors docs + fichier orphelin)</td>
+</tr>
+<tr>
+<td>Principe surface / organe</td>
+<td>Respecté (pas de logique métier dans <code>epee/</code>)</td>
+</tr>
+</tbody>
+</table>
+<hr />
+<h2>Hors périmètre (volontaire)</h2>
+<ul>
+<li>UI Back Office administrateur (web)</li>
+<li>Nouvelles recettes World Factory</li>
+<li>Event / Marketing / Loyalty / Collaboration (déclarés seulement)</li>
+<li>Entitlements serveur / abonnements</li>
+<li>Suppression de <code>DashboardScreen.js</code></li>
+</ul>
+<hr />
+<h2>CTO — auto-évaluation</h2>
+<table>
+<thead>
+<tr>
+<th>Qualité</th>
+<th>Note</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Fidélité au plan Phase 1</td>
+<td>Forte</td>
+</tr>
+<tr>
+<td>Séparation surface / organe</td>
+<td>Forte</td>
+</tr>
+<tr>
+<td>Extensibilité (registre + adaptateurs)</td>
+<td>Forte</td>
+</tr>
+<tr>
+<td>UX briefing (pas d'exhaustivité)</td>
+<td>Respectée</td>
+</tr>
+<tr>
+<td>Dette introduite</td>
+<td>Faible (<code>DashboardScreen</code> orphelin ; Inbox a encore son titre interne sous le header stack)</td>
+</tr>
+</tbody>
+</table>
+<p><strong>Verdict :</strong> Phase 1 Shell Épée livrable. Le Bac à Sable a maintenant ses deux premières fondations livrées — <strong>World Factory (backend)</strong> et <strong>Épée Shell (mobile)</strong> — prêtes à accueillir les organes suivants sans refactor de coquille.</p>
+</body>
+</html>

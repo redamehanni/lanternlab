@@ -46,6 +46,20 @@ const EVENT_TYPE = {
   ENRICHED: 'enriched',
 };
 
+// ── Contrat de capacités (ADR-005) ────────────────────────────────────────────
+// Garde-fou anti « super-moteur » : une capacité ne peut être `handledBy: 'wallet'`
+// QUE si elle appartient à l'une de ces deux catégories strictement bornées :
+//   1. transition d'état sur l'objet lui-même (transfer/offer, revoke, reserve…) ;
+//   2. affichage pur de données déjà stockées (QR, code, souvenir…).
+// Toute autre action doit être déléguée à `source` (organe émetteur) ou `device`.
+// Cette liste est vérifiée au chargement du registre (validateCapabilityContract).
+const WALLET_HANDLED_ALLOWLIST = new Set([
+  // 1. transitions d'entitlement
+  'offer', 'transfer', 'revoke', 'reserve', 'release',
+  // 2. affichage de données stockées
+  'show_qr', 'show_code', 'view_memory', 'view_receipt',
+]);
+
 // ── Familles d'objets (regroupement UX uniquement, jamais de logique métier) ──
 const FAMILIES = [
   { id: 'billets', label: 'Billets', icon: 'ticket-outline', color: '#2563EB' },
@@ -182,6 +196,28 @@ const KINDS = {
   }),
 };
 
+/**
+ * Vérifie le contrat de capacités au chargement (fail-fast).
+ * Empêche qu'une capacité métier soit exécutée par le Wallet lui-même :
+ * seul un id de l'allowlist peut porter `handledBy: 'wallet'`.
+ */
+function validateCapabilityContract() {
+  for (const def of Object.values(KINDS)) {
+    for (const cap of def.capabilities) {
+      if (cap.handledBy === 'wallet' && !WALLET_HANDLED_ALLOWLIST.has(cap.id)) {
+        throw new Error(
+          `[WalletRegistry] Violation du contrat de capacités : la capacité "${cap.id}" ` +
+          `du kind "${def.kind}" est déclarée handledBy: 'wallet' mais n'appartient pas ` +
+          `à l'allowlist (transitions d'état ou affichage de données stockées). ` +
+          `Déléguez-la à 'source' ou 'device'.`
+        );
+      }
+    }
+  }
+}
+
+validateCapabilityContract();
+
 // ── API du registre (lecture seule, pure) ─────────────────────────────────────
 
 function isKnownKind(kind) {
@@ -248,6 +284,8 @@ module.exports = {
   EVENT_TYPE,
   FAMILIES,
   DEFAULT_TRANSITIONS,
+  WALLET_HANDLED_ALLOWLIST,
+  validateCapabilityContract,
   isKnownKind,
   getKind,
   listKinds,

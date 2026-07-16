@@ -347,6 +347,7 @@ db.exec(`
     status TEXT NOT NULL,
     retention TEXT NOT NULL DEFAULT 'entitlement_only',
     payload TEXT,
+    display TEXT,
     source_engine TEXT NOT NULL,
     source_ref TEXT,
     zone_id TEXT,
@@ -375,6 +376,84 @@ db.exec(`
   CREATE UNIQUE INDEX IF NOT EXISTS idx_object_events_idempotency
     ON digital_object_events(object_id, idempotency_key)
     WHERE idempotency_key IS NOT NULL;
+`);
+
+// Migration non destructive : descripteur de présentation séparé du payload (ADR-002).
+addColumnIfMissing('digital_objects', 'display', 'TEXT');
+
+// ── Identity Engine : jetons de présentation d'identité du citoyen ────────────
+// identity_presentations : projection d'état courant (jeton actif rotatif).
+// identity_events        : journal append-only (audit des vérifications, immuable).
+// Le `handle` est neutre vis-à-vis du canal (QR aujourd'hui, NFC/Wallet demain).
+db.exec(`
+  CREATE TABLE IF NOT EXISTS identity_presentations (
+    id TEXT PRIMARY KEY,
+    user_id TEXT NOT NULL REFERENCES users(id),
+    handle TEXT NOT NULL UNIQUE,
+    purpose TEXT NOT NULL,
+    status TEXT NOT NULL,
+    expires_at TEXT NOT NULL,
+    created_at TEXT NOT NULL DEFAULT (datetime('now')),
+    updated_at TEXT NOT NULL DEFAULT (datetime('now'))
+  );
+
+  CREATE INDEX IF NOT EXISTS idx_identity_pres_user ON identity_presentations(user_id, status);
+
+  CREATE TABLE IF NOT EXISTS identity_events (
+    id TEXT PRIMARY KEY,
+    presentation_id TEXT REFERENCES identity_presentations(id),
+    subject_id TEXT,
+    verifier_id TEXT,
+    verifier_role TEXT,
+    purpose TEXT,
+    channel TEXT,
+    type TEXT NOT NULL,
+    outcome TEXT,
+    reason TEXT,
+    idempotency_key TEXT,
+    created_at TEXT NOT NULL DEFAULT (datetime('now'))
+  );
+
+  CREATE INDEX IF NOT EXISTS idx_identity_events_subject ON identity_events(subject_id, created_at);
+  CREATE INDEX IF NOT EXISTS idx_identity_events_presentation ON identity_events(presentation_id, created_at);
+  CREATE UNIQUE INDEX IF NOT EXISTS idx_identity_events_idempotency
+    ON identity_events(idempotency_key)
+    WHERE idempotency_key IS NOT NULL;
+`);
+
+// ── Bac à Sable : administration interne + World Factory ──────────────────────
+// admin_users   : équipe Ma Zone, STRICTEMENT hors de l'écosystème citoyen.
+// demo_batches  : une exécution de recette World Factory.
+// demo_entities : provenance de tout ce que la World Factory a créé (reset propre).
+db.exec(`
+  CREATE TABLE IF NOT EXISTS admin_users (
+    id TEXT PRIMARY KEY,
+    email TEXT UNIQUE NOT NULL,
+    password TEXT NOT NULL,
+    name TEXT,
+    level TEXT NOT NULL DEFAULT 'operator',
+    active INTEGER NOT NULL DEFAULT 1,
+    created_at TEXT NOT NULL DEFAULT (datetime('now'))
+  );
+
+  CREATE TABLE IF NOT EXISTS demo_batches (
+    id TEXT PRIMARY KEY,
+    recipe_id TEXT NOT NULL,
+    label TEXT,
+    params TEXT,
+    status TEXT NOT NULL DEFAULT 'active',
+    created_at TEXT NOT NULL DEFAULT (datetime('now'))
+  );
+
+  CREATE TABLE IF NOT EXISTS demo_entities (
+    id TEXT PRIMARY KEY,
+    batch_id TEXT NOT NULL REFERENCES demo_batches(id),
+    entity_type TEXT NOT NULL,
+    entity_id TEXT NOT NULL,
+    created_at TEXT NOT NULL DEFAULT (datetime('now'))
+  );
+
+  CREATE INDEX IF NOT EXISTS idx_demo_entities_batch ON demo_entities(batch_id);
 `);
 
 db.generateId = () => uuidv4();

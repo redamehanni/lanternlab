@@ -60,6 +60,7 @@ function rowToObject(row) {
     status: row.status,
     retention: row.retention,
     payload: safeParse(row.payload),
+    display: safeParse(row.display),
     sourceEngine: row.source_engine,
     sourceRef: row.source_ref,
     zoneId: row.zone_id,
@@ -111,6 +112,7 @@ function issueObject(params, io) {
     ownerId,
     kind,
     payload = null,
+    display = null,
     sourceEngine,
     sourceRef = null,
     zoneId = null,
@@ -132,11 +134,12 @@ function issueObject(params, io) {
   const created = db.transaction(() => {
     db.prepare(`
       INSERT INTO digital_objects
-        (id, owner_id, kind, family, status, retention, payload, source_engine, source_ref, zone_id, expires_at)
-      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+        (id, owner_id, kind, family, status, retention, payload, display, source_engine, source_ref, zone_id, expires_at)
+      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
     `).run(
       id, ownerId, kind, family, status, retention,
       payload ? JSON.stringify(payload) : null,
+      display ? JSON.stringify(display) : null,
       sourceEngine, sourceRef, zoneId, expiresAt
     );
 

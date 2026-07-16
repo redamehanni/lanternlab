@@ -1,0 +1,467 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Revue d'architecture n°2 — Wallet Engine</title>
+<style>
+  @page { margin: 16mm 14mm; }
+  body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Helvetica, Arial, sans-serif; font-size: 10.5pt; line-height: 1.45; color: #1a1a1a; max-width: 100%; }
+  h1 { font-size: 20pt; border-bottom: 2px solid #0f2d5c; padding-bottom: 8px; color: #0f2d5c; page-break-after: avoid; }
+  h2 { font-size: 14pt; margin-top: 22px; color: #0f2d5c; border-bottom: 1px solid #e5e7eb; padding-bottom: 4px; page-break-after: avoid; }
+  h3 { font-size: 11.5pt; margin-top: 14px; color: #1a4a8a; page-break-after: avoid; }
+  table { border-collapse: collapse; width: 100%; margin: 10px 0; font-size: 9pt; page-break-inside: avoid; }
+  th, td { border: 1px solid #d1d5db; padding: 5px 7px; text-align: left; vertical-align: top; }
+  th { background: #f3f4f6; font-weight: 600; }
+  code { background: #f3f4f6; padding: 1px 4px; border-radius: 3px; font-size: 8.5pt; }
+  pre { background: #f8fafc; border: 1px solid #e5e7eb; border-radius: 6px; padding: 10px; overflow-x: auto; font-size: 8pt; line-height: 1.35; white-space: pre-wrap; word-break: break-word; page-break-inside: avoid; }
+  pre code { background: none; padding: 0; }
+  blockquote { border-left: 4px solid #0f2d5c; margin: 10px 0; padding: 6px 14px; background: #f0f4f8; color: #1e3a5f; }
+  hr { border: none; border-top: 1px solid #e5e7eb; margin: 18px 0; }
+  ul, ol { padding-left: 22px; }
+  li { margin-bottom: 3px; }
+  p { margin: 8px 0; }
+  .pdf-note { display: none; }
+  @media screen {
+    .pdf-note { display: block; background: #eff6ff; border: 1px solid #bfdbfe; border-radius: 8px; padding: 12px 16px; margin-bottom: 24px; color: #1e3a8a; }
+  }
+</style>
+</head>
+<body>
+<div class="pdf-note">
+  <strong>Lecture dans Cursor / navigateur :</strong> ce fichier HTML est la version lisible du plan.
+  Pour le PDF, ouvrez <code>REVUE_ARCHITECTURE_WALLET_N2.pdf</code> depuis le Finder (clic droit → Ouvrir avec Aperçu)
+  ou double-cliquez le fichier <code>Ouvrir_*_PDF.command</code> correspondant à la racine du projet.
+</div>
+<h1>Revue d'architecture n°2 — Wallet Engine</h1>
+<p><strong>Date :</strong> 15 juillet 2026<br />
+<strong>Statut :</strong> Document de décisions (ADR) — fondation à valider — aucune implémentation<br />
+<strong>Références :</strong> <a href="AUDIT_WALLET_ENGINE_MAZONE.md">AUDIT_WALLET_ENGINE_MAZONE.md</a> · tag <code>v9.0</code><br />
+<strong>Public :</strong> Architectes Ma Zone — dernière étape avant validation officielle du Wallet Engine</p>
+<hr />
+<h2>Résumé exécutif</h2>
+<p>Cette revue confronte six points soulevés lors du contre-audit du Wallet Engine v1. L'objectif n'est pas d'avoir raison, mais de construire la meilleure fondation possible.</p>
+<p><strong>Verdict global :</strong> la fondation tient. Deux évolutions sont actées (espace <code>display</code>, contrat de capabilities). Deux clarifications conceptuelles (familles = vues, souvenir = facette). Deux non-actions assumées (relations, états déjà couverts).</p>
+<table>
+<thead>
+<tr>
+<th>Point</th>
+<th>Verdict</th>
+<th>Action</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>1. Familles</td>
+<td>Critique en partie juste</td>
+<td>Familles = vues de présentation ; moteur garde <code>kind</code></td>
+</tr>
+<tr>
+<td>2. Payload / display</td>
+<td>Critique juste — meilleure évolution</td>
+<td>Ajouter un espace <code>display</code> distinct du <code>payload</code></td>
+</tr>
+<tr>
+<td>3. Souvenirs</td>
+<td>Choix actuel défendu</td>
+<td>Facette, pas nouvelle nature ni état</td>
+</tr>
+<tr>
+<td>4. Relations</td>
+<td>Prématuré</td>
+<td>Ne rien construire ; <code>sourceRef</code> suffit pour l'instant</td>
+</tr>
+<tr>
+<td>5. Capabilities</td>
+<td>Séparation OK, à blinder</td>
+<td>Contrat <code>handledBy: wallet</code> + validation registre</td>
+</tr>
+<tr>
+<td>6. États</td>
+<td>Déjà implémenté</td>
+<td>Rien ; composition DRY en réserve</td>
+</tr>
+</tbody>
+</table>
+<p><strong>Statut proposé :</strong> Fondation Wallet Engine <strong>validée</strong>, avec évolutions documentées et reportées à un chantier ultérieur.</p>
+<hr />
+<h2>Point 1 — Les familles d'objets</h2>
+<h3>Choix actuel</h3>
+<p>Le moteur connaît <code>kind</code> (type intrinsèque) et en dérive une <code>family</code> via le registre. La colonne <code>family</code> est stockée dans <code>digital_objects</code>. L'API <code>getWalletByFamilies()</code> regroupe les objets par ces familles pour l'écran mobile.</p>
+<h3>Ce que je défends</h3>
+<p>Le <strong><code>kind</code> doit rester dans le moteur</strong>. C'est une propriété intrinsèque et gouvernante : elle pilote les transitions autorisées, la rétention, les capacités. Ce n'est pas négociable.</p>
+<h3>Ce que je concède</h3>
+<p>La critique est <strong>juste à 80 %</strong>. Les « familles de demain » proposées ne sont pas des familles au sens actuel :</p>
+<table>
+<thead>
+<tr>
+<th>Vue future</th>
+<th>Nature réelle</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Mes souvenirs</td>
+<td>Filtre : <code>status terminal + isMemory</code></td>
+</tr>
+<tr>
+<td>Mes objets actifs</td>
+<td>Filtre : <code>status = active</code></td>
+</tr>
+<tr>
+<td>Mes favoris</td>
+<td>Tag posé par le citoyen</td>
+</tr>
+<tr>
+<td>Culture, Commerce, Ville</td>
+<td>Collections transversales</td>
+</tr>
+</tbody>
+</table>
+<p>Aucune de ces vues n'est un mapping <code>kind → billets</code>. Ce sont des <strong>vues de présentation</strong>, pas une taxonomie moteur.</p>
+<h3>Comparaison des approches</h3>
+<table>
+<thead>
+<tr>
+<th></th>
+<th>Familles dans le moteur (actuel)</th>
+<th>Familles = couche UI (proposé)</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><strong>Avantages</strong></td>
+<td>Regroupement simple, une requête</td>
+<td>Flexibilité totale des vues ; moteur plus pur</td>
+</tr>
+<tr>
+<td><strong>Inconvénients</strong></td>
+<td>Figé (6 familles) ; fuite présentation → moteur</td>
+<td>Couche UI à maintenir ; mapping kind → vue</td>
+</tr>
+<tr>
+<td><strong>Évolutivité</strong></td>
+<td>Faible (changer une vue = toucher registre + colonne)</td>
+<td>Forte (nouvelles vues sans toucher le moteur)</td>
+</tr>
+</tbody>
+</table>
+<h3>Décision retenue (ADR-001)</h3>
+<p><strong>Séparer taxonomie et présentation.</strong></p>
+<ul>
+<li><strong>Moteur</strong> : expose <code>kind</code> (+ éventuellement un <code>category</code> indicatif dérivé du registre, jamais gouvernant).</li>
+<li><strong>Présentation</strong> : les « familles » et « collections » deviennent des <strong>vues déclaratives</strong> (filtres sur kind/status/tags), côté config UI ou endpoint dédié.</li>
+<li><strong>Migration</strong> : la colonne <code>family</code> reste tolérée comme <strong>cache de lecture dérivé du registre</strong>, mais n'est plus la source de vérité. Migration future, additive, non urgente.</li>
+</ul>
+<hr />
+<h2>Point 2 — Le payload et les métadonnées communes</h2>
+<h3>Choix actuel</h3>
+<p>Le <code>payload</code> est opaque au moteur (JSON libre). Seuls <code>zone_id</code> et <code>expires_at</code> existent en colonnes gouvernantes. Les listes affichent le <code>label</code> <strong>du kind</strong> (« Billet d'événement »), pas le titre réel de l'objet.</p>
+<h3>Limite identifiée</h3>
+<p>Aujourd'hui, dans <code>WalletFamilyScreen</code>, deux billets différents affichent tous les deux « Billet d'événement ». Le titre « Concert de quartier » est enfoui dans le <code>payload</code> opaque — <strong>inaccessible aux listes et à la recherche</strong> sans casser l'opacité. C'est un vrai défaut d'expérience et d'architecture.</p>
+<h3>Comparaison</h3>
+<table>
+<thead>
+<tr>
+<th></th>
+<th>Payload seul (actuel)</th>
+<th>Métadonnées communes dans payload</th>
+<th>Espace <code>display</code> séparé (retenu)</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><strong>Flexibilité</strong></td>
+<td>Maximale</td>
+<td>Maximale</td>
+<td>Maximale pour payload</td>
+</tr>
+<tr>
+<td><strong>Listes / recherche</strong></td>
+<td>Impossible sans parser payload</td>
+<td>Possible mais casse opacité</td>
+<td>Native, sans interprétation métier</td>
+</tr>
+<tr>
+<td><strong>Risque fourre-tout</strong></td>
+<td>Faible</td>
+<td>Élevé (mélange droit + présentation)</td>
+<td>Faible (trois espaces distincts)</td>
+</tr>
+</tbody>
+</table>
+<h3>La résolution élégante — trois espaces, pas deux</h3>
+<table>
+<thead>
+<tr>
+<th>Espace</th>
+<th>Nature</th>
+<th>Le moteur…</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>payload</code></td>
+<td>Données d'entitlement (droit, valeur)</td>
+<td>ne lit jamais, ne branche jamais</td>
+</tr>
+<tr>
+<td><strong><code>display</code></strong> (nouveau)</td>
+<td>Descripteur de présentation standardisé</td>
+<td>stocke et retourne, ne branche jamais</td>
+</tr>
+<tr>
+<td>Colonnes gouvernantes</td>
+<td>État (<code>status</code>, <code>retention</code>, <code>zone_id</code>…)</td>
+<td>lit et gouverne</td>
+</tr>
+</tbody>
+</table>
+<p>Champs <code>display</code> proposés : <code>title</code>, <code>subtitle</code>, <code>thumbnail</code>, <code>icon</code>, <code>primaryDate</code>, <code>category</code>.</p>
+<p>Le moteur traite <code>display</code> comme <strong>opaque au sens logique</strong> (aucune décision métier) mais <strong>lisible pour listes, recherche et tri</strong>. C'est le « contrat d'interaction partagé » de B++ : chaque objet se présente dans un langage commun.</p>
+<h3>Schéma des trois espaces</h3>
+<pre><code>┌─────────────────────────────────────────────────────────┐
+│  digital_objects                                        │
+├─────────────────────────────────────────────────────────┤
+│  COUCHE GOUVERNANTE (moteur lit et décide)              │
+│  status, retention, zone_id, expires_at, owner_id, kind │
+├─────────────────────────────────────────────────────────┤
+│  COUCHE PRÉSENTATION (moteur stocke, ne décide pas)     │
+│  display: { title, subtitle, thumbnail, icon, ... }     │
+├─────────────────────────────────────────────────────────┤
+│  COUCHE ENTITLEMENT (moteur ne lit jamais)              │
+│  payload: { ... données métier opaques ... }            │
+└─────────────────────────────────────────────────────────┘
+</code></pre>
+<h3>Décision retenue (ADR-002)</h3>
+<p><strong>Introduire un descripteur <code>display</code> séparé du <code>payload</code>.</strong> C'est la seule évolution du moteur recommandée comme prioritaire. À implémenter dans un chantier ultérieur ; à acter dès maintenant comme direction officielle.</p>
+<hr />
+<h2>Point 3 — Les souvenirs</h2>
+<h3>Question posée</h3>
+<p>Le souvenir est-il un état supplémentaire ? Une nouvelle nature d'objet ? Le billet consommé reste-t-il un billet ?</p>
+<h3>Choix actuel</h3>
+<p>Un objet consommé avec <code>memoryEnabled: true</code> et <code>retention: keepsake</code> obtient <code>isMemory: true</code>. Les capacités basculent (Offrir disparaît, Revoir le souvenir apparaît). L'objet <strong>persiste</strong> avec le même <code>id</code> et le même ledger.</p>
+<h3>Ce que je défends fermement</h3>
+<p><strong>Ni nouvel état, ni nouvelle nature — une facette de présentation.</strong></p>
+<p>Trois niveaux à ne pas confondre :</p>
+<table>
+<thead>
+<tr>
+<th>Niveau</th>
+<th>Exemple billet consommé</th>
+<th>Mutabilité</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><strong>Nature</strong> (<code>kind</code>)</td>
+<td><code>event_ticket</code></td>
+<td>Immuable</td>
+</tr>
+<tr>
+<td><strong>État</strong> (<code>status</code>)</td>
+<td><code>consumed</code></td>
+<td>Gouverné par machine à états</td>
+</tr>
+<tr>
+<td><strong>Facette</strong> (<code>isMemory</code>)</td>
+<td>Mode souvenir activé</td>
+<td>Dérivé : terminal + memoryEnabled + retention</td>
+</tr>
+</tbody>
+</table>
+<p><strong>Pourquoi le billet reste un billet :</strong></p>
+<ul>
+<li><strong>Philosophiquement</strong> : « le même objet continue de vivre » — changer de nature, c'est tuer l'objet et en créer un successeur.</li>
+<li><strong>Techniquement</strong> : l'identité (<code>id</code>) et le ledger (<code>digital_object_events</code>) doivent persister. Le souvenir tire sa valeur de son histoire.</li>
+</ul>
+<h3>Comparaison</h3>
+<table>
+<thead>
+<tr>
+<th></th>
+<th>Nouvel état <code>memory</code></th>
+<th>Nouvelle nature <code>keepsake</code></th>
+<th>Facette dérivée (retenu)</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Identité objet</td>
+<td>Conservée</td>
+<td>Perdue (transformation)</td>
+<td>Conservée</td>
+</tr>
+<tr>
+<td>Ledger</td>
+<td>Continu</td>
+<td>Rupture ou migration</td>
+<td>Continu</td>
+</tr>
+<tr>
+<td>Complexité moteur</td>
+<td>Faible</td>
+<td>Élevée</td>
+<td>Minimale</td>
+</tr>
+<tr>
+<td>Alignement B+</td>
+<td>Partiel</td>
+<td>Non</td>
+<td>Total</td>
+</tr>
+</tbody>
+</table>
+<h3>Décision retenue (ADR-003)</h3>
+<p><strong>Conserver le modèle facette.</strong> Vocabulaire officiel : nature / état / facette. Aucune modification du moteur.</p>
+<hr />
+<h2>Point 4 — Relations entre objets</h2>
+<h3>Question posée</h3>
+<p>Faut-il préparer architecturalement des liens entre objets (festival → billet → coupon → badge) ?</p>
+<h3>Choix actuel</h3>
+<p>Objets indépendants. Pas de table de relations. Champs <code>sourceEngine</code> + <code>sourceRef</code> pour tracer l'origine.</p>
+<h3>Analyse</h3>
+<p><strong>L'intuition est légitime à long terme.</strong> L'analyse B++ a déjà tranché la forme : arêtes typées, unidirectionnelles, append-only, sans moteur de graphe ni cascade.</p>
+<p><strong>Mais c'est prématuré aujourd'hui :</strong></p>
+<ul>
+<li>Zéro organe métier n'est branché au Wallet.</li>
+<li>Construire un système de relations maintenant = sur-ingénierie exactement ce que nous voulons éviter.</li>
+<li>Le schéma actuel <strong>n'empêche rien</strong> : ajouter <code>object_relations</code> plus tard est purement additif.</li>
+</ul>
+<p><strong>Ce qui existe déjà :</strong> <code>sourceEngine</code> + <code>sourceRef</code>. Un organe Event qui émet billet + coupon + badge pour le même festival peut leur donner une référence commune. Le regroupement « objets d'un même événement » est <strong>déjà possible</strong> sans table de relations.</p>
+<h3>Décision retenue (ADR-004)</h3>
+<p><strong>Ne rien implémenter.</strong> Documenter la forme cible (arêtes typées : <code>bundledWith</code>, <code>derivedFrom</code>, <code>unlocks</code>, <code>relatedTo</code>). S'appuyer sur <code>sourceRef</code> pour les regroupements simples. Introduire les relations explicites uniquement quand un organe concret (Event) en démontrera le besoin.</p>
+<hr />
+<h2>Point 5 — Capabilities : descriptives, jamais exécutives</h2>
+<h3>Choix actuel</h3>
+<p>Les capacités sont des <strong>descripteurs</strong> dans le registre : <code>{ id, label, icon, handledBy, invocation, availableInStates }</code>. Le moteur filtre et retourne ; il n'exécute jamais. Le mobile affiche un stub Alert.</p>
+<h3>Ce que je défends</h3>
+<p>La séparation <strong>tient</strong> en v1. Le moteur ne connaît pas la logique métier des actions.</p>
+<h3>Risque identifié</h3>
+<p>Le maillon faible : <code>handledBy: 'wallet'</code> sur <code>show_qr</code> et <code>offer</code>. Sans règle explicite, la tentation viendra d'implémenter « juste une petite logique » derrière une capability wallet → dérive vers super-moteur.</p>
+<h3>Garde-fou proposé — contrat de capacités</h3>
+<p><code>handledBy: 'wallet'</code> autorisé <strong>uniquement</strong> pour :</p>
+<ol>
+<li><strong>Transitions d'état sur l'objet</strong> (transfer, revoke, reserve) — opérations d'entitlement, légitimement cœur.</li>
+<li><strong>Affichage pur de données déjà stockées</strong> (show_qr = rendre l'identité de l'objet).</li>
+</ol>
+<p>Tout le reste → <code>source</code> (organe émetteur) ou <code>device</code> (OS).</p>
+<p><strong>Validation exécutable :</strong> au chargement du registre, refuser un <code>handledBy: 'wallet'</code> hors allowlist d'ids. Le « Wallet ne devient jamais un super-moteur » devient une <strong>contrainte</strong>, pas une promesse.</p>
+<h3>Décision retenue (ADR-005)</h3>
+<p><strong>Garder le modèle descriptif.</strong> Ajouter le contrat de capabilities (règle + validation registre). Évolution documentaire et légère ; à implémenter avec le prochain chantier registre.</p>
+<hr />
+<h2>Point 6 — États et comportements</h2>
+<h3>Question posée</h3>
+<p>Les actions doivent-elles dépendre du cycle de vie, pas seulement du type ?</p>
+<h3>Réponse : c'est déjà le cas</h3>
+<p>Les capacités portent <code>availableInStates</code>. <code>getCapabilities(kind, status)</code> filtre par état courant.</p>
+<p>Exemple <code>event_ticket</code> dans le registre :</p>
+<table>
+<thead>
+<tr>
+<th>Capacité</th>
+<th>États disponibles</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Afficher mon QR</td>
+<td><code>active</code></td>
+</tr>
+<tr>
+<td>Offrir</td>
+<td><code>active</code></td>
+</tr>
+<tr>
+<td>Ajouter au calendrier</td>
+<td><code>active</code></td>
+</tr>
+<tr>
+<td>Revoir le souvenir</td>
+<td><code>consumed</code>, <code>expired</code></td>
+</tr>
+</tbody>
+</table>
+<p>Billet actif → QR, Offrir, Calendrier. Billet consommé → Revoir le souvenir. <strong>Exactement le comportement demandé.</strong></p>
+<h3>Nuance défendue</h3>
+<p><strong><code>kind × état</code></strong>, pas l'état seul. Un <code>loyalty_card</code> actif et un <code>event_ticket</code> actif partagent l'état mais pas les capacités. L'état seul serait insuffisant.</p>
+<h3>Option future (réserve)</h3>
+<p>Si beaucoup de kinds partagent « partager le souvenir » en état terminal : <strong>capacités génériques par état</strong>, composées avec les spécifiques par kind :</p>
+<pre><code>capabilities(objet) = génériques(état) ⊕ spécifiques(kind, état)
+</code></pre>
+<p>Pure DRY ; à activer seulement si le besoin apparaît.</p>
+<h3>Décision retenue (ADR-006)</h3>
+<p><strong>Aucune évolution nécessaire.</strong> L'architecture accueille déjà l'idée. Composition générique-par-état gardée en réserve.</p>
+<hr />
+<h2>Synthèse des décisions (ADR)</h2>
+<table>
+<thead>
+<tr>
+<th>ID</th>
+<th>Décision</th>
+<th>Statut</th>
+<th>Implémentation</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>ADR-001</td>
+<td>Familles = vues de présentation ; moteur garde <code>kind</code></td>
+<td>Acté</td>
+<td>Reporté (migration additive)</td>
+</tr>
+<tr>
+<td>ADR-002</td>
+<td>Espace <code>display</code> séparé du <code>payload</code></td>
+<td>Acté</td>
+<td>Reporté (chantier prioritaire)</td>
+</tr>
+<tr>
+<td>ADR-003</td>
+<td>Souvenir = facette, pas nouvelle nature</td>
+<td>Validé</td>
+<td>Inchangé</td>
+</tr>
+<tr>
+<td>ADR-004</td>
+<td>Relations : ne rien construire ; <code>sourceRef</code> suffit</td>
+<td>Acté</td>
+<td>Reporté (jusqu'à besoin Event)</td>
+</tr>
+<tr>
+<td>ADR-005</td>
+<td>Contrat capabilities <code>handledBy: wallet</code> + validation</td>
+<td>Acté</td>
+<td>Reporté (avec registre)</td>
+</tr>
+<tr>
+<td>ADR-006</td>
+<td>Capabilities par <code>kind × état</code></td>
+<td>Validé</td>
+<td>Inchangé</td>
+</tr>
+</tbody>
+</table>
+<hr />
+<h2>Statut final proposé</h2>
+<p><strong>Le Wallet Engine v1 (tag <code>v9.0</code>) est proposé comme fondation officielle de Ma Zone.</strong></p>
+<p>Conditions :</p>
+<ul>
+<li>Les six points de la revue n°2 sont traités et actés.</li>
+<li>Deux évolutions futures sont documentées (display, contrat capabilities) sans remettre en cause le noyau.</li>
+<li>Aucune modification du code n'est requise pour valider la fondation.</li>
+<li>Les chantiers suivants (intégration Orders, QR Identity, espace display) s'appuient sur cette base.</li>
+</ul>
+<hr />
+<h2>Prochains chantiers recommandés (ordre)</h2>
+<ol>
+<li><strong>Espace <code>display</code></strong> — débloque listes, recherche, UX (ADR-002)</li>
+<li><strong>Contrat capabilities</strong> — protège la propriété anti super-moteur (ADR-005)</li>
+<li><strong>Branchement Orders → <code>pickup_ticket</code></strong> — première intégration organe réelle</li>
+<li><strong>Familles → vues</strong> — quand l'UX global le demandera (ADR-001)</li>
+<li><strong>Relations explicites</strong> — quand Event Engine existera (ADR-004)</li>
+</ol>
+<hr />
+<p><em>Document généré le 15 juillet 2026 — Revue d'architecture n°2, document de décisions, aucune implémentation.</em></p>
+</body>
+</html>

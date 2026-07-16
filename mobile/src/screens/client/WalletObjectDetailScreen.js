@@ -72,7 +72,10 @@ export default function WalletObjectDetailScreen({ route }) {
     <ScrollView style={styles.bg} contentContainerStyle={styles.content}>
       <FadeIn>
         <View style={styles.header}>
-          <Text style={styles.title}>{object.label}</Text>
+          <Text style={styles.title}>{object.display?.title || object.label}</Text>
+          {object.display?.subtitle ? (
+            <Text style={styles.subtitle}>{object.display.subtitle}</Text>
+          ) : null}
           <View style={styles.badgeRow}>
             <View style={[styles.statusPill, { backgroundColor: meta.color + '18' }]}>
               <View style={[styles.statusDot, { backgroundColor: meta.color }]} />
@@ -145,7 +148,8 @@ const styles = StyleSheet.create({
   center: { flex: 1, alignItems: 'center', justifyContent: 'center', backgroundColor: THEME.colors.bg },
   emptyText: { ...THEME.typography.body, color: THEME.colors.textSecondary },
   header: { marginBottom: THEME.spacing.lg },
-  title: { ...THEME.typography.hero, color: THEME.colors.text, marginBottom: 10 },
+  title: { ...THEME.typography.hero, color: THEME.colors.text, marginBottom: 4 },
+  subtitle: { ...THEME.typography.body, color: THEME.colors.textSecondary, marginBottom: 10 },
   badgeRow: { flexDirection: 'row', gap: 8 },
   statusPill: { flexDirection: 'row', alignItems: 'center', paddingHorizontal: 10, paddingVertical: 5, borderRadius: THEME.radius.full },
   statusDot: { width: 8, height: 8, borderRadius: 4, marginRight: 6 },

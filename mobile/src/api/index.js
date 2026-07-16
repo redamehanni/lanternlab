@@ -132,6 +132,12 @@ export const getWalletObject = (id) => api.get(`/api/wallet/objects/${id}`);
 export const getWalletObjectCapabilities = (id) => api.get(`/api/wallet/objects/${id}/capabilities`);
 export const getWalletObjectEvents = (id) => api.get(`/api/wallet/objects/${id}/events`);
 
+// ── Identity (preuve d'identité présentable) ──────────────────────────────────
+// Le QR n'est qu'un canal : le backend renvoie un handle neutre à présenter.
+export const getIdentityToken = () => api.get('/api/identity/token');
+export const verifyIdentity = (data) => api.post('/api/identity/verify', data);
+export const getIdentityHistory = () => api.get('/api/identity/history');
+
 // ── Conversations (legacy alias) ───────────────────────────────────────────────
 export const getConversations     = () => api.get('/api/conversations');
 export const resolveConversation  = (order_id, target_role) =>

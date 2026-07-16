@@ -1,0 +1,341 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Plan d'implémentation — Phase 1 · Shell Épée (Merchant Workspace)</title>
+<style>
+  @page { margin: 16mm 14mm; }
+  body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Helvetica, Arial, sans-serif; font-size: 10.5pt; line-height: 1.45; color: #1a1a1a; max-width: 100%; }
+  h1 { font-size: 20pt; border-bottom: 2px solid #0f2d5c; padding-bottom: 8px; color: #0f2d5c; page-break-after: avoid; }
+  h2 { font-size: 14pt; margin-top: 22px; color: #0f2d5c; border-bottom: 1px solid #e5e7eb; padding-bottom: 4px; page-break-after: avoid; }
+  h3 { font-size: 11.5pt; margin-top: 14px; color: #1a4a8a; page-break-after: avoid; }
+  table { border-collapse: collapse; width: 100%; margin: 10px 0; font-size: 9pt; page-break-inside: avoid; }
+  th, td { border: 1px solid #d1d5db; padding: 5px 7px; text-align: left; vertical-align: top; }
+  th { background: #f3f4f6; font-weight: 600; }
+  code { background: #f3f4f6; padding: 1px 4px; border-radius: 3px; font-size: 8.5pt; }
+  pre { background: #f8fafc; border: 1px solid #e5e7eb; border-radius: 6px; padding: 10px; overflow-x: auto; font-size: 8pt; line-height: 1.35; white-space: pre-wrap; word-break: break-word; page-break-inside: avoid; }
+  pre code { background: none; padding: 0; }
+  blockquote { border-left: 4px solid #0f2d5c; margin: 10px 0; padding: 6px 14px; background: #f0f4f8; color: #1e3a5f; }
+  hr { border: none; border-top: 1px solid #e5e7eb; margin: 18px 0; }
+  ul, ol { padding-left: 22px; }
+  li { margin-bottom: 3px; }
+  p { margin: 8px 0; }
+  .pdf-note { display: none; }
+  @media screen {
+    .pdf-note { display: block; background: #eff6ff; border: 1px solid #bfdbfe; border-radius: 8px; padding: 12px 16px; margin-bottom: 24px; color: #1e3a8a; }
+  }
+</style>
+</head>
+<body>
+<div class="pdf-note">
+  <strong>Lecture dans Cursor / navigateur :</strong> ce fichier HTML est la version lisible du plan.
+  Pour le PDF, ouvrez <code>PLAN_EPEE_SHELL_PHASE_1.pdf</code> depuis le Finder (clic droit → Ouvrir avec Aperçu)
+  ou double-cliquez le fichier <code>Ouvrir_*_PDF.command</code> correspondant à la racine du projet.
+</div>
+<h1>Plan d'implémentation — Phase 1 · Shell Épée (Merchant Workspace)</h1>
+<p><strong>Date :</strong> 15 juillet 2026
+<strong>Statut :</strong> Plan à valider avant développement — aucune implémentation dans ce document
+<strong>Références :</strong> <a href="ETUDE_BAC_A_SABLE_MAZONE.md">ETUDE_BAC_A_SABLE_MAZONE.md</a> · <a href="CHANTIER_WORLD_FACTORY_V1.md">CHANTIER_WORLD_FACTORY_V1.md</a>
+<strong>Public :</strong> Architectes Ma Zone — deuxième incrément du Bac à Sable</p>
+<hr />
+<h2>Objet de ce document</h2>
+<p>Ce document présente le <strong>plan d'implémentation</strong> de la Phase 1 du Bac à Sable : transformer l'app marchand Expo en <strong>shell Épée</strong> (Cockpit briefing + registre de modules + adaptateurs).</p>
+<p>Suite logique de la Phase 0 (World Factory + auth admin, déjà livrée).</p>
+<p><strong>Aucune UI Back Office.</strong> Aucun nouveau moteur métier. Les écrans existants restent ; la navigation et l'accueil deviennent le bureau évolutif du commerçant.</p>
+<hr />
+<h2>Résumé exécutif</h2>
+<p>Quand le commerçant ouvre Ma Zone, il doit avoir le sentiment d'<strong>ouvrir son commerce</strong>. Le tableau de bord actuel (4 onglets monolithiques) devient un <strong>Cockpit</strong> qui raconte la journée, priorise les actions, et un <strong>menu hamburger</strong> qui donne accès aux modules déclaratifs.</p>
+<p><strong>Objectif architectural :</strong> poser le terrain pour qu'Event, Marketing, Collaboration et Fidélisation s'y branchent plus tard <strong>sans refactor</strong> du shell.</p>
+<hr />
+<h2>Philosophie</h2>
+<table>
+<thead>
+<tr>
+<th>Principe</th>
+<th>Application Phase 1</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Surface, pas organe</td>
+<td>L'Épée compose ; zéro règle métier nouvelle</td>
+</tr>
+<tr>
+<td>Modularité</td>
+<td>Registre de modules Open/Closed</td>
+</tr>
+<tr>
+<td>Faible couplage</td>
+<td>Adaptateurs → APIs existantes</td>
+</tr>
+<tr>
+<td>Vision Cockpit</td>
+<td>Priorités, Vie du commerce + slots préparés (Objectifs, Suggestions, Santé)</td>
+</tr>
+<tr>
+<td>Pas de sur-ingénierie</td>
+<td>Stubs pour l'intelligence future ; pas d'IA aujourd'hui</td>
+</tr>
+</tbody>
+</table>
+<hr />
+<h2>Décisions concrètes</h2>
+<ol>
+<li><strong>Navigation</strong> — remplacer <code>MerchantTabs</code> (4 onglets) par un <strong>Drawer + Cockpit</strong> (même pattern que le drawer client).</li>
+<li><strong>Cockpit</strong> — cartes de briefing agrégées depuis des adaptateurs, triées par <code>priority</code>, plafond ~6 cartes.</li>
+<li><strong>Slots futurs</strong> — blocs UI stubs pour Objectifs, Suggestions, Santé (libellés + espace réservé).</li>
+<li><strong>Pas de nouvelle API cockpit backend</strong> — les adaptateurs appellent <code>getMyStore</code>, <code>getMerchantOrders</code>, communication, promos. Un endpoint briefing unifié pourra arriver plus tard sans casser le contrat de carte.</li>
+</ol>
+<hr />
+<h2>Architecture cible</h2>
+<pre><code class="language-mermaid">flowchart TB
+  subgraph epee [Epee surface mobile]
+    Cockpit[&quot;MerchantCockpitScreen&quot;]
+    Registry[&quot;moduleRegistry.js&quot;]
+    Adapters[&quot;adapters marketplace promotions clients messages store&quot;]
+  end
+  Cockpit --&gt;|&quot;summaryCards()&quot;| Adapters
+  Registry --&gt;|&quot;modules enabled&quot;| Drawer[&quot;MerchantDrawer&quot;]
+  Adapters --&gt;|&quot;APIs existantes&quot;| Backend[&quot;Express APIs&quot;]
+</code></pre>
+<hr />
+<h2>Contrat de carte (uniforme)</h2>
+<p>Chaque adaptateur expose <code>summaryCards(ctx) → BriefingCard[]</code> :</p>
+<table>
+<thead>
+<tr>
+<th>Champ</th>
+<th>Rôle</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>id</code></td>
+<td>Identifiant stable</td>
+</tr>
+<tr>
+<td><code>engine</code></td>
+<td>Source (marketplace, promotions…)</td>
+</tr>
+<tr>
+<td><code>section</code></td>
+<td><code>priorities</code> | <code>life</code></td>
+</tr>
+<tr>
+<td><code>priority</code></td>
+<td>Tri (plus petit = plus urgent)</td>
+</tr>
+<tr>
+<td><code>title</code></td>
+<td>Titre affiché</td>
+</tr>
+<tr>
+<td><code>metric</code></td>
+<td>Sous-ligne optionnelle</td>
+</tr>
+<tr>
+<td><code>cta</code></td>
+<td>Libellé d'action</td>
+</tr>
+<tr>
+<td><code>deeplink</code></td>
+<td>Navigation vers un module / écran</td>
+</tr>
+</tbody>
+</table>
+<p>Sections layout Cockpit aussi : <code>objectives</code>, <code>suggestions</code>, <code>health</code> — <strong>stubs uniquement</strong> en V1.</p>
+<hr />
+<h2>Modules V1</h2>
+<h3>Enabled (visibles)</h3>
+<table>
+<thead>
+<tr>
+<th>Famille</th>
+<th>Module</th>
+<th>Destinations existantes</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><strong>Vendre</strong></td>
+<td>Marketplace</td>
+<td>AddProduct, ManageStock, MerchantOrders, CreateStore</td>
+</tr>
+<tr>
+<td><strong>Animer</strong></td>
+<td>Promotions</td>
+<td>ManagePromotions, CreatePromotion, PromotionDetail</td>
+</tr>
+<tr>
+<td><strong>Réseau</strong></td>
+<td>Clients</td>
+<td>MesClients</td>
+</tr>
+<tr>
+<td><strong>Piloter</strong></td>
+<td>Messages</td>
+<td>MerchantInbox (+ support)</td>
+</tr>
+<tr>
+<td><strong>Piloter</strong></td>
+<td>Mon commerce</td>
+<td>CreateStore / fiche boutique</td>
+</tr>
+<tr>
+<td><strong>Piloter</strong></td>
+<td>Statistiques</td>
+<td>Écran placeholder (indicateurs basiques si calculables)</td>
+</tr>
+</tbody>
+</table>
+<h3>Declared but disabled (invisibles)</h3>
+<p>Événements · Collaborations · Fidélisation · Carnet d'adresses — <code>enabled: false</code> tant que les moteurs n'existent pas.</p>
+<hr />
+<h2>Structure du Cockpit</h2>
+<ol>
+<li><strong>Header</strong> — bonjour + nom boutique + bouton menu (drawer)</li>
+<li><strong>Priorités</strong> — cartes <code>section: 'priorities'</code></li>
+<li><strong>Vie du commerce</strong> — cartes <code>section: 'life'</code> (nuit, commandes reçues…)</li>
+<li><strong>Objectifs</strong> — stub (« Bientôt : vos objectifs du jour »)</li>
+<li><strong>Suggestions</strong> — stub (« Votre copilote proposera des actions »)</li>
+<li><strong>Santé</strong> — stub compact (« État général à venir »)</li>
+<li><strong>Accès rapide</strong> — modules enabled (dérivé du registre, pas en dur)</li>
+</ol>
+<p>Empty state boutique absente : CTA « Créer ma boutique » (comportement actuel conservé).</p>
+<hr />
+<h2>Fichiers principaux</h2>
+<h3>À créer</h3>
+<table>
+<thead>
+<tr>
+<th>Fichier</th>
+<th>Rôle</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>mobile/src/merchant/moduleRegistry.js</code></td>
+<td><code>defineModule</code>, familles, entitlements</td>
+</tr>
+<tr>
+<td><code>mobile/src/merchant/adapters/*.js</code></td>
+<td>marketplace, promotions, clients, messages, store</td>
+</tr>
+<tr>
+<td><code>mobile/src/merchant/briefing.js</code></td>
+<td>Agrège, trie, plafonne les cartes</td>
+</tr>
+<tr>
+<td><code>mobile/src/screens/merchant/MerchantCockpitScreen.js</code></td>
+<td>Accueil briefing</td>
+</tr>
+<tr>
+<td><code>mobile/src/components/merchant/MerchantDrawerContent.js</code></td>
+<td>Menu hamburger</td>
+</tr>
+<tr>
+<td><code>mobile/src/components/merchant/BriefingCard.js</code></td>
+<td>Carte UI</td>
+</tr>
+</tbody>
+</table>
+<h3>À modifier</h3>
+<table>
+<thead>
+<tr>
+<th>Fichier</th>
+<th>Rôle</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>mobile/src/navigation/index.js</code></td>
+<td><code>MerchantRoot</code> = Drawer à la place de <code>MerchantTabs</code></td>
+</tr>
+<tr>
+<td><code>mobile/src/screens/merchant/DashboardScreen.js</code></td>
+<td>Déprécier / rediriger vers Cockpit</td>
+</tr>
+</tbody>
+</table>
+<p>Les écrans feature sous <code>screens/merchant/</code> ne sont <strong>pas réécrits</strong>.</p>
+<hr />
+<h2>Hors périmètre</h2>
+<table>
+<thead>
+<tr>
+<th>Élément</th>
+<th>Pourquoi</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Back Office web / World Factory UI</td>
+<td>Phase 2</td>
+</tr>
+<tr>
+<td>Event Engine, scan Identity, Collaborations, Fidélité</td>
+<td>Moteurs futurs</td>
+</tr>
+<tr>
+<td>Objectifs réels, suggestions IA, score santé</td>
+<td>Slots seulement</td>
+</tr>
+<tr>
+<td>Endpoint backend briefing unifié</td>
+<td>Plus tard</td>
+</tr>
+<tr>
+<td>Refonte visuelle stock / promos / commandes</td>
+<td>Pas dans cet incrément</td>
+</tr>
+</tbody>
+</table>
+<hr />
+<h2>Vérifications prévues</h2>
+<ul>
+<li>Login commerçant → Cockpit s'affiche ; drawer liste uniquement modules enabled</li>
+<li>Cartes commandes / promos cliquables vers les bons écrans</li>
+<li>Modules disabled absents du menu</li>
+<li>Flux existants (stock, commandes, messagerie) toujours joignables</li>
+<li>Lints propres ; aucune régression client / driver</li>
+</ul>
+<hr />
+<h2>Phasage Bac à Sable (rappel)</h2>
+<table>
+<thead>
+<tr>
+<th>Phase</th>
+<th>Contenu</th>
+<th>Statut</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><strong>0</strong></td>
+<td>World Factory + auth admin + <code>/api/admin</code></td>
+<td>Livré</td>
+</tr>
+<tr>
+<td><strong>1</strong></td>
+<td>Shell Épée (ce plan)</td>
+<td>À développer</td>
+</tr>
+<tr>
+<td><strong>2</strong></td>
+<td>Back Office web</td>
+<td>Plus tard</td>
+</tr>
+<tr>
+<td><strong>3+</strong></td>
+<td>Chaque moteur = organe + adaptateur Épée + recette World Factory</td>
+<td>Plus tard</td>
+</tr>
+</tbody>
+</table>
+<hr />
+<h2>Critère de succès</h2>
+<p>À la fin de cet incrément, le commerçant ouvre Ma Zone et voit un <strong>bureau</strong> : briefing du matin, priorités, vie du commerce, et un menu de modules extensible. Ajouter demain le module Événements = une entrée dans le registre + un adaptateur — <strong>sans toucher au shell</strong>.</p>
+</body>
+</html>

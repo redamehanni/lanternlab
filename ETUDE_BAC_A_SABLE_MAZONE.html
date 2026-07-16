@@ -1,0 +1,768 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Étude d'architecture — Le Bac à Sable de Ma Zone</title>
+<style>
+  @page { margin: 16mm 14mm; }
+  body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Helvetica, Arial, sans-serif; font-size: 10.5pt; line-height: 1.45; color: #1a1a1a; max-width: 100%; }
+  h1 { font-size: 20pt; border-bottom: 2px solid #0f2d5c; padding-bottom: 8px; color: #0f2d5c; page-break-after: avoid; }
+  h2 { font-size: 14pt; margin-top: 22px; color: #0f2d5c; border-bottom: 1px solid #e5e7eb; padding-bottom: 4px; page-break-after: avoid; }
+  h3 { font-size: 11.5pt; margin-top: 14px; color: #1a4a8a; page-break-after: avoid; }
+  table { border-collapse: collapse; width: 100%; margin: 10px 0; font-size: 9pt; page-break-inside: avoid; }
+  th, td { border: 1px solid #d1d5db; padding: 5px 7px; text-align: left; vertical-align: top; }
+  th { background: #f3f4f6; font-weight: 600; }
+  code { background: #f3f4f6; padding: 1px 4px; border-radius: 3px; font-size: 8.5pt; }
+  pre { background: #f8fafc; border: 1px solid #e5e7eb; border-radius: 6px; padding: 10px; overflow-x: auto; font-size: 8pt; line-height: 1.35; white-space: pre-wrap; word-break: break-word; page-break-inside: avoid; }
+  pre code { background: none; padding: 0; }
+  blockquote { border-left: 4px solid #0f2d5c; margin: 10px 0; padding: 6px 14px; background: #f0f4f8; color: #1e3a5f; }
+  hr { border: none; border-top: 1px solid #e5e7eb; margin: 18px 0; }
+  ul, ol { padding-left: 22px; }
+  li { margin-bottom: 3px; }
+  p { margin: 8px 0; }
+  .pdf-note { display: none; }
+  @media screen {
+    .pdf-note { display: block; background: #eff6ff; border: 1px solid #bfdbfe; border-radius: 8px; padding: 12px 16px; margin-bottom: 24px; color: #1e3a8a; }
+  }
+</style>
+</head>
+<body>
+<div class="pdf-note">
+  <strong>Lecture dans Cursor / navigateur :</strong> ce fichier HTML est la version lisible du plan.
+  Pour le PDF, ouvrez <code>ETUDE_BAC_A_SABLE_MAZONE.pdf</code> depuis le Finder (clic droit → Ouvrir avec Aperçu)
+  ou double-cliquez le fichier <code>Ouvrir_*_PDF.command</code> correspondant à la racine du projet.
+</div>
+<h1>Étude d'architecture — Le Bac à Sable de Ma Zone</h1>
+<p><strong>Date :</strong> 15 juillet 2026
+<strong>Statut :</strong> Proposition à valider — aucune implémentation
+<strong>Version Ma Zone de référence :</strong> v9.0+ (Wallet Engine + Identity Engine)
+<strong>Références :</strong> <a href="ETUDE_IDENTITY_ENGINE.md">ETUDE_IDENTITY_ENGINE.md</a> · <a href="AUDIT_WALLET_ENGINE_MAZONE.md">AUDIT_WALLET_ENGINE_MAZONE.md</a> · <a href="REVUE_ARCHITECTURE_WALLET_N2.md">REVUE_ARCHITECTURE_WALLET_N2.md</a></p>
+<hr />
+<h2>Objet de ce document</h2>
+<p>Ce document présente l'<strong>étude de conception</strong> du Bac à Sable de Ma Zone : l'environnement qui permettra de développer, tester et démontrer les futurs organes (Event, Marketing, Collaboration, Fidélisation, Ville Augmentée…) dans des conditions réalistes.</p>
+<p><strong>Aucun code. Aucune implémentation. Réflexion architecturale uniquement.</strong></p>
+<p>Le Bac à Sable repose sur trois piliers :</p>
+<ol>
+<li><strong>L'Épée</strong> — bureau du commerçant, surface d'expression des moteurs métier</li>
+<li><strong>Le Back Office Administrateur</strong> — outil interne de l'équipe Ma Zone</li>
+<li><strong>Le Monde de démonstration</strong> — ville numérique vivante et peuplée</li>
+</ol>
+<hr />
+<h2>Résumé exécutif</h2>
+<p>Avant de construire l'Event Engine (et les organes suivants), Ma Zone a besoin d'un <strong>environnement de développement crédible</strong> : un commerçant qui ouvre vraiment son commerce le matin, une équipe qui peupple une ville en quelques clics, et une base de données qui n'est plus un catalogue vide.</p>
+<p><strong>Verdict d'architecte :</strong> la vision est saine et alignée avec la philosophie des organes. Le risque principal n'est pas fonctionnel — c'est architectural : que l'Épée et le Back Office deviennent des amas d'écrans couplés aux moteurs.</p>
+<p><strong>Phrase directrice :</strong></p>
+<blockquote>
+<p>L'Épée et le Back Office ne sont pas des organes. Ce sont des <strong>surfaces</strong>. Elles ne contiennent aucune logique métier ; elles composent et appellent les contrats publics des organes.</p>
+</blockquote>
+<p>C'est la même discipline que le Wallet (les familles sont des vues, pas du métier) et l'Identity (le QR est un canal, pas l'organe). Une surface affiche et actionne. Un organe décide.</p>
+<hr />
+<h2>État de l'existant (constats)</h2>
+<table>
+<thead>
+<tr>
+<th>Élément</th>
+<th>État actuel</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>App commerçant (Expo)</td>
+<td>4 onglets monolithiques : Boutique, Commandes, Inbox, Profil</td>
+</tr>
+<tr>
+<td>Widgets / composition</td>
+<td>Absents — écrans durs, pas de couche adaptateurs</td>
+</tr>
+<tr>
+<td>Wallet / Identity côté commerçant</td>
+<td>Absents (client uniquement)</td>
+</tr>
+<tr>
+<td>Rôle <code>admin</code></td>
+<td><strong>Inexistant</strong> — <code>users.role</code> = <code>client</code> | <code>merchant</code> | <code>driver</code></td>
+</tr>
+<tr>
+<td>Back Office</td>
+<td><strong>Absent</strong></td>
+</tr>
+<tr>
+<td>Seed réaliste</td>
+<td>Minimal — <code>seed-wallet-demo.js</code> uniquement (6 objets pour un client)</td>
+</tr>
+<tr>
+<td>Reset DB scripté</td>
+<td>Absent — <code>rm mazone.db</code> manuel</td>
+</tr>
+</tbody>
+</table>
+<p>L'Épée existe en germe. Le Back Office et le Monde de démonstration n'existent pas.</p>
+<hr />
+<h2>Principe fondateur — Surfaces vs Organes</h2>
+<table>
+<thead>
+<tr>
+<th></th>
+<th>Organe</th>
+<th>Surface</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><strong>Exemples</strong></td>
+<td>Wallet, Identity, Event, Marketing…</td>
+<td>Épée, Back Office, App citoyen</td>
+</tr>
+<tr>
+<td><strong>Responsabilité</strong></td>
+<td>Décider, gouverner, journaliser</td>
+<td>Afficher, composer, actionner</td>
+</tr>
+<tr>
+<td><strong>Logique métier</strong></td>
+<td>Oui (dans son périmètre)</td>
+<td><strong>Jamais</strong></td>
+</tr>
+<tr>
+<td><strong>Dépendances</strong></td>
+<td>Les autres organes consomment son contrat</td>
+<td>Consomme les contrats publics</td>
+</tr>
+<tr>
+<td><strong>Extension</strong></td>
+<td>Nouveau <code>kind</code> / <code>purpose</code> / entité</td>
+<td>Nouvel adaptateur / module / recette</td>
+</tr>
+</tbody>
+</table>
+<pre><code class="language-mermaid">flowchart TB
+  subgraph surfaces [Surfaces - zero logique metier]
+    Epee[&quot;Epee - bureau commercant&quot;]
+    BO[&quot;Back Office - web interne&quot;]
+    ClientApp[&quot;App citoyen&quot;]
+  end
+  subgraph organs [Organes - contrats publics]
+    WE[&quot;Wallet Engine&quot;]
+    IE[&quot;Identity Engine&quot;]
+    CE[&quot;Communication&quot;]
+    DE[&quot;Dispatch&quot;]
+    EE[&quot;Event Engine futur&quot;]
+    ME[&quot;Marketing Engine futur&quot;]
+    CO[&quot;Collaboration futur&quot;]
+    LE[&quot;Loyalty futur&quot;]
+  end
+  Epee --&gt; organs
+  BO --&gt; organs
+  ClientApp --&gt; organs
+</code></pre>
+<p><strong>Conséquence :</strong> chaque futur moteur enrichit les surfaces <strong>sans les réécrire</strong>, car elles ne connaissent que des contrats, pas des implémentations.</p>
+<hr />
+<h2>Les trois piliers</h2>
+<h3>Vue d'ensemble</h3>
+<table>
+<thead>
+<tr>
+<th>Pilier</th>
+<th>Public</th>
+<th>Plateforme</th>
+<th>Mission</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><strong>Épée</strong></td>
+<td>Commerçant</td>
+<td>Mobile Expo (app existante, refactorée)</td>
+<td>Ouvrir son commerce — cockpit + modules</td>
+</tr>
+<tr>
+<td><strong>Back Office</strong></td>
+<td>Équipe Ma Zone</td>
+<td>App web indépendante (React/Vite)</td>
+<td>Administrer + peupler le monde de démo</td>
+</tr>
+<tr>
+<td><strong>Monde de démonstration</strong></td>
+<td>(données)</td>
+<td>Backend <code>lib/worldFactory.js</code></td>
+<td>Ville vivante, rejouable, taguée</td>
+</tr>
+</tbody>
+</table>
+<p>Ces trois piliers ne collent jamais une logique métier. Ils orchestrent.</p>
+<hr />
+<h2>Pilier 1 — L'Épée (bureau du commerçant)</h2>
+<h3>Vision</h3>
+<p>Quand le commerçant ouvre Ma Zone le matin, il ne ouvre pas un logiciel. <strong>Il ouvre son commerce.</strong></p>
+<blockquote>
+<p>« Grâce à Ma Zone, le commerçant vend même lorsqu'il est fermé. »</p>
+</blockquote>
+<p>Le matin, le cockpit lui raconte l'histoire de la nuit : commandes reçues, Click &amp; Collect à préparer, messages, événements à venir, promotions actives.</p>
+<p>L'Épée n'est pas un tableau de bord figé. C'est le <strong>bureau du commerçant</strong> — le lieu où tous les organes invisibles de Ma Zone deviennent visibles, compréhensibles et actionnables.</p>
+<h3>Architecture en deux couches</h3>
+<h4>A. Le Cockpit (accueil = briefing du matin)</h4>
+<ul>
+<li>Un seul écran d'accueil.</li>
+<li>Il n'affiche <strong>pas tout</strong>. Il affiche <strong>ce qui mérite attention aujourd'hui</strong>, trié par priorité.</li>
+<li>Il n'agrège pas des moteurs en dur : chaque moteur contribue des <strong>cartes de briefing</strong> via un contrat uniforme.</li>
+</ul>
+<p><strong>Contrat de carte (conceptuel) :</strong></p>
+<pre><code class="language-json">{
+  &quot;id&quot;: &quot;orders-to-prep&quot;,
+  &quot;engine&quot;: &quot;orders&quot;,
+  &quot;priority&quot;: 10,
+  &quot;title&quot;: &quot;3 commandes à préparer&quot;,
+  &quot;metric&quot;: &quot;2 Click &amp; Collect · 1 livraison&quot;,
+  &quot;cta&quot;: &quot;Voir les commandes&quot;,
+  &quot;deeplink&quot;: &quot;Marketplace/Orders&quot;
+}
+</code></pre>
+<p>Le cockpit est un <strong>agrégateur passif</strong> : ajouter Event ou Collaboration ajoute des cartes, sans toucher au code du cockpit.</p>
+<p><strong>Anti-surcharge :</strong> plafonner le nombre de cartes visibles (ex. top 5–8), le reste est accessible via « Voir plus » ou les modules.</p>
+<h4>B. Les Modules (menu hamburger = capacités)</h4>
+<p>Chaque module représente une capacité offerte au commerçant :</p>
+<table>
+<thead>
+<tr>
+<th>Famille</th>
+<th>Modules</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><strong>Vendre</strong></td>
+<td>Marketplace (produits, stock, commandes, Click &amp; Collect, livraison, historique)</td>
+</tr>
+<tr>
+<td><strong>Animer</strong></td>
+<td>Événements · Promotions</td>
+</tr>
+<tr>
+<td><strong>Réseau</strong></td>
+<td>Collaborations · Carnet d'adresses · Clients</td>
+</tr>
+<tr>
+<td><strong>Piloter</strong></td>
+<td>Fidélisation · Statistiques · Messages · Mon commerce</td>
+</tr>
+</tbody>
+</table>
+<p><strong>Registre de modules (déclaratif, Open/Closed) :</strong></p>
+<pre><code class="language-js">// Conceptuel — merchantModuleRegistry
+defineModule({
+  id: 'events',
+  label: 'Événements',
+  family: 'animer',
+  icon: 'calendar-outline',
+  entitlement: 'engine.event',  // visible seulement si le moteur existe
+  screen: 'EventsHome',
+});
+</code></pre>
+<p>Le shell de l'Épée lit ce registre. Il ne connaît aucun module en dur. Un module n'apparaît que si son moteur existe et si le commerçant y a droit (<code>entitlement</code> / feature flag).</p>
+<p>On peut livrer l'Épée avec 3 modules (Marketplace, Promotions, Messages) et en ajouter 10 sans refactor.</p>
+<h3>Pattern adaptateur de moteur</h3>
+<p>Pour chaque organe exposé dans l'Épée, un petit <strong>adaptateur</strong> côté mobile :</p>
+<table>
+<thead>
+<tr>
+<th>Méthode</th>
+<th>Rôle</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>summaryCards()</code></td>
+<td>Cartes pour le cockpit</td>
+</tr>
+<tr>
+<td><code>module()</code></td>
+<td>Entrée hamburger</td>
+</tr>
+<tr>
+<td><code>screens()</code></td>
+<td>Navigation du module</td>
+</tr>
+</tbody>
+</table>
+<p>Le shell ne dépend que de ces adaptateurs. Chaque nouveau moteur = un adaptateur + des écrans de module.</p>
+<h3>Identity n'est pas un module</h3>
+<p>Conformément à la vision validée : le commerçant ne pense jamais « je vais utiliser Identity ». Il pense « je gère mon événement ».</p>
+<ul>
+<li>Les fonctions Identity (scanner QR, vérifier identité, vérifier procurations) vivent <strong>dans le module Événements</strong>.</li>
+<li>Identity reste un <strong>organe distinct</strong> en backend (<code>identityEngine.js</code>).</li>
+<li>L'Épée l'invoque en arrière-plan depuis le contexte Event.</li>
+</ul>
+<p><strong>UX groupée, moteurs découplés</strong> — même leçon que les familles Wallet = vues de présentation.</p>
+<h3>Anti-surcharge sur 10 ans — règles</h3>
+<ol>
+<li>Le cockpit <strong>prioritise et plafonne</strong> ; le détail vit dans les modules.</li>
+<li>Tout module est <strong>déclaratif</strong>, lazy, et gated par entitlement.</li>
+<li><strong>Aucune logique métier</strong> dans l'Épée — elle compose des contrats.</li>
+<li>Familles de modules pour garder un menu lisible (pas une liste à rallonge).</li>
+<li>Un adaptateur = un fichier ; ajouter un moteur n'ouvre jamais le shell.</li>
+</ol>
+<pre><code class="language-mermaid">flowchart TB
+  subgraph epee [Epee - surface]
+    Cockpit[&quot;Cockpit - briefing&quot;]
+    Shell[&quot;Shell + registre modules&quot;]
+    Adapters[&quot;Adaptateurs moteurs&quot;]
+  end
+  Cockpit --&gt; Adapters
+  Shell --&gt; Adapters
+  Adapters --&gt;|&quot;summaryCards / module / screens&quot;| Organs[&quot;Organes backend&quot;]
+</code></pre>
+<hr />
+<h2>Pilier 2 — Le Back Office Administrateur</h2>
+<h3>Vision</h3>
+<p>Application <strong>web interne totalement indépendante</strong> de l'app mobile.</p>
+<ul>
+<li>Ce n'est <strong>pas</strong> un produit utilisateur.</li>
+<li>Ce n'est <strong>pas</strong> un produit commerçant.</li>
+<li>C'est l'outil de l'<strong>équipe Ma Zone</strong>.</li>
+</ul>
+<p>Il sera utilisé pendant toute la vie du projet — pensé comme un outil permanent, pas un utilitaire temporaire.</p>
+<h3>Plateforme retenue</h3>
+<table>
+<thead>
+<tr>
+<th>Décision</th>
+<th>Choix</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Plateforme</td>
+<td>App web dédiée (React + Vite), séparée</td>
+</tr>
+<tr>
+<td>API</td>
+<td>Même backend Express (<code>/api/admin/*</code>)</td>
+</tr>
+<tr>
+<td>Indépendance</td>
+<td>Jamais mêlée à Expo / mobile</td>
+</tr>
+</tbody>
+</table>
+<h3>Sécurité — rôle admin séparé</h3>
+<p>Le rôle <code>admin</code> n'existe pas aujourd'hui (<code>users.role</code> = <code>client</code> | <code>merchant</code> | <code>driver</code> seulement).</p>
+<p><strong>Recommandation :</strong> table <code>admin_users</code> <strong>séparée</strong> + authentification admin dédiée.</p>
+<table>
+<thead>
+<tr>
+<th>Pourquoi pas <code>role: 'admin'</code> dans <code>users</code> ?</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Un administrateur interne ne doit jamais apparaître dans l'écosystème citoyen</td>
+</tr>
+<tr>
+<td>Évite confusion / fuite dans listes clients, Wallets, Identity</td>
+</tr>
+<tr>
+<td>Frontière nette : citoyens vs opérateurs plateforme</td>
+</tr>
+</tbody>
+</table>
+<p>Middleware admin distinct de <code>verifyToken</code> citoyen. Namespace <code>/api/admin/*</code> exclusivement.</p>
+<h3>Deux faces du Back Office</h3>
+<h4>Face A — Administration de l'écosystème</h4>
+<table>
+<thead>
+<tr>
+<th>Domaine</th>
+<th>Capacités</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Utilisateurs</td>
+<td>Lister, rechercher, suspendre, inspecter</td>
+</tr>
+<tr>
+<td>Commerçants</td>
+<td>Stores, validation, statut</td>
+</tr>
+<tr>
+<td>Livreurs</td>
+<td>Statut, broadcast (table déjà prévue)</td>
+</tr>
+<tr>
+<td>Catégories</td>
+<td>CRUD catégories</td>
+</tr>
+<tr>
+<td>Quartiers</td>
+<td>Plus tard (Zone-aware)</td>
+</tr>
+<tr>
+<td>Rôles / paramètres</td>
+<td>Feature flags, config système</td>
+</tr>
+<tr>
+<td>Statistiques globales</td>
+<td>Indicateurs agrégés</td>
+</tr>
+<tr>
+<td>Organes</td>
+<td>Inspecter / diagnostics si nécessaire</td>
+</tr>
+</tbody>
+</table>
+<p>Majoritairement lecture + modération. Pas d'écrans métier « Event » ou « Promotion » ici — ces logiques restent dans les organes (et s'expriment dans l'Épée).</p>
+<h4>Face B — World Factory (le plus important en MVP)</h4>
+<p>Créer rapidement une <strong>vrai ville de démonstration</strong> :</p>
+<ul>
+<li>citoyens, commerçants, livreurs ;</li>
+<li>Wallets peuplés, droits, billets ;</li>
+<li>événements, promotions, collaborations ;</li>
+<li>commandes simulées ;</li>
+<li>interactions (messages, notifications).</li>
+</ul>
+<p><strong>Idée clé :</strong> le Back Office pilote les <strong>contrats publics</strong> des moteurs.</p>
+<pre><code>World Factory  ≠  INSERT SQL direct
+World Factory  =  wallet.issueObject(...)
+               +  dispatch.createOrderWithDispatch(...)
+               +  identity.issuePresentation(...)  (si besoin)
+               +  eventEngine.createEvent(...)     (futur)
+</code></pre>
+<p><strong>Bénéfice majeur :</strong> le Back Office devient le <strong>premier consommateur réel</strong> de chaque organe. Il dogfood les contrats exactement comme le feront les vrais flux. Un organe mal conçu se révèle immédiatement ici.</p>
+<h3>Recettes de monde (world recipes)</h3>
+<p>Scénarios composables, déterministes et rejouables :</p>
+<table>
+<thead>
+<tr>
+<th>Recette</th>
+<th>Exemple</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>quartier_anime</code></td>
+<td>N habitants, M commerçants, produits, commandes du jour</td>
+</tr>
+<tr>
+<td><code>festival_local</code></td>
+<td>Événements + billets Wallet + contrôles Identity</td>
+</tr>
+<tr>
+<td><code>soirée_commerciale</code></td>
+<td>Promotions + coupons + cartographie Click &amp; Collect</td>
+</tr>
+<tr>
+<td><code>reset_demo</code></td>
+<td>Nettoyer tout ce qui est tagué <code>demo</code></td>
+</tr>
+</tbody>
+</table>
+<p>Données taguées (<code>source_engine: 'demo'</code> / <code>batch_id</code>) — même esprit que <code>demo_seed</code> dans <code>seed-wallet-demo.js</code> — pour un nettoyage propre sans toucher les comptes réels.</p>
+<hr />
+<h2>Pilier 3 — Le Monde de démonstration</h2>
+<h3>Vision</h3>
+<p>Une base de données <strong>réaliste, riche et vivante</strong> — pas une application vide. Habitants, commerçants, livreurs, Wallets, événements, commandes, promotions, interactions.</p>
+<h3>Architecture</h3>
+<ul>
+<li>Module backend <code>lib/worldFactory.js</code> : <strong>orchestrateur</strong> uniquement.</li>
+<li>Aucune logique métier propre : il enchaîne les appels aux organes existants.</li>
+<li>Exposition via <code>/api/admin/world/*</code> (protégé admin).</li>
+<li>Idempotent, rejouable, tagué, nettoyable.</li>
+</ul>
+<pre><code class="language-mermaid">flowchart LR
+  BO[&quot;Back Office World Factory&quot;] --&gt; WF[&quot;lib/worldFactory.js&quot;]
+  WF --&gt; WE[&quot;walletEngine&quot;]
+  WF --&gt; DE[&quot;dispatch&quot;]
+  WF --&gt; IE[&quot;identityEngine&quot;]
+  WF --&gt; EE[&quot;eventEngine futur&quot;]
+  WF --&gt; Core[&quot;users stores products&quot;]
+  WF --&gt;|&quot;tag demo&quot;| DB[&quot;SQLite&quot;]
+</code></pre>
+<h3>Relation avec seed existant</h3>
+<p><code>backend/scripts/seed-wallet-demo.js</code> est le <strong>prototype</strong> de cette approche (in-process, tagué, idempotent). La World Factory le généralise : multi-entités, multi-recettes, exposée au Back Office, sans SQL métier.</p>
+<hr />
+<h2>Comment cela accélère les futurs moteurs</h2>
+<p>Chaque nouveau moteur suit toujours le <strong>même triptyque</strong> :</p>
+<table>
+<thead>
+<tr>
+<th>Étape</th>
+<th>Livrable</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><strong>1. Organe</strong></td>
+<td><code>lib/*Engine.js</code> + registre + routes (contrat public)</td>
+</tr>
+<tr>
+<td><strong>2. Adaptateur Épée</strong></td>
+<td>Cartes cockpit + module hamburger + écrans</td>
+</tr>
+<tr>
+<td><strong>3. Recette World Factory</strong></td>
+<td>Scénario de démo dans le Back Office</td>
+</tr>
+</tbody>
+</table>
+<p>Exemple — <strong>Event Engine</strong> :</p>
+<ol>
+<li>Backend : créer événements, émettre billets via Wallet, contrôle d'accès via Identity.</li>
+<li>Épée : module « Événements » (création, billetterie, participants, scan Identity en arrière-plan).</li>
+<li>Back Office : recette <code>festival_local</code> → ville peuplée, démontrable dès le jour 1.</li>
+</ol>
+<p>L'Event Engine n'attend plus une base vide. Il arrive dans un monde vivant.</p>
+<hr />
+<h2>Frontières à ne jamais franchir</h2>
+<table>
+<thead>
+<tr>
+<th>Interdit</th>
+<th>Pourquoi</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Logique métier dans l'Épée ou le Back Office</td>
+<td>Ce sont des surfaces</td>
+</tr>
+<tr>
+<td>SQL métier direct depuis le Back Office</td>
+<td>Contourne les organes ; casse le dogfooding</td>
+</tr>
+<tr>
+<td>Identity comme module séparé dans le menu</td>
+<td>Le commerçant pense « événement », pas « Identity »</td>
+</tr>
+<tr>
+<td>Admin dans la table <code>users</code> citoyens</td>
+<td>Contamine l'écosystème</td>
+</tr>
+<tr>
+<td>Cockpit qui affiche tout</td>
+<td>Surcharge ; le détail vit dans les modules</td>
+</tr>
+<tr>
+<td>Registre de modules en dur dans le shell</td>
+<td>Empêche l'extension Open/Closed</td>
+</tr>
+</tbody>
+</table>
+<hr />
+<h2>Phasage recommandé (sans tout construire)</h2>
+<h3>Phase 0 — Socle World Factory + admin</h3>
+<ul>
+<li>Table <code>admin_users</code> + auth admin + middleware</li>
+<li>Routes <code>/api/admin/*</code></li>
+<li><code>lib/worldFactory.js</code> minimal : créer citoyens/commerçants + peupler Wallets via APIs existantes</li>
+<li>Recette <code>quartier_anime</code> v1</li>
+</ul>
+<p><strong>Débloque immédiatement</strong> la démo et le dogfooding.</p>
+<h3>Phase 1 — Shell Épée</h3>
+<ul>
+<li>Refactorer l'app marchand Expo : cockpit agrégateur + registre de modules</li>
+<li>Brancher modules déjà couverts : Marketplace, Promotions, Clients, Messages, Mon commerce</li>
+<li>Adapter les écrans existants sans réécrire toute la logique métier (elle reste côté API)</li>
+</ul>
+<h3>Phase 2 — Back Office Administration</h3>
+<ul>
+<li>UI web React/Vite : gestion utilisateurs/commerçants/livreurs, stats globales, paramètres</li>
+<li>World Factory UI : lancer recettes, reset demo</li>
+</ul>
+<h3>Phase 3+ — Moteurs successifs</h3>
+<ul>
+<li>Event → Collaboration → Fidélisation → Marketing avancé…</li>
+<li>Chaque moteur : organe + adaptateur Épée + recette World Factory</li>
+</ul>
+<p><strong>Event Engine n'ouvre officiellement qu'après la Phase 0 (au minimum) et idéalement après le shell Épée Phase 1</strong> — sinon on développe un organe dans le vide.</p>
+<hr />
+<h2>Décisions architecturales proposées (ADR)</h2>
+<table>
+<thead>
+<tr>
+<th>ID</th>
+<th>Décision</th>
+<th>Statut</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><strong>ADR-BS-001</strong></td>
+<td>Épée et Back Office sont des surfaces, jamais des organes</td>
+<td>À valider</td>
+</tr>
+<tr>
+<td><strong>ADR-BS-002</strong></td>
+<td>Épée = cockpit (cartes prioritaires) + modules déclaratifs (registre)</td>
+<td>À valider</td>
+</tr>
+<tr>
+<td><strong>ADR-BS-003</strong></td>
+<td>Pattern adaptateur moteur (<code>summaryCards</code> / <code>module</code> / <code>screens</code>)</td>
+<td>À valider</td>
+</tr>
+<tr>
+<td><strong>ADR-BS-004</strong></td>
+<td>Identity UX sous Événements ; Identity reste un organe distinct</td>
+<td>À valider</td>
+</tr>
+<tr>
+<td><strong>ADR-BS-005</strong></td>
+<td>Back Office = app web indépendante (React/Vite)</td>
+<td>À valider</td>
+</tr>
+<tr>
+<td><strong>ADR-BS-006</strong></td>
+<td>Admins hors <code>users</code> citoyens (<code>admin_users</code> séparée)</td>
+<td>À valider</td>
+</tr>
+<tr>
+<td><strong>ADR-BS-007</strong></td>
+<td>World Factory pilote uniquement les contrats publics des organes</td>
+<td>À valider</td>
+</tr>
+<tr>
+<td><strong>ADR-BS-008</strong></td>
+<td>Données démo taguées et nettoyables (pas de SQL métier direct)</td>
+<td>À valider</td>
+</tr>
+<tr>
+<td><strong>ADR-BS-009</strong></td>
+<td>Triptyque systématique : organe + adaptateur Épée + recette World Factory</td>
+<td>À valider</td>
+</tr>
+</tbody>
+</table>
+<hr />
+<h2>Ce qui est préparé mais non développé</h2>
+<table>
+<thead>
+<tr>
+<th>Élément</th>
+<th>Préparation</th>
+<th>Développement</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Event / Marketing / Collaboration / Loyalty</td>
+<td>Contrats d'adaptateur + familles de modules</td>
+<td>À l'ouverture officielle de chaque organe</td>
+</tr>
+<tr>
+<td>Quartiers / Zone</td>
+<td>Zone-aware déjà dans la philosophie Wallet</td>
+<td>Plus tard</td>
+</tr>
+<tr>
+<td>BI avancée</td>
+<td>Module Statistiques simple d'abord</td>
+<td>Pas de BI lourd en V1</td>
+</tr>
+<tr>
+<td>Multi-employés magasin</td>
+<td>Table <code>store_members</code> déjà existante</td>
+<td>Plus tard</td>
+</tr>
+<tr>
+<td>Scanner commerçant Identity</td>
+<td>Endpoint <code>POST /identity/verify</code> prêt</td>
+<td>Dans le module Événements</td>
+</tr>
+</tbody>
+</table>
+<hr />
+<h2>Auto-évaluation (note CTO)</h2>
+<table>
+<thead>
+<tr>
+<th>Critère</th>
+<th>Évaluation</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Simplicité</td>
+<td>Forte — deux couches Épée, Back Office dual face, factory sans métier</td>
+</tr>
+<tr>
+<td>Modularité</td>
+<td>Forte — registres + adaptateurs</td>
+</tr>
+<tr>
+<td>Faible couplage</td>
+<td>Forte — surfaces / organes séparés</td>
+</tr>
+<tr>
+<td>Évolutivité</td>
+<td>Forte — triptyque répétable 10 ans</td>
+</tr>
+<tr>
+<td>Risque principal</td>
+<td>Sur-construire le Back Office avant le shell Épée — mitigué par le phasage</td>
+</tr>
+</tbody>
+</table>
+<p><strong>Note :</strong> architecture fondatrice, cohérente avec Wallet et Identity. Prête pour validation avant développement.</p>
+<hr />
+<h2>Annexes</h2>
+<h3>Arborescence cible (conceptuelle)</h3>
+<pre><code>backend/src/
+├── lib/
+│   ├── worldFactory.js          # Orchestrateur de recettes de démo
+│   ├── walletEngine.js          # (existant)
+│   ├── identityEngine.js        # (existant)
+│   └── … futurs engines
+├── routes/
+│   └── admin.js                 # /api/admin/* (auth admin séparée)
+└── db/index.js                  # + admin_users
+
+admin-web/                       # App React/Vite indépendante
+├── src/
+│   ├── pages/                   # Admin + World Factory
+│   └── api/                     # Client /api/admin/*
+
+mobile/src/
+├── screens/merchant/
+│   ├── MerchantCockpitScreen.js # Briefing du matin
+│   └── modules/                 # Écrans par module
+├── merchant/
+│   ├── moduleRegistry.js        # Registre déclaratif
+│   └── adapters/                # Un adaptateur par moteur
+└── navigation/                  # Shell Épée (drawer + modules)
+</code></pre>
+<h3>Correspondance avec organes existants</h3>
+<table>
+<thead>
+<tr>
+<th>Concept Wallet / Identity</th>
+<th>Équivalent Bac à Sable</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Registre de kinds / purposes</td>
+<td>Registre de modules Épée</td>
+</tr>
+<tr>
+<td><code>handledBy</code> / disclosure</td>
+<td>Entitlements de modules</td>
+</tr>
+<tr>
+<td>Surface client (Wallet tab, Identity screen)</td>
+<td>Surface commerçant (Épée)</td>
+</tr>
+<tr>
+<td><code>seed-wallet-demo.js</code></td>
+<td>World Factory généralisée</td>
+</tr>
+<tr>
+<td>Organe transversal</td>
+<td>Organe métier futur + adaptateur</td>
+</tr>
+</tbody>
+</table>
+<h3>Trace documentaire</h3>
+<p>Cette étude constitue le cadre du Bac à Sable avant l'ouverture de l'Event Engine. Aucune implémentation tant que les ADR-BS ne sont pas validées.</p>
+</body>
+</html>

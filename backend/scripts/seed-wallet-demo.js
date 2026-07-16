@@ -38,12 +38,36 @@ if (previous.length) {
 }
 
 const samples = [
-  { kind: 'event_ticket', payload: { title: 'Concert de quartier', venue: 'Place centrale', date: '2026-08-15' } },
-  { kind: 'pickup_ticket', payload: { store: 'Épicerie du coin', orderRef: 'CMD-1042' } },
-  { kind: 'promo_voucher', payload: { code: 'ZONE10', label: '-10% sur votre panier' } },
-  { kind: 'loyalty_card', payload: { store: 'Boulangerie Lumière', points: 120 } },
-  { kind: 'badge', payload: { title: 'Voisin actif', level: 2 } },
-  { kind: 'civic_points', payload: { balance: 340 } },
+  {
+    kind: 'event_ticket',
+    payload: { venue: 'Place centrale', date: '2026-08-15', seat: 'Zone A' },
+    display: { title: 'Concert de quartier', subtitle: 'Place centrale · 15 août', primaryDate: '2026-08-15', category: 'culture' },
+  },
+  {
+    kind: 'pickup_ticket',
+    payload: { orderRef: 'CMD-1042' },
+    display: { title: 'Épicerie du coin', subtitle: 'Commande CMD-1042 à retirer', category: 'commerce' },
+  },
+  {
+    kind: 'promo_voucher',
+    payload: { code: 'ZONE10' },
+    display: { title: '-10% sur votre panier', subtitle: 'Code ZONE10', category: 'commerce' },
+  },
+  {
+    kind: 'loyalty_card',
+    payload: { points: 120 },
+    display: { title: 'Boulangerie Lumière', subtitle: '120 points fidélité', category: 'commerce' },
+  },
+  {
+    kind: 'badge',
+    payload: { level: 2 },
+    display: { title: 'Voisin actif', subtitle: 'Niveau 2', category: 'ville' },
+  },
+  {
+    kind: 'civic_points',
+    payload: { balance: 340 },
+    display: { title: 'Points civiques', subtitle: 'Solde : 340', category: 'ville' },
+  },
 ];
 
 const created = [];
@@ -52,6 +76,7 @@ for (const s of samples) {
     ownerId: client.id,
     kind: s.kind,
     payload: s.payload,
+    display: s.display,
     sourceEngine: 'demo_seed',
     sourceRef: s.payload.orderRef || null,
   });

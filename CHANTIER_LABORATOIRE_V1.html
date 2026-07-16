@@ -1,0 +1,380 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Chantier livré — Laboratoire Vivant (Back Office · Phase 2 du Bac à Sable)</title>
+<style>
+  @page { margin: 16mm 14mm; }
+  body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Helvetica, Arial, sans-serif; font-size: 10.5pt; line-height: 1.45; color: #1a1a1a; max-width: 100%; }
+  h1 { font-size: 20pt; border-bottom: 2px solid #0f2d5c; padding-bottom: 8px; color: #0f2d5c; page-break-after: avoid; }
+  h2 { font-size: 14pt; margin-top: 22px; color: #0f2d5c; border-bottom: 1px solid #e5e7eb; padding-bottom: 4px; page-break-after: avoid; }
+  h3 { font-size: 11.5pt; margin-top: 14px; color: #1a4a8a; page-break-after: avoid; }
+  table { border-collapse: collapse; width: 100%; margin: 10px 0; font-size: 9pt; page-break-inside: avoid; }
+  th, td { border: 1px solid #d1d5db; padding: 5px 7px; text-align: left; vertical-align: top; }
+  th { background: #f3f4f6; font-weight: 600; }
+  code { background: #f3f4f6; padding: 1px 4px; border-radius: 3px; font-size: 8.5pt; }
+  pre { background: #f8fafc; border: 1px solid #e5e7eb; border-radius: 6px; padding: 10px; overflow-x: auto; font-size: 8pt; line-height: 1.35; white-space: pre-wrap; word-break: break-word; page-break-inside: avoid; }
+  pre code { background: none; padding: 0; }
+  blockquote { border-left: 4px solid #0f2d5c; margin: 10px 0; padding: 6px 14px; background: #f0f4f8; color: #1e3a5f; }
+  hr { border: none; border-top: 1px solid #e5e7eb; margin: 18px 0; }
+  ul, ol { padding-left: 22px; }
+  li { margin-bottom: 3px; }
+  p { margin: 8px 0; }
+  .pdf-note { display: none; }
+  @media screen {
+    .pdf-note { display: block; background: #eff6ff; border: 1px solid #bfdbfe; border-radius: 8px; padding: 12px 16px; margin-bottom: 24px; color: #1e3a8a; }
+  }
+</style>
+</head>
+<body>
+<div class="pdf-note">
+  <strong>Lecture dans Cursor / navigateur :</strong> ce fichier HTML est la version lisible du plan.
+  Pour le PDF, ouvrez <code>CHANTIER_LABORATOIRE_V1.pdf</code> depuis le Finder (clic droit → Ouvrir avec Aperçu)
+  ou double-cliquez le fichier <code>Ouvrir_*_PDF.command</code> correspondant à la racine du projet.
+</div>
+<h1>Chantier livré — Laboratoire Vivant (Back Office · Phase 2 du Bac à Sable)</h1>
+<p><strong>Date :</strong> 16 juillet 2026<br />
+<strong>Statut :</strong> Livré et vérifié — 3ᵉ fondation du Bac à Sable<br />
+<strong>Références :</strong> <a href="PLAN_LABORATOIRE_VIVANT.md">PLAN_LABORATOIRE_VIVANT.md</a> · <a href="CHANTIER_WORLD_FACTORY_V1.md">CHANTIER_WORLD_FACTORY_V1.md</a> · <a href="CHANTIER_EPEE_SHELL_V1.md">CHANTIER_EPEE_SHELL_V1.md</a><br />
+<strong>Public :</strong> Architectes Ma Zone — compte rendu d'implémentation</p>
+<hr />
+<h2>Document de référence</h2>
+<table>
+<thead>
+<tr>
+<th>Format</th>
+<th>Fichier</th>
+<th>Usage</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><strong>HTML</strong></td>
+<td><code>CHANTIER_LABORATOIRE_V1.html</code></td>
+<td>Lecture dans Cursor / navigateur</td>
+</tr>
+<tr>
+<td><strong>Markdown</strong></td>
+<td><code>CHANTIER_LABORATOIRE_V1.md</code></td>
+<td>Partage / édition</td>
+</tr>
+<tr>
+<td><strong>PDF</strong></td>
+<td><code>CHANTIER_LABORATOIRE_V1.pdf</code></td>
+<td>Impression / revue</td>
+</tr>
+</tbody>
+</table>
+<hr />
+<h2>Résumé exécutif</h2>
+<p>Le <strong>Laboratoire</strong> est livré : une app web (<code>admin-web/</code>) qui permet à l'équipe Ma Zone de <strong>générer un monde</strong>, d'<strong>explorer ses acteurs</strong>, et surtout de <strong>devenir</strong> n'importe quel acteur démo pour vivre sa vraie application Ma Zone.</p>
+<p>Deux principes intangibles ont guidé chaque décision et sont respectés dans le code :</p>
+<blockquote>
+<p><strong>Entrer dans un acteur = s'authentifier, pas muter.</strong><br />
+<strong>Le laboratoire n'écrit jamais en base directement : toute action passe par un organe.</strong></p>
+</blockquote>
+<p>Vérifié en headless : <strong>12 assertions vertes</strong> (génération → exploration → jeton d'imitation → action via organe Wallet → reset par appartenance). Build <code>admin-web</code> OK. Lints propres.</p>
+<hr />
+<h2>Ce qui a été construit</h2>
+<pre><code>admin-web (React+Vite · :5174)
+   Login → Monde (World Factory) → Explorateur → « Devenir X » / Pouvoirs du labo
+        │
+        ▼
+/api/admin (verifyAdmin · sandbox-only)
+   /impersonate ─────► jeton citoyen réel (0 écriture)
+   /lab/actions ─────► organes (Wallet aujourd'hui)
+   /world/actors ────► lecture seule
+   /world/run|reset ─► World Factory (reset par appartenance)
+        │  nouvel onglet #labToken
+        ▼
+Vraie app Ma Zone web (:8081) → Client / Cockpit / Livreur → organes réels
+</code></pre>
+<hr />
+<h2>Fichiers créés</h2>
+<h3>Backend</h3>
+<table>
+<thead>
+<tr>
+<th>Fichier</th>
+<th>Rôle</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>backend/src/lib/sandbox.js</code></td>
+<td>Garde <code>isSandbox()</code> / <code>requireSandbox</code> (pouvoirs coupés en prod)</td>
+</tr>
+<tr>
+<td><code>backend/src/lib/worldFactory/explorer.js</code></td>
+<td>Exploration <strong>lecture seule</strong> des acteurs démo + <code>isDemoUser</code></td>
+</tr>
+<tr>
+<td><code>backend/src/lib/worldFactory/demoWorld.js</code></td>
+<td><code>purgeUsers</code> — reset par <strong>clôture d'appartenance</strong> FK-safe</td>
+</tr>
+<tr>
+<td><code>backend/src/lib/lab/actionRegistry.js</code></td>
+<td>Registre déclaratif des actions (Open/Closed)</td>
+</tr>
+<tr>
+<td><code>backend/src/lib/lab/actions/wallet.js</code></td>
+<td>Actions Wallet (<code>issue</code> / <code>consume</code>) via l'organe</td>
+</tr>
+<tr>
+<td><code>backend/src/lib/lab/index.js</code></td>
+<td>Orchestrateur mince des actions de labo</td>
+</tr>
+</tbody>
+</table>
+<h3>Back Office web (<code>admin-web/</code>)</h3>
+<table>
+<thead>
+<tr>
+<th>Fichier</th>
+<th>Rôle</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>package.json</code>, <code>vite.config.js</code>, <code>index.html</code>, <code>postcss.config.js</code></td>
+<td>Socle Vite + React</td>
+</tr>
+<tr>
+<td><code>src/config.js</code>, <code>src/api.js</code></td>
+<td>Endpoints + client HTTP (jeton admin)</td>
+</tr>
+<tr>
+<td><code>src/App.jsx</code>, <code>src/main.jsx</code>, <code>src/styles.css</code></td>
+<td>Coquille + navigation Monde/Explorateur</td>
+</tr>
+<tr>
+<td><code>src/pages/LoginPage.jsx</code></td>
+<td>Connexion admin</td>
+</tr>
+<tr>
+<td><code>src/pages/WorldPage.jsx</code></td>
+<td>Recettes, génération paramétrée, batches, reset</td>
+</tr>
+<tr>
+<td><code>src/pages/ExplorerPage.jsx</code></td>
+<td>Acteurs, détail, « Devenir X », pouvoirs du labo</td>
+</tr>
+</tbody>
+</table>
+<h2>Fichiers modifiés</h2>
+<table>
+<thead>
+<tr>
+<th>Fichier</th>
+<th>Changement</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>backend/src/routes/admin.js</code></td>
+<td>Routes explorateur, <code>/impersonate</code>, <code>/lab/actions</code></td>
+</tr>
+<tr>
+<td><code>backend/src/lib/worldFactory/index.js</code></td>
+<td><code>resetBatch</code> / <code>resetAllDemo</code> délèguent à la purge par appartenance</td>
+</tr>
+<tr>
+<td><code>mobile/src/context/AppContext.js</code></td>
+<td>Passage de jeton <code>#labToken</code> (web) via <code>/api/users/me</code></td>
+</tr>
+</tbody>
+</table>
+<hr />
+<h2>API ajoutée (sous <code>/api/admin</code>, <code>verifyAdmin</code>)</h2>
+<table>
+<thead>
+<tr>
+<th>Méthode</th>
+<th>Route</th>
+<th>Garde</th>
+<th>Rôle</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>GET</code></td>
+<td><code>/world/actors</code></td>
+<td>admin</td>
+<td>Acteurs démo (filtres <code>type</code>, <code>batchId</code>) — lecture seule</td>
+</tr>
+<tr>
+<td><code>GET</code></td>
+<td><code>/world/actors/:id</code></td>
+<td>admin</td>
+<td>Détail d'un acteur (profil + gravitation)</td>
+</tr>
+<tr>
+<td><code>POST</code></td>
+<td><code>/impersonate</code></td>
+<td>admin + sandbox + <strong>démo-only</strong></td>
+<td>Émet un jeton citoyen réel</td>
+</tr>
+<tr>
+<td><code>GET</code></td>
+<td><code>/lab/actions</code></td>
+<td>admin + sandbox</td>
+<td>Actions de labo déclarées</td>
+</tr>
+<tr>
+<td><code>POST</code></td>
+<td><code>/lab/actions/:actionId</code></td>
+<td>admin + sandbox + <strong>démo-only</strong></td>
+<td>Exécute une action via un organe</td>
+</tr>
+</tbody>
+</table>
+<hr />
+<h2>Impersonation — clé de voûte</h2>
+<p><code>POST /api/admin/impersonate { userId }</code> :</p>
+<ol>
+<li>refuse hors sandbox ;</li>
+<li>refuse si <code>userId</code> n'est pas un acteur démo (<code>demo_entities</code>) → <strong>impossible de devenir un vrai citoyen</strong> ;</li>
+<li>émet <code>jwt.sign({ id, name, email, role }, JWT_SECRET, { expiresIn: '12h' })</code> — le <strong>même</strong> jeton qu'un login réel, donc sockets / dispatch / chat fonctionnent nativement ;</li>
+<li><strong>aucune écriture en base</strong>.</li>
+</ol>
+<p>Côté app, l'onglet ouvert avec <code>#labToken=&lt;jeton&gt;</code> résout l'acteur via <code>/api/users/me</code>, ouvre la session (isolée par onglet) et atterrit dans la bonne app.</p>
+<hr />
+<h2>Pouvoirs du labo — via organes uniquement</h2>
+<p>Registre Open/Closed identique à celui des recettes World Factory. Actions livrées (organe Wallet) :</p>
+<table>
+<thead>
+<tr>
+<th>Action</th>
+<th>Organe appelé</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>issue_wallet_object</code></td>
+<td><code>walletEngine.issueObject({ sourceEngine: 'lab' })</code></td>
+</tr>
+<tr>
+<td><code>consume_wallet_object</code></td>
+<td><code>walletEngine.consumeObject()</code></td>
+</tr>
+</tbody>
+</table>
+<p>Brancher un futur organe (Event, Marketing, Identity…) = ajouter un fichier dans <code>lib/lab/actions/</code>, <strong>sans toucher au cœur</strong>.</p>
+<hr />
+<h2>Reset par appartenance (durcissement)</h2>
+<p>Problème résolu : les lignes créées pendant l'imitation (commandes, objets Wallet…) n'étaient pas tracées, donc non nettoyées. <code>demoWorld.purgeUsers</code> supprime désormais la <strong>clôture d'appartenance</strong> des acteurs démo, en ordre FK-safe, avec garde stricte (seuls les users de <code>demo_entities</code>). Le monde redevient réellement propre.</p>
+<hr />
+<h2>Vérifications</h2>
+<table>
+<thead>
+<tr>
+<th>Check</th>
+<th>Résultat</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Test headless (12 assertions)</td>
+<td>Vert</td>
+</tr>
+<tr>
+<td><code>npm run build</code> (admin-web)</td>
+<td>OK</td>
+</tr>
+<tr>
+<td>Lints backend / mobile / admin-web</td>
+<td>Aucune erreur</td>
+</tr>
+<tr>
+<td>Impersonation limitée aux acteurs démo</td>
+<td>Vérifié (<code>isDemoUser</code>)</td>
+</tr>
+<tr>
+<td>Reset purge les traces d'imitation</td>
+<td>Vérifié (objets + user à 0)</td>
+</tr>
+<tr>
+<td>Aucune écriture directe dans les actions de labo</td>
+<td>Respecté (délégation Wallet)</td>
+</tr>
+</tbody>
+</table>
+<hr />
+<h2>Lancement (dev)</h2>
+<table>
+<thead>
+<tr>
+<th>Processus</th>
+<th>Commande</th>
+<th>Port</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Backend</td>
+<td><code>cd backend &amp;&amp; npm run dev</code></td>
+<td>4000</td>
+</tr>
+<tr>
+<td>App Ma Zone web</td>
+<td><code>cd mobile &amp;&amp; npm run web</code></td>
+<td>8081</td>
+</tr>
+<tr>
+<td>Back Office</td>
+<td><code>cd admin-web &amp;&amp; npm install &amp;&amp; npm run dev</code></td>
+<td>5174</td>
+</tr>
+</tbody>
+</table>
+<p>Admin : <code>node backend/scripts/create-admin.js</code> → <code>admin@mazone.local</code> / <code>admin1234</code>.</p>
+<hr />
+<h2>Ouvertures d'architecture préservées (non implémentées)</h2>
+<p>Conformément à la vision, rien ne ferme ces évolutions futures :</p>
+<ul>
+<li><strong>État global du monde</strong> : <code>explorer.listActors</code> + comptes agrégés forment déjà le socle d'un tableau de bord d'activité.</li>
+<li><strong>Contrôle du temps</strong> : le World Factory est déjà pensé pour faire <em>évoluer</em> un monde (avancer le temps, expirer des objets) via orchestration d'organes.</li>
+<li><strong>Scénarios reproductibles</strong> : le registre d'actions de labo permet d'enchaîner des actions ; une future « recette de scénario » les composerait.</li>
+<li><strong>Historique des simulations</strong> : <code>demo_batches</code> trace déjà chaque exécution (rejeu / comparaison possibles).</li>
+</ul>
+<p>Chaque capacité future reste un <strong>module indépendant</strong> ajouté sans modifier le cœur du laboratoire.</p>
+<hr />
+<h2>CTO — auto-évaluation</h2>
+<table>
+<thead>
+<tr>
+<th>Qualité</th>
+<th>Note</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Fidélité au plan validé</td>
+<td>Forte</td>
+</tr>
+<tr>
+<td>Impersonation = authentification (jamais mutation)</td>
+<td>Respecté</td>
+</tr>
+<tr>
+<td>Actions via organes uniquement</td>
+<td>Respecté</td>
+</tr>
+<tr>
+<td>Reset réellement propre</td>
+<td>Résolu (par appartenance)</td>
+</tr>
+<tr>
+<td>Extensibilité (Open/Closed)</td>
+<td>Forte (recettes + actions + adaptateurs)</td>
+</tr>
+<tr>
+<td>Dette introduite</td>
+<td>Faible (<code>postcss.config.js</code> local pour neutraliser le Tailwind racine)</td>
+</tr>
+</tbody>
+</table>
+<p><strong>Verdict :</strong> le Bac à Sable possède désormais ses trois fondations — <strong>World Factory</strong>, <strong>Épée</strong>, <strong>Laboratoire</strong>. Ma Zone peut être vécue avant ses habitants, et chaque futur organe s'y branchera sans refonte. C'est l'infrastructure qui permettra à Ma Zone d'inventer Ma Zone.</p>
+</body>
+</html>

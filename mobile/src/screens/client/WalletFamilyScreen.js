@@ -61,7 +61,10 @@ export default function WalletFamilyScreen({ route, navigation }) {
                 <Ionicons name={item.isMemory ? 'sparkles-outline' : family.icon} size={24} color={family.color} />
               </View>
               <View style={styles.cardBody}>
-                <Text style={styles.cardLabel}>{item.label}</Text>
+                <Text style={styles.cardLabel}>{item.display?.title || item.label}</Text>
+                {item.display?.subtitle ? (
+                  <Text style={styles.cardSubtitle} numberOfLines={1}>{item.display.subtitle}</Text>
+                ) : null}
                 <View style={styles.metaRow}>
                   <View style={[styles.statusDot, { backgroundColor: meta.color }]} />
                   <Text style={styles.statusText}>{item.isMemory ? 'Souvenir' : meta.label}</Text>
@@ -89,6 +92,7 @@ const styles = StyleSheet.create({
   iconWrap: { width: 48, height: 48, borderRadius: 14, alignItems: 'center', justifyContent: 'center', marginRight: 14 },
   cardBody: { flex: 1 },
   cardLabel: { ...THEME.typography.subtitle, color: THEME.colors.text },
+  cardSubtitle: { fontSize: 13, color: THEME.colors.textSecondary, marginTop: 2 },
   metaRow: { flexDirection: 'row', alignItems: 'center', marginTop: 6 },
   statusDot: { width: 8, height: 8, borderRadius: 4, marginRight: 6 },
   statusText: { fontSize: 13, color: THEME.colors.textSecondary },

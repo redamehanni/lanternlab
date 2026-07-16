@@ -1,0 +1,589 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Chantier livré — Identity Engine v1 (Ma Zone)</title>
+<style>
+  @page { margin: 16mm 14mm; }
+  body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Helvetica, Arial, sans-serif; font-size: 10.5pt; line-height: 1.45; color: #1a1a1a; max-width: 100%; }
+  h1 { font-size: 20pt; border-bottom: 2px solid #0f2d5c; padding-bottom: 8px; color: #0f2d5c; page-break-after: avoid; }
+  h2 { font-size: 14pt; margin-top: 22px; color: #0f2d5c; border-bottom: 1px solid #e5e7eb; padding-bottom: 4px; page-break-after: avoid; }
+  h3 { font-size: 11.5pt; margin-top: 14px; color: #1a4a8a; page-break-after: avoid; }
+  table { border-collapse: collapse; width: 100%; margin: 10px 0; font-size: 9pt; page-break-inside: avoid; }
+  th, td { border: 1px solid #d1d5db; padding: 5px 7px; text-align: left; vertical-align: top; }
+  th { background: #f3f4f6; font-weight: 600; }
+  code { background: #f3f4f6; padding: 1px 4px; border-radius: 3px; font-size: 8.5pt; }
+  pre { background: #f8fafc; border: 1px solid #e5e7eb; border-radius: 6px; padding: 10px; overflow-x: auto; font-size: 8pt; line-height: 1.35; white-space: pre-wrap; word-break: break-word; page-break-inside: avoid; }
+  pre code { background: none; padding: 0; }
+  blockquote { border-left: 4px solid #0f2d5c; margin: 10px 0; padding: 6px 14px; background: #f0f4f8; color: #1e3a5f; }
+  hr { border: none; border-top: 1px solid #e5e7eb; margin: 18px 0; }
+  ul, ol { padding-left: 22px; }
+  li { margin-bottom: 3px; }
+  p { margin: 8px 0; }
+  .pdf-note { display: none; }
+  @media screen {
+    .pdf-note { display: block; background: #eff6ff; border: 1px solid #bfdbfe; border-radius: 8px; padding: 12px 16px; margin-bottom: 24px; color: #1e3a8a; }
+  }
+</style>
+</head>
+<body>
+<div class="pdf-note">
+  <strong>Lecture dans Cursor / navigateur :</strong> ce fichier HTML est la version lisible du plan.
+  Pour le PDF, ouvrez <code>CHANTIER_IDENTITY_ENGINE_V1.pdf</code> depuis le Finder (clic droit → Ouvrir avec Aperçu)
+  ou double-cliquez le fichier <code>Ouvrir_*_PDF.command</code> correspondant à la racine du projet.
+</div>
+<h1>Chantier livré — Identity Engine v1 (Ma Zone)</h1>
+<p><strong>Date :</strong> 15 juillet 2026
+<strong>Statut :</strong> Livré et vérifié — première version professionnelle
+<strong>Références :</strong> <a href="ETUDE_IDENTITY_ENGINE.md">ETUDE_IDENTITY_ENGINE.md</a> · <a href="ETUDE_QR_IDENTITY_ENGINE.md">ETUDE_QR_IDENTITY_ENGINE.md</a> · <a href="CHANTIER_WALLET_ADR_002_005.md">CHANTIER_WALLET_ADR_002_005.md</a>
+<strong>Public :</strong> Architectes Ma Zone — compte rendu d'implémentation après validation officielle</p>
+<hr />
+<h2>Résumé exécutif</h2>
+<p>Le <strong>Identity Engine</strong> est le deuxième organe transversal de Ma Zone. Sa responsabilité unique : répondre avec certitude à la question <em>« Qui est cette personne ? »</em> — sans jamais accorder un droit ni prendre une décision métier.</p>
+<p><strong>Verdict :</strong> fondation saine, alignée sur les conventions du Wallet Engine (registre déclaratif + moteur transactionnel + journal append-only + routes HTTP bornées). Architecture miroir, faible couplage, zéro dépendance vers les organes métier.</p>
+<p><strong>Évolution conceptuelle actée :</strong> l'organe s'appelle <strong>Identity Engine</strong> ; le <strong>QR n'est qu'un canal de présentation</strong> (le premier, en V1). Le handle opaque produit par le serveur est neutre vis-à-vis du transport.</p>
+<hr />
+<h2>Philosophie respectée</h2>
+<table>
+<thead>
+<tr>
+<th>Principe</th>
+<th>Implémentation</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Identifie uniquement</td>
+<td><code>verifyPresentation</code> retourne une revendication minimale, jamais un droit</td>
+</tr>
+<tr>
+<td>Ne décide jamais</td>
+<td>Aucun appel vers Wallet, Orders, Event, Marketing…</td>
+</tr>
+<tr>
+<td>Organe transversal</td>
+<td>Consommé par les autres ; dépend uniquement de <code>users</code> + <code>auth</code></td>
+</tr>
+<tr>
+<td>Le QR n'est pas l'organe</td>
+<td>Handle neutre côté serveur ; encodage QR au bord client (<code>IdentityScreen</code>)</td>
+</tr>
+<tr>
+<td>Simplicité V1</td>
+<td>Un seul <code>purpose: identity</code>, un seul canal (QR), aucun stub NFC/BLE</td>
+</tr>
+</tbody>
+</table>
+<hr />
+<h2>Architecture backend</h2>
+<h3>Modèle en couches</h3>
+<pre><code>Identity Engine (cœur neutre)
+├── identityRegistry.js   → purposes, TTL, rôles vérificateurs, contrat de divulgation
+├── identityEngine.js     → issue / verify / revokeAll, ledger, socket
+└── routes/identity.js    → GET /token, POST /verify, GET /history
+
+Bord client (canal de présentation)
+└── IdentityScreen.js     → encode le handle en QR (react-native-qrcode-svg)
+</code></pre>
+<h3>Fichiers créés</h3>
+<table>
+<thead>
+<tr>
+<th>Fichier</th>
+<th>Rôle</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>backend/src/lib/identityRegistry.js</code></td>
+<td>Registre des <code>purposes</code> ; contrat de divulgation ; validation fail-fast</td>
+</tr>
+<tr>
+<td><code>backend/src/lib/identityEngine.js</code></td>
+<td>Moteur transactionnel ; handle opaque ; revendication bornée</td>
+</tr>
+<tr>
+<td><code>backend/src/routes/identity.js</code></td>
+<td>Routes HTTP montées sous <code>/api/identity</code></td>
+</tr>
+<tr>
+<td><code>backend/src/db/index.js</code></td>
+<td>Tables <code>identity_presentations</code> + <code>identity_events</code> (modifié)</td>
+</tr>
+<tr>
+<td><code>backend/src/index.js</code></td>
+<td>Montage <code>app.use('/api/identity', identityRoutes)</code> (modifié)</td>
+</tr>
+</tbody>
+</table>
+<h3>Modèle de données</h3>
+<p><strong><code>identity_presentations</code></strong> — projection d'état courant</p>
+<table>
+<thead>
+<tr>
+<th>Colonne</th>
+<th>Rôle</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>id</code></td>
+<td>Identifiant du jeton</td>
+</tr>
+<tr>
+<td><code>user_id</code></td>
+<td>Citoyen propriétaire</td>
+</tr>
+<tr>
+<td><code>handle</code></td>
+<td>Valeur opaque (<code>mz:id:…</code>) — canal-agnostique</td>
+</tr>
+<tr>
+<td><code>purpose</code></td>
+<td>Usage (<code>identity</code> en V1)</td>
+</tr>
+<tr>
+<td><code>status</code></td>
+<td><code>active</code> · <code>used</code> · <code>expired</code> · <code>revoked</code></td>
+</tr>
+<tr>
+<td><code>expires_at</code></td>
+<td>TTL court (120 s par défaut)</td>
+</tr>
+</tbody>
+</table>
+<p><strong><code>identity_events</code></strong> — journal append-only (audit)</p>
+<table>
+<thead>
+<tr>
+<th>Colonne</th>
+<th>Rôle</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>presentation_id</code>, <code>subject_id</code>, <code>verifier_id</code>, <code>verifier_role</code></td>
+<td>Traçabilité</td>
+</tr>
+<tr>
+<td><code>purpose</code>, <code>channel</code></td>
+<td>Contexte (<code>channel</code> = audit, défaut <code>qr</code>)</td>
+</tr>
+<tr>
+<td><code>type</code></td>
+<td><code>issued</code> · <code>validated</code> · <code>rejected</code> · <code>revoked</code></td>
+</tr>
+<tr>
+<td><code>outcome</code>, <code>reason</code>, <code>idempotency_key</code></td>
+<td>Résultat et anti-rejeu</td>
+</tr>
+</tbody>
+</table>
+<h3>API publique du moteur (in-process)</h3>
+<p><strong>Commandes :</strong></p>
+<table>
+<thead>
+<tr>
+<th>Fonction</th>
+<th>Rôle</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>issuePresentation({ userId, purpose })</code></td>
+<td>Émet un handle rotatif ; expire le jeton actif précédent</td>
+</tr>
+<tr>
+<td><code>verifyPresentation({ handle, verifierId, verifierRole, purpose, channel, idempotencyKey })</code></td>
+<td>Valide ou rejette ; retourne revendication</td>
+</tr>
+<tr>
+<td><code>revokeAll({ userId, reason })</code></td>
+<td>Invalide tous les jetons actifs (logout, incident)</td>
+</tr>
+</tbody>
+</table>
+<p><strong>Requêtes :</strong></p>
+<table>
+<thead>
+<tr>
+<th>Fonction</th>
+<th>Rôle</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>getActivePresentation(userId, purpose?)</code></td>
+<td>Jeton actif courant</td>
+</tr>
+<tr>
+<td><code>getVerificationHistory(userId)</code></td>
+<td>Historique des identifications réussies</td>
+</tr>
+</tbody>
+</table>
+<h3>Routes HTTP</h3>
+<table>
+<thead>
+<tr>
+<th>Méthode</th>
+<th>Route</th>
+<th>Auth</th>
+<th>Rôle</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>GET</code></td>
+<td><code>/api/identity/token</code></td>
+<td><code>verifyToken</code></td>
+<td>Citoyen — obtient un handle frais</td>
+</tr>
+<tr>
+<td><code>POST</code></td>
+<td><code>/api/identity/verify</code></td>
+<td><code>verifyToken</code> + rôle vérificateur</td>
+<td>Résout une identité à partir d'un handle</td>
+</tr>
+<tr>
+<td><code>GET</code></td>
+<td><code>/api/identity/history</code></td>
+<td><code>verifyToken</code></td>
+<td>Citoyen — historique de ses vérifications</td>
+</tr>
+</tbody>
+</table>
+<p><code>revokeAll</code> n'est <strong>pas</strong> exposé en HTTP : primitive interne (déconnexion / incident).</p>
+<h3>Sécurité (Approche C)</h3>
+<ul>
+<li><strong>Handle opaque</strong> : <code>mz:id:</code> + 48 octets aléatoires (<code>crypto.randomBytes</code>) — aucun secret dans le QR</li>
+<li><strong>Usage unique</strong> : un jeton consommé passe en <code>used</code></li>
+<li><strong>TTL court</strong> : 120 s ; rotation automatique toutes les 45 s côté client</li>
+<li><strong>Idempotence</strong> : <code>idempotency_key</code> sur scan — rejouer ne double pas l'effet</li>
+<li><strong>Divulgation minimale</strong> : seuls <code>displayName</code> et <code>photoUrl</code> exposés ; jamais email, rôle, ni identifiant technique au-delà de <code>subjectId</code></li>
+<li><strong>Rôles vérificateurs</strong> : <code>merchant</code> et <code>driver</code> pour <code>purpose: identity</code> ; <code>client</code> rejeté (403)</li>
+<li><strong>Contrat fail-fast</strong> : allowlist de divulgation validée au chargement du registre</li>
+</ul>
+<h3>Revendication d'identité vérifiée</h3>
+<pre><code class="language-json">{
+  &quot;subjectId&quot;: &quot;uuid-utilisateur&quot;,
+  &quot;displayName&quot;: &quot;Marie&quot;,
+  &quot;photoUrl&quot;: &quot;/uploads/...&quot;,
+  &quot;purpose&quot;: &quot;identity&quot;,
+  &quot;verifiedAt&quot;: &quot;2026-07-15T10:30:00Z&quot;,
+  &quot;verificationId&quot;: &quot;uuid-evenement-audit&quot;
+}
+</code></pre>
+<p>Pas de liste de billets. Pas de « accès autorisé ».</p>
+<h3>Événements Socket.io</h3>
+<table>
+<thead>
+<tr>
+<th>Événement</th>
+<th>Cible</th>
+<th>Quand</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>identity:verified</code></td>
+<td><code>user_{subjectId}</code></td>
+<td>Scan réussi (notification citoyen)</td>
+</tr>
+<tr>
+<td><code>identity:revoked</code></td>
+<td><code>user_{userId}</code></td>
+<td>Tous les jetons invalidés</td>
+</tr>
+</tbody>
+</table>
+<hr />
+<h2>Architecture mobile</h2>
+<h3>Fichiers créés / modifiés</h3>
+<table>
+<thead>
+<tr>
+<th>Fichier</th>
+<th>Nature</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>mobile/src/screens/client/IdentityScreen.js</code></td>
+<td>Écran plein écran : avatar, nom, QR rotatif</td>
+</tr>
+<tr>
+<td><code>mobile/src/api/index.js</code></td>
+<td><code>getIdentityToken</code>, <code>verifyIdentity</code>, <code>getIdentityHistory</code></td>
+</tr>
+<tr>
+<td><code>mobile/src/navigation/index.js</code></td>
+<td>Stack racine <code>ClientRoot</code> + modal <code>Identity</code> plein écran</td>
+</tr>
+<tr>
+<td><code>mobile/src/components/client/ClientDrawerContent.js</code></td>
+<td>Pictogramme QR à côté de l'avatar (menu hamburger)</td>
+</tr>
+<tr>
+<td><code>mobile/package.json</code></td>
+<td><code>react-native-svg</code>, <code>react-native-qrcode-svg</code> (via <code>expo install</code>)</td>
+</tr>
+</tbody>
+</table>
+<h3>Parcours utilisateur</h3>
+<ol>
+<li>L'utilisateur ouvre le <strong>menu hamburger</strong> (drawer).</li>
+<li>En haut : photo de profil + <strong>petit bouton QR</strong> (badge accent à côté de l'avatar).</li>
+<li>Un clic ouvre <strong>Mon identité</strong> en plein écran (modal).</li>
+<li>L'écran affiche avatar, nom, et un <strong>QR du handle</strong> qui se renouvelle automatiquement.</li>
+<li>Fermeture par chevron en haut.</li>
+</ol>
+<p>L'emplacement définitif dans la navigation globale pourra évoluer lors du chantier UX « Double Identité » ; la racine <code>ClientRoot</code> permet d'ouvrir l'identité depuis n'importe où.</p>
+<h3>Dépendances ajoutées</h3>
+<table>
+<thead>
+<tr>
+<th>Package</th>
+<th>Usage</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>react-native-svg</code></td>
+<td>Rendu SVG (requis par qrcode-svg)</td>
+</tr>
+<tr>
+<td><code>react-native-qrcode-svg</code></td>
+<td>Affichage du QR du handle</td>
+</tr>
+</tbody>
+</table>
+<p>Installées via <code>npx expo install</code> — compatibles Expo Go, sans rebuild natif.</p>
+<hr />
+<h2>Communication avec les autres organes</h2>
+<pre><code>Citoyen → GET /identity/token → handle
+         → IdentityScreen encode en QR
+
+Vérificateur (futur) → POST /identity/verify → revendication
+
+Organe métier (Event, Orders…) → applique SA logique
+                              → wallet.consumeObject(...) si pertinent
+</code></pre>
+<p>L'Identity Engine n'a participé qu'à l'identification. Il ignore billets, commandes et décisions.</p>
+<hr />
+<h2>Vérifications effectuées</h2>
+<table>
+<thead>
+<tr>
+<th>Vérification</th>
+<th>Résultat</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Lints (backend + mobile)</td>
+<td>Aucune erreur</td>
+</tr>
+<tr>
+<td>Tables DB au boot</td>
+<td>Créées automatiquement</td>
+</tr>
+<tr>
+<td>Registre fail-fast</td>
+<td>Contrat de divulgation validé</td>
+</tr>
+<tr>
+<td><code>issuePresentation</code></td>
+<td>Handle <code>mz:id:…</code>, TTL/rotate présents</td>
+</tr>
+<tr>
+<td>Rotation</td>
+<td>Un seul jeton actif ; handle différent à chaque émission</td>
+</tr>
+<tr>
+<td><code>verifyPresentation</code></td>
+<td>Revendication correcte ; pas d'email/rôle</td>
+</tr>
+<tr>
+<td>Usage unique</td>
+<td>Handle déjà utilisé → 409</td>
+</tr>
+<tr>
+<td>Idempotence</td>
+<td>Même <code>idempotencyKey</code> → même revendication, un seul événement</td>
+</tr>
+<tr>
+<td>Rôle non autorisé</td>
+<td>Client → 403</td>
+</tr>
+<tr>
+<td>Handle inconnu</td>
+<td>404</td>
+</tr>
+<tr>
+<td>Jeton expiré</td>
+<td>409</td>
+</tr>
+<tr>
+<td><code>revokeAll</code></td>
+<td>Tous les actifs révoqués</td>
+</tr>
+<tr>
+<td>Historique</td>
+<td>Validations listées, sans données sensibles</td>
+</tr>
+<tr>
+<td>Boot serveur</td>
+<td>Healthcheck OK sur port isolé</td>
+</tr>
+</tbody>
+</table>
+<p><strong>21 assertions</strong> — toutes passent.</p>
+<hr />
+<h2>Décisions architecturales (ADR) — statut</h2>
+<table>
+<thead>
+<tr>
+<th>ID</th>
+<th>Décision</th>
+<th>Statut</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>ADR-ID-001</td>
+<td>Identifie uniquement ; jamais de décision métier</td>
+<td>Implémenté</td>
+</tr>
+<tr>
+<td>ADR-ID-002</td>
+<td>Handle opaque + validation serveur (Approche C)</td>
+<td>Implémenté</td>
+</tr>
+<tr>
+<td>ADR-ID-003</td>
+<td>Architecture miroir du Wallet</td>
+<td>Implémenté</td>
+</tr>
+<tr>
+<td>ADR-ID-004</td>
+<td>V1 = identité personnelle ; objet Wallet = extension</td>
+<td>Respecté</td>
+</tr>
+<tr>
+<td>ADR-ID-005</td>
+<td>Contrat de divulgation, fail-fast au chargement</td>
+<td>Implémenté</td>
+</tr>
+<tr>
+<td>ADR-ID-006</td>
+<td>Zéro dépendance vers organes métier</td>
+<td>Respecté</td>
+</tr>
+<tr>
+<td>ADR-ID-007</td>
+<td>Mode hors-ligne préparé, non développé</td>
+<td>Respecté</td>
+</tr>
+<tr>
+<td>ADR-ID-008</td>
+<td>Identity Engine ; QR = canal</td>
+<td>Implémenté</td>
+</tr>
+<tr>
+<td>ADR-ID-009</td>
+<td>Champ <code>channel</code> (audit) ; présentation au bord</td>
+<td>Implémenté</td>
+</tr>
+</tbody>
+</table>
+<hr />
+<h2>Volontairement hors périmètre V1</h2>
+<table>
+<thead>
+<tr>
+<th>Élément</th>
+<th>État</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Scanner vérificateur (app marchand)</td>
+<td>Endpoint <code>POST /verify</code> prêt ; UI non construite</td>
+</tr>
+<tr>
+<td>Branchement Orders / Event (retrait, accès)</td>
+<td>À la demande des organes métier</td>
+</tr>
+<tr>
+<td>Canaux NFC, Apple/Google Wallet, BLE</td>
+<td>Architecture ouverte ; aucun code</td>
+</tr>
+<tr>
+<td><code>revokeAll</code> au logout</td>
+<td>Primitive prête ; branchement auth à faire</td>
+</tr>
+<tr>
+<td>Purposes multiples (<code>access</code>, <code>pickup</code>, <code>civic</code>)</td>
+<td>Registre extensible ; un seul purpose en V1</td>
+</tr>
+<tr>
+<td>IdentityContext + socket temps réel</td>
+<td>Événements définis ; context optionnel non ajouté</td>
+</tr>
+</tbody>
+</table>
+<hr />
+<h2>Correspondance Wallet ↔ Identity</h2>
+<table>
+<thead>
+<tr>
+<th>Wallet</th>
+<th>Identity</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>walletRegistry.js</code> / <code>defineKind</code></td>
+<td><code>identityRegistry.js</code> / <code>definePurpose</code></td>
+</tr>
+<tr>
+<td><code>walletEngine.js</code></td>
+<td><code>identityEngine.js</code></td>
+</tr>
+<tr>
+<td><code>digital_objects</code> + <code>digital_object_events</code></td>
+<td><code>identity_presentations</code> + <code>identity_events</code></td>
+</tr>
+<tr>
+<td><code>issueObject</code></td>
+<td><code>issuePresentation</code></td>
+</tr>
+<tr>
+<td><code>consumeObject</code></td>
+<td><code>verifyPresentation</code> (identifie, ne consomme pas)</td>
+</tr>
+<tr>
+<td>Contrat capabilities (ADR-005)</td>
+<td>Contrat de divulgation</td>
+</tr>
+<tr>
+<td><code>show_qr</code> (objet Wallet)</td>
+<td>Canal QR identité personnelle (distinct)</td>
+</tr>
+</tbody>
+</table>
+<hr />
+<h2>Prochaines étapes suggérées</h2>
+<ol>
+<li>Brancher <code>revokeAll</code> sur le logout (<code>auth</code> / <code>AppContext</code>).</li>
+<li>Construire l'app vérificatrice marchand (scan + <code>POST /verify</code>) lors de l'intégration Orders ou Event.</li>
+<li>Premier cas d'usage réel : retrait Click &amp; Collect (Orders identifie via Identity, consomme via Wallet).</li>
+<li>Documenter le contrat d'intégration pour les futurs organes.</li>
+</ol>
+<hr />
+<h2>Conclusion</h2>
+<p>L'Identity Engine v1 constitue une <strong>fondation d'identité numérique</strong> minimaliste, robuste et évolutive. Le QR est le premier canal ; le cœur reste neutre. Aucune sur-ingénierie, aucune régression, alignement total avec la philosophie Ma Zone et le Wallet Engine.</p>
+</body>
+</html>
