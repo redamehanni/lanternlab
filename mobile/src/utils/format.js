@@ -27,3 +27,18 @@ export function imageUrl(pathOrUrl) {
   if (pathOrUrl.startsWith('http')) return pathOrUrl;
   return `${API_URL}${pathOrUrl}`;
 }
+
+// Date/horodatage → "à l'instant" / "il y a 2 h" / "il y a 3 j"
+export function timeAgo(value) {
+  if (!value) return '';
+  const then = new Date(String(value).replace(' ', 'T'));
+  const ms = Date.now() - then.getTime();
+  if (isNaN(ms)) return '';
+  if (ms < 60 * 1000) return 'à l\u2019instant';
+  const min = Math.floor(ms / (60 * 1000));
+  if (min < 60) return `il y a ${min} min`;
+  const h = Math.floor(min / 60);
+  if (h < 24) return `il y a ${h} h`;
+  const j = Math.floor(h / 24);
+  return `il y a ${j} j`;
+}

@@ -177,6 +177,7 @@ function LabPowers({ actor, onError }) {
   const [actionId, setActionId] = useState('');
   const [params, setParams] = useState({});
   const [notice, setNotice] = useState('');
+  const [result, setResult] = useState(null);
   const [busy, setBusy] = useState(false);
 
   useEffect(() => {
@@ -187,24 +188,39 @@ function LabPowers({ actor, onError }) {
 
   const current = actions.find((a) => a.id === actionId);
 
+  function defaultFor(def) {
+    if (def.type === 'enum') return def.options?.[0]?.value || '';
+    if (def.type === 'boolean') return false;
+    if (def.type === 'multi') return [];
+    return '';
+  }
+
   function selectAction(id) {
     setActionId(id);
     const a = actions.find((x) => x.id === id);
     const init = {};
-    Object.entries(a?.params || {}).forEach(([k, def]) => {
-      init[k] = def.type === 'enum' ? (def.options?.[0]?.value || '') : '';
-    });
+    Object.entries(a?.params || {}).forEach(([k, def]) => { init[k] = defaultFor(def); });
     setParams(init);
     setNotice('');
+    setResult(null);
+  }
+
+  function toggleMulti(key, value) {
+    setParams((p) => {
+      const list = Array.isArray(p[key]) ? p[key] : [];
+      return { ...p, [key]: list.includes(value) ? list.filter((v) => v !== value) : [...list, value] };
+    });
   }
 
   async function run() {
     setBusy(true);
     setNotice('');
+    setResult(null);
     onError('');
     try {
       const res = await api.runLabAction(actionId, actor.id, params);
       setNotice(`Action exécutée via l'organe « ${res.organ} ».`);
+      setResult(res.result ?? null);
     } catch (err) {
       onError(err.message);
     } finally {
@@ -212,12 +228,24 @@ function LabPowers({ actor, onError }) {
     }
   }
 
+  // Identifiants utiles renvoyés (ex. eventId pour enchaîner publier/diffuser).
+  const resultId = result && (result.id || result.event?.id || result.ticket?.id || result.reward?.id);
+
   return (
     <div className="card">
       <h3>Pouvoirs du labo</h3>
       <div className="desc">Chaque action passe par un organe réel de Ma Zone. Aucune écriture directe.</div>
 
       {notice ? <div className="notice" style={{ marginBottom: 12 }}>{notice}</div> : null}
+      {result ? (
+        <div className="notice" style={{ marginBottom: 12 }}>
+          {resultId ? <div><strong>id :</strong> <code>{resultId}</code></div> : null}
+          <details style={{ marginTop: 6 }}>
+            <summary style={{ cursor: 'pointer' }}>Résultat complet</summary>
+            <pre style={{ whiteSpace: 'pre-wrap', fontSize: 12, marginTop: 6 }}>{JSON.stringify(result, null, 2)}</pre>
+          </details>
+        </div>
+      ) : null}
 
       <div className="field">
         <label>Action</label>
@@ -238,9 +266,32 @@ function LabPowers({ actor, onError }) {
                 <option key={o.value} value={o.value}>{o.label}</option>
               ))}
             </select>
+          ) : def.type === 'boolean' ? (
+            <label className="row" style={{ gap: 8, cursor: 'pointer' }}>
+              <input
+                type="checkbox"
+                checked={!!params[key]}
+                onChange={(e) => setParams((p) => ({ ...p, [key]: e.target.checked }))}
+              />
+              <span className="muted" style={{ fontSize: 13 }}>Oui</span>
+            </label>
+          ) : def.type === 'multi' ? (
+            <div className="grid" style={{ gap: 4 }}>
+              {(def.options || []).map((o) => (
+                <label key={o.value} className="row" style={{ gap: 8, cursor: 'pointer' }}>
+                  <input
+                    type="checkbox"
+                    checked={Array.isArray(params[key]) && params[key].includes(o.value)}
+                    onChange={() => toggleMulti(key, o.value)}
+                  />
+                  <span style={{ fontSize: 13 }}>{o.label}</span>
+                </label>
+              ))}
+            </div>
           ) : (
             <input
-              value={params[key] || ''}
+              type={def.type === 'number' ? 'number' : 'text'}
+              value={params[key] ?? ''}
               onChange={(e) => setParams((p) => ({ ...p, [key]: e.target.value }))}
             />
           )}

@@ -1,0 +1,468 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Plan d'architecture — Event Engine (cœur vivant de Ma Zone)</title>
+<style>
+  @page { margin: 16mm 14mm; }
+  body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Helvetica, Arial, sans-serif; font-size: 10.5pt; line-height: 1.45; color: #1a1a1a; max-width: 100%; }
+  h1 { font-size: 20pt; border-bottom: 2px solid #0f2d5c; padding-bottom: 8px; color: #0f2d5c; page-break-after: avoid; }
+  h2 { font-size: 14pt; margin-top: 22px; color: #0f2d5c; border-bottom: 1px solid #e5e7eb; padding-bottom: 4px; page-break-after: avoid; }
+  h3 { font-size: 11.5pt; margin-top: 14px; color: #1a4a8a; page-break-after: avoid; }
+  table { border-collapse: collapse; width: 100%; margin: 10px 0; font-size: 9pt; page-break-inside: avoid; }
+  th, td { border: 1px solid #d1d5db; padding: 5px 7px; text-align: left; vertical-align: top; }
+  th { background: #f3f4f6; font-weight: 600; }
+  code { background: #f3f4f6; padding: 1px 4px; border-radius: 3px; font-size: 8.5pt; }
+  pre { background: #f8fafc; border: 1px solid #e5e7eb; border-radius: 6px; padding: 10px; overflow-x: auto; font-size: 8pt; line-height: 1.35; white-space: pre-wrap; word-break: break-word; page-break-inside: avoid; }
+  pre code { background: none; padding: 0; }
+  blockquote { border-left: 4px solid #0f2d5c; margin: 10px 0; padding: 6px 14px; background: #f0f4f8; color: #1e3a5f; }
+  hr { border: none; border-top: 1px solid #e5e7eb; margin: 18px 0; }
+  ul, ol { padding-left: 22px; }
+  li { margin-bottom: 3px; }
+  p { margin: 8px 0; }
+  .pdf-note { display: none; }
+  @media screen {
+    .pdf-note { display: block; background: #eff6ff; border: 1px solid #bfdbfe; border-radius: 8px; padding: 12px 16px; margin-bottom: 24px; color: #1e3a8a; }
+  }
+</style>
+</head>
+<body>
+<div class="pdf-note">
+  <strong>Lecture dans Cursor / navigateur :</strong> ce fichier HTML est la version lisible du plan.
+  Pour le PDF, ouvrez <code>PLAN_EVENT_ENGINE.pdf</code> depuis le Finder (clic droit → Ouvrir avec Aperçu)
+  ou double-cliquez le fichier <code>Ouvrir_*_PDF.command</code> correspondant à la racine du projet.
+</div>
+<h1>Plan d'architecture — Event Engine (cœur vivant de Ma Zone)</h1>
+<p><strong>Date :</strong> 21 juillet 2026<br />
+<strong>Statut :</strong> Plan d'architecture — <strong>aucune implémentation exécutée</strong><br />
+<strong>Références :</strong> Vision Deuxième Âme · Wallet Engine · Identity Engine · Épée · Laboratoire<br />
+<strong>Public :</strong> Architectes Ma Zone<br />
+<strong>Révision :</strong> formulations produit alignées (philosophie « produire la vie locale ») — architecture inchangée</p>
+<hr />
+<h2>Document de référence</h2>
+<table>
+<thead>
+<tr>
+<th>Format</th>
+<th>Fichier</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><strong>PDF</strong></td>
+<td><code>PLAN_EVENT_ENGINE.pdf</code></td>
+</tr>
+<tr>
+<td>HTML</td>
+<td><code>PLAN_EVENT_ENGINE.html</code></td>
+</tr>
+<tr>
+<td>Markdown</td>
+<td><code>PLAN_EVENT_ENGINE.md</code></td>
+</tr>
+</tbody>
+</table>
+<hr />
+<h2>Décisions d'architecture validées</h2>
+<ol>
+<li><strong>Nature :</strong> moteur d'<strong>OCCURRENCES</strong> (pas un bus technique universel qui refondrait Orders/sockets).</li>
+<li><strong>Portée :</strong> architecture <strong>conceptuelle complète</strong>, implémentation ensuite <strong>par phases</strong>.</li>
+</ol>
+<hr />
+<h2>Vision produit (philosophie)</h2>
+<p>Ma Zone <strong>n'est pas</strong> un agenda de quartier, ni un catalogue de ce qui existe déjà, ni un panneau d'affichage.</p>
+<p>La mission première : donner aux acteurs d'une ville (commerçants, associations, artistes, créateurs, citoyens, collectivités…) les moyens de <strong>créer davantage de vie locale</strong>.</p>
+<p>Une grande partie des événements présents dans Ma Zone <strong>n'existeraient jamais sans Ma Zone</strong>.</p>
+<table>
+<thead>
+<tr>
+<th>Ce que ce n'est pas</th>
+<th>Ce que c'est</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Un moteur qui <strong>observe</strong> la ville</td>
+<td>Un moteur qui aide la ville à <strong>produire</strong> davantage d'initiatives</td>
+</tr>
+<tr>
+<td>Le <strong>miroir</strong> de la ville</td>
+<td>Le <strong>moteur</strong> qui aide la ville à devenir plus vivante</td>
+</tr>
+<tr>
+<td>Un agrégateur / afficheur</td>
+<td>Un accompagnateur du <strong>cycle de vie complet</strong> d'une initiative</td>
+</tr>
+</tbody>
+</table>
+<p>L'Event Engine intervient <strong>dès la création</strong> (brouillon inclus) : un commerçant ouvre l'Épée et crée une dégustation ; une association crée une collecte ; un artiste une rencontre ; un citoyen une balade ; une mairie un événement. Ces initiatives <strong>naissent grâce aux outils Ma Zone</strong>.</p>
+<hr />
+<h2>Résumé exécutif</h2>
+<p>L'Event Engine est un <strong>organe</strong> générique, robuste et évolutif : le <strong>cœur vivant</strong> de Ma Zone.</p>
+<ul>
+<li>Un <strong>Événement</strong> = une <strong>initiative locale</strong> portée par un acteur, accompagnée sur <strong>tout son cycle de vie</strong> (du brouillon à l'archivage). Le « fait qui a lieu » n'est qu'<strong>une phase</strong>, pas la définition.</li>
+<li>Une <strong>Opportunité Volante</strong> n'est <strong>pas</strong> un type d'événement : c'est une <strong>stratégie de diffusion</strong> d'un événement.</li>
+<li>La <strong>Deuxième Âme</strong> est une surface de <strong>découverte, participation, rencontre et engagement</strong> — et, à terme, une porte vers la <strong>création</strong> d'initiatives par les habitants. Elle consomme l'organe (projections) ; elle n'est <strong>pas</strong> un simple panneau d'affichage.</li>
+<li>L'Engine <strong>orchestre</strong> Wallet, Identity, Communication — il ne réimplémente jamais leur logique.</li>
+<li>On <strong>ne refond pas</strong> le cœur stable de la Marketplace (commandes, dispatch, sockets existants).</li>
+</ul>
+<hr />
+<h2>Principe directeur</h2>
+<p>Mêmes règles que Wallet et Identity :</p>
+<table>
+<thead>
+<tr>
+<th>Principe</th>
+<th>Application</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Organe ≠ surface</td>
+<td>Le cœur ne contient aucune UI</td>
+</tr>
+<tr>
+<td>Registre Open/Closed</td>
+<td>Nouveau type = une déclaration, sans toucher au cœur</td>
+</tr>
+<tr>
+<td>Payload opaque + <code>display</code> séparé</td>
+<td>Comme ADR-002 du Wallet</td>
+</tr>
+<tr>
+<td>Journal append-only</td>
+<td>Biographie + audit de chaque transition</td>
+</tr>
+<tr>
+<td>Orchestration</td>
+<td>Billet → Wallet ; scan → Identity ; chat → Communication</td>
+</tr>
+<tr>
+<td>Provenance démo</td>
+<td>Tag <code>demo_entities</code> (<code>entity_type = event</code>) pour reset World Factory</td>
+</tr>
+</tbody>
+</table>
+<hr />
+<h2>Vue d'ensemble</h2>
+<pre><code>Sources / Producteurs  (créent les initiatives grâce à Ma Zone)
+  Commerçant (Épée) · Admin / Lab · Système / Organes · Assoc / Artiste / Citoyen (futur)
+        │
+        ▼
+┌─────────────────────────────────────────────────────────┐
+│  EVENT ENGINE (organe)                                  │
+│  Accompagne le cycle de vie des initiatives locales     │
+│  eventRegistry (types + canaux)                         │
+│  Core: create / publish / transition / query            │
+│  lifecycle + event_journal (append-only)                 │
+│  diffusion (Opportunités Volantes + abonnements)        │
+│  hook interne emit/subscribe                            │
+└───────────────┬─────────────────────┬───────────────────┘
+                │ orchestre           │ projections + actions
+                ▼                     ▼
+     Wallet · Identity · Comm    Deuxième Âme · Marketplace
+                                 (découvrir, participer, s'engager ;
+                                  à terme : créer)
+                                 Notifications / Stats / IA
+</code></pre>
+<hr />
+<h2>1. Modèle canonique — l'Événement (initiative / occurrence)</h2>
+<p><strong>Définition produit :</strong> un Événement est une <strong>initiative locale</strong> créée et portée dans Ma Zone. Elle existe dès qu'elle est en <strong>brouillon</strong> — elle n'a pas encore « lieu », et pourtant elle est déjà une entité du moteur.</p>
+<p><strong>Définition technique :</strong> entité persistante de premier ordre, produite par une source, adressée à une audience, située (quand pertinent) dans le temps et l'espace, avec un <strong>cycle de vie complet</strong>.</p>
+<p>L'Event Engine n'est pas un observateur de faits urbains : c'est le moteur qui <strong>accompagne</strong> ces initiatives de la création à l'archivage (y compris diffusion et participation comme dimensions du parcours).</p>
+<h3>Table <code>events</code> (proposée)</h3>
+<table>
+<thead>
+<tr>
+<th>Groupe</th>
+<th>Champs</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Identité</td>
+<td><code>id</code>, <code>type</code> (registre), <code>status</code> (cycle de vie)</td>
+</tr>
+<tr>
+<td>Source</td>
+<td><code>source_kind</code> (merchant, admin, driver, association, artist, citizen, system, ai), <code>source_id</code></td>
+</tr>
+<tr>
+<td>Contenu</td>
+<td><code>title</code>, <code>summary</code>, <code>body</code>, <code>media</code>, <code>display</code> (JSON), <code>payload</code> (JSON opaque)</td>
+</tr>
+<tr>
+<td>Temps</td>
+<td><code>starts_at</code>, <code>ends_at</code>, <code>timezone</code>, <code>recurrence</code> (réservé)</td>
+</tr>
+<tr>
+<td>Espace</td>
+<td><code>lat</code>, <code>lng</code>, <code>zone_id</code>, <code>address</code>, <code>geo_precision</code> (exact / approx)</td>
+</tr>
+<tr>
+<td>Audience</td>
+<td><code>visibility</code> (public | targeted), <code>capacity</code>, <code>channels</code></td>
+</tr>
+<tr>
+<td>Liens</td>
+<td><code>store_id</code>, <code>product_id</code>, <code>parent_event_id</code>, <code>source_ref</code></td>
+</tr>
+<tr>
+<td>Provenance</td>
+<td>tag <code>demo_entities</code></td>
+</tr>
+<tr>
+<td>Horodatage</td>
+<td><code>created_at</code>, <code>updated_at</code></td>
+</tr>
+</tbody>
+</table>
+<h3>Table <code>event_journal</code> (append-only)</h3>
+<p><code>id</code>, <code>event_id</code>, <code>type</code>, <code>from_status</code>, <code>to_status</code>, <code>actor</code>, <code>payload</code>, <code>idempotency_key</code>, <code>created_at</code><br />
+Biographie auditable, calquée sur <code>digital_object_events</code> du Wallet.</p>
+<hr />
+<h2>2. Registre de types (Open/Closed)</h2>
+<p><code>eventRegistry.defineEventType({...})</code> — même patron que <code>defineKind</code> (Wallet) et <code>defineRecipe</code> (World Factory).</p>
+<p>Chaque type déclare :</p>
+<ul>
+<li><code>id</code> — ex. <code>concert</code>, <code>degustation</code>, <code>atelier</code>, <code>ouverture</code>, <code>expo</code>, <code>collecte</code>, <code>promo</code>, <code>lanterne</code>, <code>murmure</code>, <code>visite</code>, <code>performance</code></li>
+<li><code>defaultChannels</code> — canaux de diffusion par défaut</li>
+<li><code>capabilities</code> — <code>canTicket</code>, <code>canRSVP</code>, <code>isLantern</code>, <code>isMurmur</code>, <code>hasCapacity</code>, <code>isFlyable</code></li>
+<li><code>lifecycle</code> — statuts + transitions (fail-fast)</li>
+<li><code>requiredPayload</code> — validation minimale</li>
+<li><code>display()</code> — projection d'affichage (le cœur n'interprète jamais le payload)</li>
+</ul>
+<p><strong>Ajouter un futur type = déclarer ici, sans toucher au cœur.</strong></p>
+<hr />
+<h2>3. Cycle de vie</h2>
+<p>Le moteur accompagne l'initiative <strong>sur tout son parcours</strong>. Lecture produit du parcours :</p>
+<pre><code>brouillon → planification → publication → (diffusion) → (participation)
+  → déroulement → clôture → archivage
+</code></pre>
+<ul>
+<li><strong>Diffusion</strong> et <strong>participation</strong> sont des <strong>dimensions du parcours</strong> (couche diffusion, plus tard <code>event_participations</code>) — pas forcément de nouveaux <code>status</code> techniques.</li>
+<li>Les <strong>statuts techniques</strong> restent génériques et inchangés :</li>
+</ul>
+<pre><code>draft → scheduled → published → live → ended → archived
+  └─────────────── cancelled (depuis draft / scheduled / published / live)
+</code></pre>
+<p>Correspondance indicative : brouillon↔<code>draft</code>, planification↔<code>scheduled</code>, publication↔<code>published</code>, déroulement↔<code>live</code>, clôture↔<code>ended</code>, archivage↔<code>archived</code>.</p>
+<p>Exemple Lanterne (spécialisation) : <code>hidden → active → discovered → retired</code><br />
+(<code>discovered</code> = scan Identity → récompense Wallet).<br />
+Chaque transition écrit au journal.</p>
+<hr />
+<h2>4. Couche de diffusion (Mode Réception + Opportunités Volantes)</h2>
+<p>Distinction fondamentale :</p>
+<blockquote>
+<p>Une Opportunité Volante <strong>n'est pas</strong> un type d'événement.<br />
+C'est une <strong>stratégie de diffusion</strong> d'un événement.</p>
+</blockquote>
+<p>La diffusion ne « montre pas la ville » : elle <strong>porte les initiatives créées dans Ma Zone</strong> vers les habitants au bon moment, selon leurs canaux et leur proximité.</p>
+<table>
+<thead>
+<tr>
+<th>Concept</th>
+<th>Rôle</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><strong>Canaux</strong></td>
+<td>Catégories du Mode Réception (culture, gastronomie, solidarité, associations, artistes, créateurs, artisans, commerces, sport, famille, nature, patrimoine, vie de quartier, lanternes, opportunités rares…). Déclarés dans le registre. Ce sont des <strong>canaux de diffusion</strong>, pas de simples filtres UI.</td>
+</tr>
+<tr>
+<td><strong>Abonnements</strong> (<code>event_subscriptions</code>)</td>
+<td>Chaque habitant construit son Mode Réception (canaux + rayon géo + préférences). Pas un simple ON/OFF.</td>
+</tr>
+<tr>
+<td><strong>Diffusion passive</strong></td>
+<td>L'initiative est <em>découvrable</em> via les portes (requêtes filtrées type / canal / géo / passions) — première marche vers la participation.</td>
+</tr>
+<tr>
+<td><strong>Diffusion active = Opportunité Volante</strong></td>
+<td>Politique attachée à un événement (canaux + fenêtre temporelle + proximité + push). Côté Épée : « Créer une Campagne d'Opportunité Volante ». Table <code>event_diffusions</code> + idempotence d'envoi.</td>
+</tr>
+</tbody>
+</table>
+<hr />
+<h2>5. Sources / producteurs</h2>
+<p><strong>Intention produit :</strong> la majorité des événements du système <strong>naissent dans Ma Zone</strong>. Les acteurs ne se contentent pas de déclarer ce qui existe déjà : ils <strong>créent</strong> grâce aux outils (Épée, futurs espaces association / artiste / citoyen, Lab).</p>
+<p>Contrat technique : tout acteur authentifié avec l'entitlement adéquat peut créer les types autorisés. Matrice <strong>rôle × type</strong> extensible :</p>
+<table>
+<thead>
+<tr>
+<th>Source</th>
+<th>Exemples</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Commerçant (Épée)</td>
+<td>Ouvertures, dégustations, promos, campagnes Opportunité Volante</td>
+</tr>
+<tr>
+<td>Admin / Lab</td>
+<td>Tout type, Lanternes (curation humaine), Murmures</td>
+</tr>
+<tr>
+<td>Système / organes</td>
+<td>Projections (« nouvelle boutique », « promo ») — secondaires par rapport à la création humaine</td>
+</tr>
+<tr>
+<td>Futur</td>
+<td>Association, artiste, citoyen — même contrat</td>
+</tr>
+</tbody>
+</table>
+<hr />
+<h2>6. Surfaces (découverte, participation, engagement)</h2>
+<p>Le cœur expose des <strong>requêtes / projections</strong> et des <strong>actions</strong> (participer, s'inscrire, scanner, etc.). Les surfaces <strong>consomment</strong> l'organe ; elles ne le réimplémentent pas.</p>
+<table>
+<thead>
+<tr>
+<th>Surface</th>
+<th>Rôle</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><strong>Deuxième Âme</strong></td>
+<td>Porte d'entrée vers la vie locale : découvrir, participer, rencontrer, s'engager — et à terme <strong>créer</strong>. Les 6 portes sont des vues filtrées <strong>et</strong> des chemins vers l'action, pas un catalogue passif.</td>
+</tr>
+<tr>
+<td><strong>Murmures</strong></td>
+<td>Projection curatée et poétique qui donne envie d'agir</td>
+</tr>
+<tr>
+<td><strong>Mode Réception</strong></td>
+<td>Boîte alimentée par la diffusion active des initiatives</td>
+</tr>
+<tr>
+<td><strong>Marketplace</strong></td>
+<td>Page commerce : les initiatives du commerçant, créées notamment via l'Épée</td>
+</tr>
+</tbody>
+</table>
+<hr />
+<h2>7. Orchestration des organes existants</h2>
+<table>
+<thead>
+<tr>
+<th>Organe</th>
+<th>Rôle</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><strong>Wallet</strong></td>
+<td>Billetterie / récompenses via <code>issueObject</code> ; souvenir keepsake</td>
+</tr>
+<tr>
+<td><strong>Identity</strong></td>
+<td>Découverte Lanterne = scan vérifié</td>
+</tr>
+<tr>
+<td><strong>Communication</strong></td>
+<td>Fil organisateur ↔ participants</td>
+</tr>
+<tr>
+<td><strong>Promotions</strong></td>
+<td>Projection éventuelle en événement <code>promo</code> (sans déplacer la logique promo)</td>
+</tr>
+<tr>
+<td><strong>Épée</strong></td>
+<td>Module <code>events</code> (aujourd'hui « Bientôt ») → <strong>Créer</strong> un événement + Campagne OV — outil de production de vie locale</td>
+</tr>
+<tr>
+<td><strong>World Factory / Lab</strong></td>
+<td>Seed d'événements + action labo « publier / diffuser »</td>
+</tr>
+</tbody>
+</table>
+<hr />
+<h2>8. Hook interne (notifications / stats / IA)</h2>
+<p><code>emit(domainEvent)</code> / <code>subscribe(channel, handler)</code> — abonnés en <strong>lecture seule</strong>.<br />
+<strong>Sans</strong> réécrire les flux socket existants (commandes, missions).</p>
+<hr />
+<h2>9. Temps réel (sockets)</h2>
+<p>Nouveaux événements : <code>event:published</code>, <code>event:live</code>, <code>event:opportunity</code>, <code>event:updated</code>, <code>event:cancelled</code>.<br />
+Rooms par canal / zone / utilisateur. Réutilise Socket.io déjà en place.</p>
+<hr />
+<h2>10. Arborescence proposée</h2>
+<pre><code>backend/src/lib/eventEngine/
+├── index.js              # API publique
+├── eventRegistry.js      # defineEventType, canaux
+├── lifecycle.js          # transitions par type
+├── diffusion.js          # Opportunités Volantes + matching
+├── bus.js                # hook interne
+└── types/                # un fichier par type (auto-déclaration)
+
+backend/src/routes/events.js
+backend/src/db/index.js   # tables events, event_journal,
+                          # event_subscriptions, event_diffusions,
+                          # (plus tard) event_participations
+</code></pre>
+<hr />
+<h2>11. Roadmap incrémentale (après validation)</h2>
+<p>Chaque phase livrable et testable en headless :</p>
+<table>
+<thead>
+<tr>
+<th>Phase</th>
+<th>Contenu</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><strong>1 · Cœur</strong></td>
+<td>Tables + registre + lifecycle + API create/publish/query + 2–3 types</td>
+</tr>
+<tr>
+<td><strong>2 · Épée</strong></td>
+<td>Activer module events + écran « Créer un événement »</td>
+</tr>
+<tr>
+<td><strong>3 · Diffusion</strong></td>
+<td>Canaux + abonnements Mode Réception + Opportunités Volantes</td>
+</tr>
+<tr>
+<td><strong>4 · Orchestration</strong></td>
+<td>Billetterie/récompenses Wallet ; Lanternes Identity + Wallet</td>
+</tr>
+<tr>
+<td><strong>5 · Hook</strong></td>
+<td>Abonnés notifications / stats</td>
+</tr>
+<tr>
+<td><strong>6 · Bac à Sable</strong></td>
+<td>Recette World Factory + action labo publier/diffuser</td>
+</tr>
+<tr>
+<td><strong>7 · Deuxième Âme</strong></td>
+<td>6 portes + Murmures (chapitre suivant, hors cœur strict)</td>
+</tr>
+</tbody>
+</table>
+<hr />
+<h2>12. Principes tenus / anti-objectifs</h2>
+<p><strong>Tenus :</strong> surface vs organe · Open/Closed · journal append-only · payload opaque · idempotence de diffusion · provenance démo · sandbox Lab · cycle de vie dès le brouillon · production d'initiatives (pas observation passive).</p>
+<p><strong>Anti-objectifs :</strong>
+- ne pas faire de l'Event Engine un second moteur métier ;
+- ne pas refondre le flux commandes / sockets stable ;
+- ne pas confondre <strong>type d'événement</strong> et <strong>stratégie de diffusion</strong> ;
+- <strong>ne pas</strong> construire un agenda de quartier, un catalogue, ni un agrégateur de ce qui existe déjà ;
+- <strong>ne pas</strong> réduire la Deuxième Âme à un panneau d'affichage.</p>
+<hr />
+<h2>Phrase à retenir</h2>
+<blockquote>
+<p>Nous ne construisons pas le miroir de la ville.<br />
+Nous construisons le moteur qui aide la ville à devenir plus vivante.  </p>
+<p>La Première Âme permet d'acheter local.<br />
+La Deuxième Âme donne envie de vivre local — et d'y participer.<br />
+L'Event Engine accompagne chaque initiative, du brouillon à l'archivage.</p>
+</blockquote>
+<hr />
+<p><em>Fin du plan — architecture uniquement, aucun code. Formulations produit révisées ; structure technique inchangée.</em></p>
+</body>
+</html>

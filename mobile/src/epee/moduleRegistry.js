@@ -37,7 +37,8 @@ const MODULES = [
 
   // ── Animer ──
   { id: 'promotions', familyId: 'animer',  label: 'Promotions',        icon: 'pricetag-outline', route: 'ManagePromotions', entitlement: 'store', enabled: true },
-  { id: 'events',     familyId: 'animer',  label: 'Événements',        icon: 'calendar-outline', route: null,               entitlement: 'store', enabled: false, comingSoon: true },
+  { id: 'events',     familyId: 'animer',  label: 'Événements',        icon: 'calendar-outline', route: 'MerchantEvents',   entitlement: 'store', enabled: true },
+  { id: 'opportunities', familyId: 'animer', label: 'Opportunité Volante', icon: 'send-outline', route: 'DiffuseOpportunity', entitlement: 'store', enabled: true },
   { id: 'loyalty',    familyId: 'animer',  label: 'Fidélité',          icon: 'ribbon-outline',   route: null,               entitlement: 'store', enabled: false, comingSoon: true },
 
   // ── Réseau ──

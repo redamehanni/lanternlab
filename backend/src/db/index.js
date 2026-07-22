@@ -421,6 +421,104 @@ db.exec(`
     WHERE idempotency_key IS NOT NULL;
 `);
 
+// ── Event Engine : initiatives locales et leur cycle de vie ───────────────────
+// events        : projection d'état courant d'une initiative (lecture rapide).
+// event_journal : journal append-only (biographie + audit, immuable).
+// Le moteur aide la ville à PRODUIRE des initiatives (du brouillon à l'archivage).
+// Le `payload` est opaque ; `display` est le descripteur d'affichage séparé.
+db.exec(`
+  CREATE TABLE IF NOT EXISTS events (
+    id TEXT PRIMARY KEY,
+    type TEXT NOT NULL,
+    status TEXT NOT NULL,
+    source_kind TEXT NOT NULL,
+    source_id TEXT,
+    title TEXT NOT NULL,
+    summary TEXT,
+    body TEXT,
+    media TEXT,
+    display TEXT,
+    payload TEXT,
+    starts_at TEXT,
+    ends_at TEXT,
+    timezone TEXT,
+    lat REAL,
+    lng REAL,
+    zone_id TEXT,
+    address TEXT,
+    geo_precision TEXT,
+    visibility TEXT NOT NULL DEFAULT 'public',
+    capacity INTEGER,
+    channels TEXT,
+    store_id TEXT,
+    product_id TEXT,
+    parent_event_id TEXT,
+    source_ref TEXT,
+    created_at TEXT NOT NULL DEFAULT (datetime('now')),
+    updated_at TEXT NOT NULL DEFAULT (datetime('now'))
+  );
+
+  CREATE INDEX IF NOT EXISTS idx_events_type ON events(type);
+  CREATE INDEX IF NOT EXISTS idx_events_status ON events(status);
+  CREATE INDEX IF NOT EXISTS idx_events_source ON events(source_kind, source_id);
+  CREATE INDEX IF NOT EXISTS idx_events_store ON events(store_id);
+  CREATE INDEX IF NOT EXISTS idx_events_zone ON events(zone_id);
+
+  CREATE TABLE IF NOT EXISTS event_journal (
+    id TEXT PRIMARY KEY,
+    event_id TEXT NOT NULL REFERENCES events(id),
+    type TEXT NOT NULL,
+    from_status TEXT,
+    to_status TEXT,
+    actor TEXT,
+    payload TEXT,
+    idempotency_key TEXT,
+    created_at TEXT NOT NULL DEFAULT (datetime('now'))
+  );
+
+  CREATE INDEX IF NOT EXISTS idx_event_journal_event ON event_journal(event_id, created_at);
+  CREATE UNIQUE INDEX IF NOT EXISTS idx_event_journal_idempotency
+    ON event_journal(event_id, idempotency_key)
+    WHERE idempotency_key IS NOT NULL;
+
+  -- Mode Réception : chaque habitant construit ses canaux d'écoute (+ rayon géo).
+  -- Ce n'est pas un simple ON/OFF : c'est la façon dont les initiatives lui
+  -- parviennent (diffusion), pas seulement un filtre d'affichage.
+  CREATE TABLE IF NOT EXISTS event_subscriptions (
+    id TEXT PRIMARY KEY,
+    user_id TEXT NOT NULL REFERENCES users(id),
+    channel TEXT NOT NULL,
+    radius_km REAL,
+    zone_id TEXT,
+    created_at TEXT NOT NULL DEFAULT (datetime('now')),
+    UNIQUE(user_id, channel)
+  );
+
+  CREATE INDEX IF NOT EXISTS idx_event_subs_user ON event_subscriptions(user_id);
+  CREATE INDEX IF NOT EXISTS idx_event_subs_channel ON event_subscriptions(channel);
+
+  -- Opportunités Volantes : une STRATEGIE DE DIFFUSION attachee a une initiative
+  -- (ciblage canal + fenetre temporelle + proximite). Ce n'est PAS un type
+  -- d'evenement. La cle idempotency_key garantit qu'un envoi ne se rejoue jamais.
+  CREATE TABLE IF NOT EXISTS event_diffusions (
+    id TEXT PRIMARY KEY,
+    event_id TEXT NOT NULL REFERENCES events(id),
+    channel TEXT NOT NULL,
+    policy TEXT,
+    window_start TEXT,
+    window_end TEXT,
+    status TEXT NOT NULL DEFAULT 'sent',
+    reached INTEGER NOT NULL DEFAULT 0,
+    idempotency_key TEXT,
+    created_at TEXT NOT NULL DEFAULT (datetime('now'))
+  );
+
+  CREATE INDEX IF NOT EXISTS idx_event_diffusions_event ON event_diffusions(event_id, created_at);
+  CREATE UNIQUE INDEX IF NOT EXISTS idx_event_diffusions_idempotency
+    ON event_diffusions(idempotency_key)
+    WHERE idempotency_key IS NOT NULL;
+`);
+
 // ── Bac à Sable : administration interne + World Factory ──────────────────────
 // admin_users   : équipe Ma Zone, STRICTEMENT hors de l'écosystème citoyen.
 // demo_batches  : une exécution de recette World Factory.

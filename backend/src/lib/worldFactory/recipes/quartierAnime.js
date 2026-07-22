@@ -186,6 +186,49 @@ defineRecipe({
       }
     }
 
+    // ── Initiatives locales via l'Event Engine (ORCHESTRATION) ────────────────
+    // Chaque commerce fait naître une initiative qui n'existerait pas sans Ma
+    // Zone (dégustation), publiée pour être découvrable. Une Lanterne curée est
+    // posée dans le quartier. On passe par l'organe, jamais d'insert direct.
+    let initiatives = 0;
+    for (const shop of shops) {
+      ctx.createEventInitiative(
+        {
+          type: 'degustation',
+          sourceKind: 'merchant',
+          sourceId: shop.store.id,
+          storeId: shop.store.id,
+          title: `Dégustation chez ${shop.store.name}`,
+          summary: 'Un moment convivial à partager au comptoir.',
+          startsAt: '2026-09-15 18:00',
+          address: shop.store.address,
+          capacity: 12,
+        },
+        { publish: true }
+      );
+      initiatives += 1;
+    }
+
+    ctx.createEventInitiative(
+      {
+        type: 'lanterne',
+        sourceKind: 'admin',
+        title: 'Lanterne du vieux lavoir',
+        summary: 'Un secret du quartier à découvrir.',
+        geoPrecision: 'approx',
+      }
+    );
+    initiatives += 1;
+
+    // ── Mode Réception des habitants (audience des Opportunités Volantes) ──────
+    for (const citizen of citizens) {
+      ctx.setModeReception(citizen.id, [
+        { channel: 'gastronomie' },
+        { channel: 'vie_de_quartier' },
+        { channel: 'lanternes' },
+      ]);
+    }
+
     return {
       residents: citizens.length,
       merchants: shops.length,
@@ -193,6 +236,7 @@ defineRecipe({
       products: shops.reduce((n, s) => n + s.products.length, 0),
       favorites,
       walletObjects,
+      initiatives,
     };
   },
 });

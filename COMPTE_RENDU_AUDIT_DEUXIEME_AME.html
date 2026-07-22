@@ -1,0 +1,358 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Compte rendu — Audit & consolidation de la Deuxième Âme (V1)</title>
+<style>
+  @page { margin: 16mm 14mm; }
+  body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Helvetica, Arial, sans-serif; font-size: 10.5pt; line-height: 1.45; color: #1a1a1a; max-width: 100%; }
+  h1 { font-size: 20pt; border-bottom: 2px solid #0f2d5c; padding-bottom: 8px; color: #0f2d5c; page-break-after: avoid; }
+  h2 { font-size: 14pt; margin-top: 22px; color: #0f2d5c; border-bottom: 1px solid #e5e7eb; padding-bottom: 4px; page-break-after: avoid; }
+  h3 { font-size: 11.5pt; margin-top: 14px; color: #1a4a8a; page-break-after: avoid; }
+  table { border-collapse: collapse; width: 100%; margin: 10px 0; font-size: 9pt; page-break-inside: avoid; }
+  th, td { border: 1px solid #d1d5db; padding: 5px 7px; text-align: left; vertical-align: top; }
+  th { background: #f3f4f6; font-weight: 600; }
+  code { background: #f3f4f6; padding: 1px 4px; border-radius: 3px; font-size: 8.5pt; }
+  pre { background: #f8fafc; border: 1px solid #e5e7eb; border-radius: 6px; padding: 10px; overflow-x: auto; font-size: 8pt; line-height: 1.35; white-space: pre-wrap; word-break: break-word; page-break-inside: avoid; }
+  pre code { background: none; padding: 0; }
+  blockquote { border-left: 4px solid #0f2d5c; margin: 10px 0; padding: 6px 14px; background: #f0f4f8; color: #1e3a5f; }
+  hr { border: none; border-top: 1px solid #e5e7eb; margin: 18px 0; }
+  ul, ol { padding-left: 22px; }
+  li { margin-bottom: 3px; }
+  p { margin: 8px 0; }
+  .pdf-note { display: none; }
+  @media screen {
+    .pdf-note { display: block; background: #eff6ff; border: 1px solid #bfdbfe; border-radius: 8px; padding: 12px 16px; margin-bottom: 24px; color: #1e3a8a; }
+  }
+</style>
+</head>
+<body>
+<div class="pdf-note">
+  <strong>Lecture dans Cursor / navigateur :</strong> ce fichier HTML est la version lisible du plan.
+  Pour le PDF, ouvrez <code>COMPTE_RENDU_AUDIT_DEUXIEME_AME.pdf</code> depuis le Finder (clic droit → Ouvrir avec Aperçu)
+  ou double-cliquez le fichier <code>Ouvrir_*_PDF.command</code> correspondant à la racine du projet.
+</div>
+<h1>Compte rendu — Audit &amp; consolidation de la Deuxième Âme (V1)</h1>
+<p><strong>Date :</strong> 22 juillet 2026<br />
+<strong>Objet :</strong> Audit et consolidation de la première version de production de la Deuxième Âme<br />
+<strong>Périmètre :</strong> Navigation entre Âmes, création d'initiatives, Laboratoire, Mode Réception, billetterie / places limitées</p>
+<hr />
+<h2>Démarche</h2>
+<p>Pour chaque point, reproduction et remontée à la <strong>cause racine</strong> (backend + DB + front) avant toute modification, puis corrections <strong>génériques et durables</strong>, fidèles à la règle « la surface compose, l'organe décide ».</p>
+<p>Tout a été validé par des tests exécutés (voir section Tests).</p>
+<hr />
+<h2>1. Navigation entre les deux Âmes — incohérence corrigée</h2>
+<h3>Problème / cause</h3>
+<p>Deux mécanismes différents pour la même action :</p>
+<ul>
+<li>depuis la <strong>Première Âme</strong> : passage via un CTA dans le <strong>drawer</strong> ;</li>
+<li>depuis la <strong>Deuxième Âme</strong> : petite icône « storefront » dans la bannière, présente uniquement sur l'écran d'accueil (absente des onglets Messages / Wallet / Panier).</li>
+</ul>
+<h3>Décision UX</h3>
+<p>Retention d'un <strong>bouton de bascule flottant unique</strong>, plutôt qu'un second hamburger : seul choix qui garantit un geste <strong>strictement identique, toujours visible, dans les deux sens</strong>, sur <strong>tous</strong> les écrans, sans alourdir la Deuxième Âme d'un drawer.</p>
+<h3>Correction</h3>
+<table>
+<thead>
+<tr>
+<th>Élément</th>
+<th>Détail</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Nouveau composant</td>
+<td><code>mobile/src/components/common/SoulSwitchFab.js</code> — même look, même position (bas-droite, au-dessus de la barre d'onglets), libellé orienté <strong>destination</strong> (« Deuxième Âme » / « Marketplace »)</td>
+</tr>
+<tr>
+<td>Montage</td>
+<td>Identique sur les deux faces (<code>FirstSoulScreen</code> et <code>SecondSoulScreen</code> dans <code>navigation/index.js</code>)</td>
+</tr>
+<tr>
+<td>Suppressions</td>
+<td>CTA du drawer (<code>ClientDrawerContent</code>) et icône storefront de la bannière (<code>AmeHeader</code>)</td>
+</tr>
+</tbody>
+</table>
+<p><strong>Résultat :</strong> un seul mécanisme, symétrique et omniprésent.</p>
+<hr />
+<h2>2. Création d'initiative — cause racine trouvée, bug levé</h2>
+<h3>Ce n'était pas un bug de code</h3>
+<p>Tests effectués :</p>
+<ul>
+<li><code>events.createEvent</code> + <code>publishEvent</code> en direct : <strong>OK</strong></li>
+<li>Les marchands ont bien un <code>store_members</code> (donc pas de 403)</li>
+<li><strong><code>GET /api/events/types</code> sur le serveur en cours → HTTP 404</strong>, alors que <code>src/index.js</code> monte bien <code>/api/events</code></li>
+</ul>
+<h3>Cause racine</h3>
+<p>Le <strong>process backend tournait depuis le 16/07</strong>, soit <strong>avant l'intégration de l'Event Engine</strong>. Le serveur en mémoire ne servait donc <strong>aucune</strong> route <code>/api/events</code> → tout appel renvoyait 404.</p>
+<p>Côté mobile, ce 404 tombait dans un <code>catch</code> qui n'affichait qu'une <code>Alert</code> — <strong>peu / pas visible sur le build web</strong> → sensation de « rien ne se passe ».</p>
+<h3>Corrections</h3>
+<ol>
+<li>
+<p><strong>Redémarrage propre du backend</strong> — le nouveau process sert bien les routes (<code>types → 401</code> auth au lieu de <code>404</code>). Flux complet <strong>création → publication</strong> revalidé en HTTP réel.</p>
+</li>
+<li>
+<p><strong>Robustesse durable du front</strong> (<code>CreateEventScreen</code>) pour que ce type de panne ne soit <strong>plus jamais silencieux</strong> :
+   - retours d'erreur via <code>toast</code> (fiable sur web, contrairement à <code>Alert</code>) ;
+   - message explicite si les types ne chargent pas + <strong>état d'erreur avec bouton « Réessayer »</strong> ;
+   - message dédié en cas de 404 (« Service indisponible (serveur à redémarrer ?) ») ;
+   - garde sur la réponse serveur inattendue.</p>
+</li>
+</ol>
+<hr />
+<h2>3. Laboratoire — véritable simulateur de monde</h2>
+<p>Enrichi <strong>sans nouveau super-pouvoir</strong> (toujours via les organes) :</p>
+<h3>Nouvelle recette <code>monde_evenementiel</code></h3>
+<p>Fichier : <code>worldFactory/recipes/mondeEvenementiel.js</code></p>
+<p>En un clic, génère un catalogue <strong>déclaratif</strong> d'initiatives variées par commerce :</p>
+<ul>
+<li>atelier <strong>ouvert</strong></li>
+<li>atelier <strong>gratuit sur réservation</strong></li>
+<li>atelier <strong>payant</strong></li>
+<li><strong>dégustation</strong></li>
+<li><strong>promotion</strong></li>
+<li><strong>Lanternes activées</strong> (découvrables et présentes dans les Murmures)</li>
+</ul>
+<p>Les habitants sont abonnés au Mode Réception. Ajouter un cas de test = ajouter une entrée dans <code>SCENARIOS</code>.</p>
+<h3>Primitive <code>transitionEventInitiative</code></h3>
+<p>Ajoutée au contexte worldFactory : indispensable pour activer les Lanternes (<code>hidden → active</code>), ce que <code>publish</code> ne couvre pas (cycle de vie spécialisé).</p>
+<h3>Actions de labo enrichies (<code>lab/actions/events.js</code>)</h3>
+<table>
+<thead>
+<tr>
+<th>Action</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>create_event</code></td>
+<td>Accepte désormais <strong>réservation</strong> (ouvert / gratuit / payant), <strong>prix</strong>, <strong>jauge</strong>, <strong>canaux</strong>, <strong>publication</strong></td>
+</tr>
+<tr>
+<td><code>set_mode_reception</code></td>
+<td>Nouvelle — régler les canaux d'écoute d'un habitant</td>
+</tr>
+<tr>
+<td><code>issue_ticket</code></td>
+<td>Nouvelle — réserver un billet</td>
+</tr>
+<tr>
+<td><code>discover_lantern</code></td>
+<td>Nouvelle — simuler un scan de Lanterne</td>
+</tr>
+</tbody>
+</table>
+<p>Tout le parcours est désormais testable depuis le Lab.</p>
+<h3>UI <code>LabPowers</code> (admin-web)</h3>
+<p>Ajout des widgets manquants <strong><code>boolean</code>, <code>multi</code>, <code>number</code></strong> et <strong>affichage du résultat</strong> (dont l'<code>id</code> renvoyé), pour enchaîner créer → publier → diffuser sans copier-coller à l'aveugle.</p>
+<hr />
+<h2>4. Mode Réception — icônes (bannière refondue)</h2>
+<p>Dans <code>AmeHeader</code> :</p>
+<ul>
+<li><strong>Suppression</strong> du raccourci <strong>Messagerie</strong> (déjà dans la barre d'onglets) et de l'icône storefront (bascule désormais via le bouton flottant).</li>
+<li><strong>Cloche remplacée</strong> par une <strong>boîte aux lettres à fanion</strong> (<code>MaterialCommunityIcons</code>) :</li>
+<li><strong><code>mailbox-up</code> (fanion levé) = activé</strong></li>
+<li><strong><code>mailbox-outline</code> (fanion baissé) = désactivé</strong></li>
+<li>renforcée par un liseré / fanion rouge et un fond accentué à l'état actif</li>
+</ul>
+<p>La même métaphore est reprise dans le popover.</p>
+<p>Il ne reste que deux accès sans ambiguïté : <strong>boîte aux lettres</strong> (réception) et <strong>profil</strong>.</p>
+<hr />
+<h2>5. Mode Réception — audit de fonctionnement</h2>
+<h3>Ce qui est implémenté (et fonctionne)</h3>
+<ul>
+<li>Abonnements habitant : <code>GET/PUT /api/events/reception</code> → <code>diffusion.setSubscriptions</code> (remplace l'ensemble des canaux, validation des canaux connus, table <code>event_subscriptions</code>).</li>
+<li>UI : toggle rapide (popover) + écran de réglage fin (<code>ModeReceptionScreen</code>), avec retours <code>toast</code>.</li>
+<li>Diffusion active (Opportunité Volante) : <code>diffuseEvent</code> → <code>runOpportunity</code> cible les abonnés et <strong>émet <code>event:opportunity</code></strong> en temps réel ; côté client <code>OpportunityContext</code> écoute et <code>OpportunityBanner</code> s'affiche ; côté commerçant <code>DiffuseOpportunityScreen</code> déclenche la campagne. <strong>Idempotence</strong> assurée.</li>
+</ul>
+<h3>Pourquoi « impossible d'activer » aujourd'hui</h3>
+<p><strong>Même cause qu'au point 2</strong> : le serveur périmé renvoyait 404 sur <code>/reception</code> → <code>get/setModeReception</code> échouaient dans un <code>catch</code> silencieux → le toggle semblait inopérant.</p>
+<p><strong>Résolu par le redémarrage</strong> ; activation revalidée (les abonnements sont bien créés).</p>
+<h3>Opportunités Volantes — état</h3>
+<p>Le <strong>cœur est complet</strong> pour l'envoi <strong>immédiat</strong> (ciblage par canal + zone, temps réel, journal, idempotence, historique des diffusions).</p>
+<p><strong>Dépendances restantes :</strong></p>
+<table>
+<thead>
+<tr>
+<th>Dépendance</th>
+<th>État</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Fenêtre de programmation (<code>windowStart</code> / <code>windowEnd</code>)</td>
+<td>Stockée mais <strong>pas d'ordonnanceur</strong> (envoi immédiat uniquement) → nécessite un scheduler</td>
+</tr>
+<tr>
+<td>Ciblage géographique fin par rayon</td>
+<td><code>radiusKm</code> est stocké mais <code>matchSubscribers</code> ne filtre que par <code>zoneId</code></td>
+</tr>
+<tr>
+<td>Notifications hors-ligne (push)</td>
+<td>La diffusion n'atteint que les habitants <strong>connectés au socket</strong>. Un canal push (APNs / FCM) reste à brancher</td>
+</tr>
+</tbody>
+</table>
+<h3>Types d'initiatives réellement supportés par le moteur</h3>
+<table>
+<thead>
+<tr>
+<th>Type</th>
+<th>Capacités</th>
+<th>Notes</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><strong>atelier</strong></td>
+<td><code>canRSVP</code>, <code>hasCapacity</code>, <strong><code>canTicket</code></strong> <em>(ajouté)</em>, <code>isFlyable</code></td>
+<td>Type générique : ouvert <strong>ou</strong> à places limitées (gratuit / payant)</td>
+</tr>
+<tr>
+<td><strong>degustation</strong></td>
+<td><code>canTicket</code>, <code>hasCapacity</code>, <code>isFlyable</code></td>
+<td>Initiative commerçante billetterie</td>
+</tr>
+<tr>
+<td><strong>promo</strong></td>
+<td><code>isFlyable</code></td>
+<td>Projection d'une promo existante</td>
+</tr>
+<tr>
+<td><strong>lanterne</strong></td>
+<td><code>isLantern</code>, <code>isMurmur</code></td>
+<td>Cycle de vie spécialisé (<code>hidden → active → discovered</code>)</td>
+</tr>
+</tbody>
+</table>
+<hr />
+<h2>6. Événements à places limitées — modèle générique</h2>
+<h3>Principe retenu</h3>
+<p>Sans dupliquer de logique, sans nouveau type. Le <strong>régime de réservation est un choix d'INSTANCE</strong>, porté par la donnée opaque <code>payload.reservation</code> que le cœur ne fait que transporter :</p>
+<pre><code>{ mode: 'open' | 'ticket', price?: number, currency?: 'EUR' }
+</code></pre>
+<ul>
+<li><code>canTicket</code> reste une <strong>éligibilité de type</strong> (« ce type PEUT proposer une billetterie ») — ajoutée à <code>atelier</code> pour couvrir « ouvert » <strong>et</strong> « places limitées » avec un seul type.</li>
+<li>La billetterie <strong>réutilise l'existant</strong> : le billet <strong>est</strong> un objet Wallet (<code>event_ticket</code>), émis par <code>orchestration.issueTicket</code>, jauge via le journal (<code>ticketsIssued</code>).</li>
+</ul>
+<h3>Backend</h3>
+<table>
+<thead>
+<tr>
+<th>Élément</th>
+<th>Rôle</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>orchestration.reservationOf(event)</code></td>
+<td>Résout le régime (rétrocompatible — une initiative billetterie historique à jauge = « réservation gratuite »)</td>
+</tr>
+<tr>
+<td><code>issueTicket</code></td>
+<td>Refuse un billet sur un événement <strong>ouvert</strong> (409), applique la jauge, inscrit prix + devise dans le payload / affichage du billet</td>
+</tr>
+<tr>
+<td><code>getEventById</code></td>
+<td>Renvoie un bloc <strong><code>reservation</code> enrichi</strong> (<code>required</code>, <code>price</code>, <code>currency</code>, <code>capacity</code>, <code>ticketsIssued</code>, <code>seatsLeft</code>, <code>soldOut</code>) → la surface affiche sans aucune règle métier</td>
+</tr>
+</tbody>
+</table>
+<h3>Mobile</h3>
+<ul>
+<li><strong><code>CreateEventScreen</code></strong> : sélecteur <strong>Ouvert à tous / Places limitées</strong>, puis <strong>Gratuit / Payant</strong> (prix configurable) + <strong>nombre de places</strong> (optionnel) — visible uniquement pour les types billetterie.</li>
+<li><strong><code>EventDetailScreen</code></strong> : affiche « Sur réservation · prix », <strong>places restantes / Complet</strong>, CTA « Réserver — Gratuit / X € », ou « Ouvert à tous — participation libre » sinon.</li>
+</ul>
+<h3>Extensibilité</h3>
+<p>De futurs régimes (liste d'attente, quotas par profil, dons libres…) s'ajoutent en enrichissant <code>reservation</code> — <strong>sans nouveau type ni refonte</strong>.</p>
+<h3>Dépendance assumée (honnête)</h3>
+<p>Il n'existe pas encore d'organe <strong>Paiement</strong> : pour un billet payant, le billet est <strong>émis avec son prix</strong>, mais le <strong>règlement en ligne</strong> reste à brancher (indiqué explicitement dans l'UI et le code). Le flux <strong>gratuit</strong> est complet de bout en bout.</p>
+<hr />
+<h2>Améliorations d'architecture réalisées</h2>
+<ol>
+<li><strong>Bascule d'Âme unifiée</strong> — un composant partagé monté sur les deux faces ; suppression des deux mécanismes divergents.</li>
+<li><strong>Régime de réservation au niveau instance</strong> (<code>payload.reservation</code>) — Open/Closed : étendre sans nouveau type ni refonte du cœur.</li>
+<li><strong><code>canTicket</code> sur atelier</strong> — éligibilité de type, pas obligation ; le choix réel est à l'instance.</li>
+<li><strong>Projection <code>reservation</code> dans <code>getEventById</code></strong> — la surface n'a aucune règle métier à recalculer.</li>
+<li><strong>Recette Lab déclarative</strong> — peuplement riche sans insert SQL direct (orchestration Event Engine).</li>
+<li><strong><code>transitionEventInitiative</code></strong> — permet d'activer les Lanternes dans le monde de démo.</li>
+</ol>
+<hr />
+<h2>Tests effectués</h2>
+<table>
+<thead>
+<tr>
+<th>Test</th>
+<th>Résultat</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Cœur : <code>createEvent</code> + <code>publishEvent</code> (direct et HTTP réel login → create → publish)</td>
+<td>HTTP 201 — OK</td>
+</tr>
+<tr>
+<td>Réservation : billet refusé sur événement ouvert (409) ; billet payant portant prix + devise ; <code>getEventById.reservation</code> (places restantes / soldOut)</td>
+<td>OK</td>
+</tr>
+<tr>
+<td>Laboratoire : recette <code>monde_evenementiel</code> → 12 initiatives, toutes découvrables (<code>atelier</code>, <code>degustation</code>, <code>lanterne</code>, <code>promo</code>), Lanternes en Murmures, reset propre (19 entités)</td>
+<td>OK</td>
+</tr>
+<tr>
+<td>Non-régression : <code>scripts/test-sandbox-events.js</code></td>
+<td><strong>7 / 7</strong></td>
+</tr>
+<tr>
+<td>Front : compilation Babel des 8 fichiers modifiés ; glyphes <code>mailbox*</code></td>
+<td>0 lint — OK</td>
+</tr>
+<tr>
+<td>Serveur : routes <code>/api/events</code> et <code>/api/admin/world</code> montées après redémarrage</td>
+<td>401 (auth), plus 404</td>
+</tr>
+</tbody>
+</table>
+<hr />
+<h2>Recommandations avant de poursuivre</h2>
+<ol>
+<li><strong>Dev sans piège de serveur périmé</strong> — lancer le backend avec un watcher (<code>nodemon</code>) et / ou afficher un <strong>bandeau « API injoignable »</strong> global côté mobile (le 404 silencieux a coûté du temps de diagnostic).</li>
+<li><strong>Organe Paiement</strong> — prérequis pour finaliser les billets <strong>payants</strong> (règlement + remboursement + annulation).</li>
+<li><strong>Ordonnanceur de diffusion</strong> — pour honorer <code>windowStart</code> / <code>windowEnd</code> (Opportunités Volantes programmées).</li>
+<li><strong>Ciblage géographique</strong> — implémenter le filtre par <code>radiusKm</code> dans <code>matchSubscribers</code>.</li>
+<li><strong>Push hors-ligne</strong> — brancher APNs / FCM pour toucher les habitants non connectés.</li>
+<li><strong>Annulation de réservation</strong> — exposer côté habitant la libération d'une place (le Wallet gère déjà <code>revoke</code> / <code>consume</code>).</li>
+</ol>
+<hr />
+<h2>Fichiers principaux touchés</h2>
+<h3>Backend</h3>
+<ul>
+<li><code>backend/src/lib/eventEngine/types/atelier.js</code></li>
+<li><code>backend/src/lib/eventEngine/orchestration.js</code></li>
+<li><code>backend/src/lib/eventEngine/index.js</code></li>
+<li><code>backend/src/lib/worldFactory/context.js</code></li>
+<li><code>backend/src/lib/worldFactory/index.js</code></li>
+<li><code>backend/src/lib/worldFactory/recipes/mondeEvenementiel.js</code> <em>(nouveau)</em></li>
+<li><code>backend/src/lib/lab/actions/events.js</code></li>
+</ul>
+<h3>Mobile</h3>
+<ul>
+<li><code>mobile/src/components/common/SoulSwitchFab.js</code> <em>(nouveau)</em></li>
+<li><code>mobile/src/navigation/index.js</code></li>
+<li><code>mobile/src/components/client/ClientDrawerContent.js</code></li>
+<li><code>mobile/src/components/deuxiemeAme/AmeHeader.js</code></li>
+<li><code>mobile/src/components/deuxiemeAme/ModeReceptionPopover.js</code></li>
+<li><code>mobile/src/screens/deuxiemeAme/DeuxiemeAmeHomeScreen.js</code></li>
+<li><code>mobile/src/screens/deuxiemeAme/EventDetailScreen.js</code></li>
+<li><code>mobile/src/screens/merchant/CreateEventScreen.js</code></li>
+</ul>
+<h3>Admin-web (Laboratoire)</h3>
+<ul>
+<li><code>admin-web/src/pages/ExplorerPage.jsx</code></li>
+</ul>
+<hr />
+<p><em>Fin du compte rendu — Ma Zone · Deuxième Âme V1 · Audit &amp; consolidation</em></p>
+</body>
+</html>

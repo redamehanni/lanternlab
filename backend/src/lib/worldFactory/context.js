@@ -17,6 +17,7 @@
 const bcrypt = require('bcrypt');
 const db = require('../../db');
 const wallet = require('../walletEngine');
+const events = require('../eventEngine');
 
 const ENTITY = {
   USER: 'user',
@@ -24,6 +25,7 @@ const ENTITY = {
   PRODUCT: 'product',
   FAVORITE: 'favorite',
   WALLET_OBJECT: 'wallet_object',
+  EVENT: 'event',
 };
 
 function createContext(batchId) {
@@ -138,6 +140,35 @@ function createContext(batchId) {
     });
   }
 
+  /**
+   * Crée une INITIATIVE LOCALE EN PASSANT PAR L'ORGANE Event Engine (jamais
+   * d'insert direct). Illustre le principe : orchestrer, ne pas réimplémenter.
+   * Optionnellement la publie (une initiative naît en brouillon par défaut).
+   */
+  function createEventInitiative(params = {}, { publish = false } = {}) {
+    const event = events.createEvent(params);
+    track(ENTITY.EVENT, event.id);
+    if (publish) return events.publishEvent(event.id, { actor: params.sourceId || 'world_factory' });
+    return event;
+  }
+
+  /**
+   * Transitionne une initiative démo via l'organe (jamais d'UPDATE direct).
+   * Utile pour rendre découvrables des types au cycle de vie spécialisé (ex.
+   * Lanterne : hidden → active), que `publish` ne couvre pas.
+   */
+  function transitionEventInitiative(eventId, toStatus) {
+    return events.transitionEvent(eventId, toStatus, { actor: 'world_factory' });
+  }
+
+  /**
+   * Définit le Mode Réception d'un habitant démo (canaux d'écoute) via l'organe.
+   * Permet aux Opportunités Volantes d'avoir une audience dans le monde de démo.
+   */
+  function setModeReception(userId, subscriptions = []) {
+    return events.setModeReception(userId, subscriptions);
+  }
+
   return {
     batchId,
     // primitives
@@ -150,6 +181,9 @@ function createContext(batchId) {
     addFavorite,
     issueWalletObject,
     consumeWalletObject,
+    createEventInitiative,
+    transitionEventInitiative,
+    setModeReception,
     track,
     // introspection
     counts: () => ({ ...counts }),

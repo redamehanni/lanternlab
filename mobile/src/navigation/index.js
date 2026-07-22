@@ -10,6 +10,7 @@ import { useCommunication } from '../context/CommunicationContext';
 import { THEME } from '../theme';
 import ClientDrawerContent from '../components/client/ClientDrawerContent';
 import { navigateToFreshHome } from './navigateToFreshHome';
+import { navigate } from './navigationRef';
 
 // Auth
 import RoleSelectScreen from '../screens/RoleSelectScreen';
@@ -44,6 +45,22 @@ import WalletFamilyScreen from '../screens/client/WalletFamilyScreen';
 import WalletObjectDetailScreen from '../screens/client/WalletObjectDetailScreen';
 import IdentityScreen from '../screens/client/IdentityScreen';
 
+// Deuxième Âme — seconde face de Ma Zone (vie de quartier)
+import DeuxiemeAmeHomeScreen from '../screens/deuxiemeAme/DeuxiemeAmeHomeScreen';
+import EventsScreen from '../screens/deuxiemeAme/EventsScreen';
+import EventDetailScreen from '../screens/deuxiemeAme/EventDetailScreen';
+import LanternsScreen from '../screens/deuxiemeAme/LanternsScreen';
+import LanternScanScreen from '../screens/deuxiemeAme/LanternScanScreen';
+import ParticiperScreen from '../screens/deuxiemeAme/ParticiperScreen';
+import DecouvrirQuartierScreen from '../screens/deuxiemeAme/DecouvrirQuartierScreen';
+import MesAdressesScreen from '../screens/deuxiemeAme/MesAdressesScreen';
+import SurpriseScreen from '../screens/deuxiemeAme/SurpriseScreen';
+import MurmursScreen from '../screens/deuxiemeAme/MurmursScreen';
+import ModeReceptionScreen from '../screens/deuxiemeAme/ModeReceptionScreen';
+import OpportunityBanner from '../components/deuxiemeAme/OpportunityBanner';
+import SoulErrorBoundary from '../components/deuxiemeAme/SoulErrorBoundary';
+import SoulSwitchFab from '../components/common/SoulSwitchFab';
+
 // Merchant — Épée (poste de travail)
 import MerchantCockpitScreen from '../screens/merchant/MerchantCockpitScreen';
 import MerchantStatsScreen    from '../screens/merchant/MerchantStatsScreen';
@@ -54,6 +71,9 @@ import MerchantOrdersScreen from '../screens/merchant/MerchantOrdersScreen';
 import ManagePromotionsScreen from '../screens/merchant/ManagePromotionsScreen';
 import CreatePromotionScreen  from '../screens/merchant/CreatePromotionScreen';
 import PromotionDetailScreen  from '../screens/merchant/PromotionDetailScreen';
+import MerchantEventsScreen   from '../screens/merchant/MerchantEventsScreen';
+import CreateEventScreen      from '../screens/merchant/CreateEventScreen';
+import DiffuseOpportunityScreen from '../screens/merchant/DiffuseOpportunityScreen';
 import MerchantInboxScreen    from '../screens/merchant/MerchantInboxScreen';
 import MesClientsScreen         from '../screens/merchant/MesClientsScreen';
 import MerchantSupportChatScreen from '../screens/merchant/MerchantSupportChatScreen';
@@ -297,19 +317,129 @@ function ClientTabs() {
   );
 }
 
-// Racine client : les onglets + l'identité numérique en plein écran (canal QR).
-// L'emplacement définitif dans la navigation évoluera lors du chantier UX
-// « Double Identité » ; cette racine permet d'ouvrir l'identité depuis partout.
-function ClientRoot() {
+/**
+ * Face Première Âme (Marketplace) : onglets inchangés + bouton de bascule d'Âme
+ * en surimpression. Le bouton est le MÊME composant, à la MÊME position que sur
+ * la Deuxième Âme : le changement d'Âme fonctionne identiquement dans les deux sens.
+ */
+function FirstSoulScreen() {
   return (
-    <Stack.Navigator screenOptions={{ headerShown: false }}>
-      <Stack.Screen name="ClientTabs" component={ClientTabs} />
+    <View style={{ flex: 1, backgroundColor: THEME.colors.bg }}>
+      <ClientTabs />
+      <SoulSwitchFab />
+    </View>
+  );
+}
+
+// Racine client : les DEUX faces coexistent comme écrans frères d'un même stack.
+// On ne remplace JAMAIS l'arbre de navigation au basculement (sinon état périmé
+// → écran blanc). switchSoul() met à jour activeSoul puis navigue vers FirstSoul
+// ou SecondSoul. L'identité reste accessible depuis les deux faces.
+function ClientRoot() {
+  const { activeSoul } = useApp();
+  return (
+    <Stack.Navigator
+      initialRouteName={activeSoul === 'second' ? 'SecondSoul' : 'FirstSoul'}
+      screenOptions={{ headerShown: false }}
+    >
+      <Stack.Screen name="FirstSoul" component={FirstSoulScreen} />
+      <Stack.Screen name="SecondSoul" component={SecondSoulScreen} />
       <Stack.Screen
         name="Identity"
         component={IdentityScreen}
         options={{ presentation: 'fullScreenModal', animation: 'slide_from_bottom' }}
       />
     </Stack.Navigator>
+  );
+}
+
+// ── Deuxième Âme — seconde face de Ma Zone ─────────────────────────────────────
+// L'Accueil compose les 6 portes sur les projections de l'Event Engine. Les
+// onglets Messages / Wallet / Panier RÉUTILISENT les mêmes stacks que la Première
+// Âme : panier, wallet et messagerie sont partagés entre les deux faces.
+function DeuxiemeAmeHomeStack() {
+  return (
+    <Stack.Navigator screenOptions={screenOptions}>
+      <Stack.Screen name="DeuxiemeAmeHome" component={DeuxiemeAmeHomeScreen} options={{ headerShown: false }} />
+      <Stack.Screen name="Events" component={EventsScreen} options={{ title: 'Les Événements' }} />
+      <Stack.Screen name="EventDetail" component={EventDetailScreen} options={{ title: 'Initiative' }} />
+      <Stack.Screen name="Lanterns" component={LanternsScreen} options={{ title: 'Les Lanternes' }} />
+      <Stack.Screen name="LanternScan" component={LanternScanScreen} options={{ headerShown: false, presentation: 'fullScreenModal', animation: 'slide_from_bottom' }} />
+      <Stack.Screen name="Participer" component={ParticiperScreen} options={{ title: 'Participer' }} />
+      <Stack.Screen name="CreateEvent" component={CreateEventScreen} options={{ title: 'Créer une initiative' }} />
+      <Stack.Screen name="DecouvrirQuartier" component={DecouvrirQuartierScreen} options={{ title: 'Mon quartier' }} />
+      <Stack.Screen name="MesAdresses" component={MesAdressesScreen} options={{ title: 'Mes adresses' }} />
+      <Stack.Screen name="Surprise" component={SurpriseScreen} options={{ title: 'Se laisser surprendre' }} />
+      <Stack.Screen name="Murmurs" component={MurmursScreen} options={{ title: 'Les murmures du quartier' }} />
+      <Stack.Screen name="ModeReception" component={ModeReceptionScreen} options={{ title: 'Mode Réception' }} />
+      <Stack.Screen name="StoreDetail" component={StoreDetailScreen} options={{ title: 'Lieu' }} />
+      <Stack.Screen name="ProductDetail" component={ProductDetailScreen} options={{ title: 'Produit' }} />
+      <Stack.Screen name="ClientProfileHub" component={ClientProfileHubScreen} options={{ title: 'Mon profil' }} />
+      <Stack.Screen name="ClientInfo" component={ClientInfoScreen} options={{ title: 'Vos informations' }} />
+      <Stack.Screen name="Chat" component={ChatScreen} options={{ title: 'Messages' }} />
+    </Stack.Navigator>
+  );
+}
+
+function DeuxiemeAmeTabs() {
+  const { count } = useCart();
+  const { getTotalUnreadMessagingTab } = useCommunication();
+  const messagingUnread = getTotalUnreadMessagingTab();
+
+  return (
+    <Tab.Navigator screenOptions={tabOptions}>
+      <Tab.Screen
+        name="AccueilTab"
+        component={DeuxiemeAmeHomeStack}
+        options={{
+          title: 'Accueil',
+          tabBarIcon: ({ focused }) => <TabIcon name={focused ? 'home' : 'home-outline'} focused={focused} />,
+        }}
+      />
+      <Tab.Screen
+        name="MessagesTab"
+        component={MessagingStack}
+        options={{
+          title: 'Messages',
+          tabBarIcon: ({ focused }) => (
+            <TabIcon name={focused ? 'chatbubbles' : 'chatbubbles-outline'} focused={focused} badge={messagingUnread} />
+          ),
+        }}
+      />
+      <Tab.Screen
+        name="WalletTab"
+        component={WalletStack}
+        options={{
+          title: 'Wallet',
+          tabBarIcon: ({ focused }) => <TabIcon name={focused ? 'wallet' : 'wallet-outline'} focused={focused} />,
+        }}
+      />
+      <Tab.Screen
+        name="PanierTab"
+        component={CartStack}
+        options={{
+          title: 'Panier',
+          tabBarIcon: ({ focused }) => <TabIcon name={focused ? 'cart' : 'cart-outline'} focused={focused} badge={count} />,
+        }}
+      />
+    </Tab.Navigator>
+  );
+}
+
+/** Face Deuxième Âme : onglets + bannière d'opportunité en surimpression. */
+function SecondSoulScreen() {
+  return (
+    <SoulErrorBoundary>
+      <View style={{ flex: 1, backgroundColor: THEME.colors.bg }}>
+        <View style={{ flex: 1 }}>
+          <DeuxiemeAmeTabs />
+        </View>
+        <SoulSwitchFab />
+        <OpportunityBanner
+          onOpen={(ev) => navigate('AccueilTab', { screen: 'EventDetail', params: { eventId: ev.id } })}
+        />
+      </View>
+    </SoulErrorBoundary>
   );
 }
 
@@ -326,6 +456,9 @@ function EpeeStack() {
       <Stack.Screen name="ManagePromotions" component={ManagePromotionsScreen} options={{ title: 'Promotions' }} />
       <Stack.Screen name="CreatePromotion" component={CreatePromotionScreen} options={{ title: 'Nouvelle promotion' }} />
       <Stack.Screen name="PromotionDetail" component={PromotionDetailScreen} options={{ title: 'Détail promotion' }} />
+      <Stack.Screen name="MerchantEvents" component={MerchantEventsScreen} options={{ title: 'Événements' }} />
+      <Stack.Screen name="CreateEvent" component={CreateEventScreen} options={{ title: 'Nouvelle initiative' }} />
+      <Stack.Screen name="DiffuseOpportunity" component={DiffuseOpportunityScreen} options={{ title: 'Opportunité Volante' }} />
       <Stack.Screen name="MerchantOrders" component={MerchantOrdersScreen} options={{ title: 'Commandes reçues' }} />
       <Stack.Screen name="MesClients" component={MesClientsScreen} options={{ title: 'Mes clients' }} />
       <Stack.Screen name="MerchantInbox" component={MerchantInboxScreen} options={{ title: 'Messages' }} />
@@ -427,6 +560,8 @@ export default function AppNavigator() {
     );
   }
 
+  // Client : une seule racine stable (FirstSoul + SecondSoul). La Première Âme
+  // (FirstSoul → ClientTabs) reste inchangée ; la Deuxième Âme s'y ajoute.
   if (user.role === 'client') return <ClientRoot />;
   if (user.role === 'merchant') return <MerchantRoot />;
   return <DriverTabs />;

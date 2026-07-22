@@ -1,0 +1,189 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Deuxième Âme — Câblage client & Opportunités Volantes</title>
+<style>
+  @page { margin: 16mm 14mm; }
+  body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Helvetica, Arial, sans-serif; font-size: 10.5pt; line-height: 1.45; color: #1a1a1a; max-width: 100%; }
+  h1 { font-size: 20pt; border-bottom: 2px solid #0f2d5c; padding-bottom: 8px; color: #0f2d5c; page-break-after: avoid; }
+  h2 { font-size: 14pt; margin-top: 22px; color: #0f2d5c; border-bottom: 1px solid #e5e7eb; padding-bottom: 4px; page-break-after: avoid; }
+  h3 { font-size: 11.5pt; margin-top: 14px; color: #1a4a8a; page-break-after: avoid; }
+  table { border-collapse: collapse; width: 100%; margin: 10px 0; font-size: 9pt; page-break-inside: avoid; }
+  th, td { border: 1px solid #d1d5db; padding: 5px 7px; text-align: left; vertical-align: top; }
+  th { background: #f3f4f6; font-weight: 600; }
+  code { background: #f3f4f6; padding: 1px 4px; border-radius: 3px; font-size: 8.5pt; }
+  pre { background: #f8fafc; border: 1px solid #e5e7eb; border-radius: 6px; padding: 10px; overflow-x: auto; font-size: 8pt; line-height: 1.35; white-space: pre-wrap; word-break: break-word; page-break-inside: avoid; }
+  pre code { background: none; padding: 0; }
+  blockquote { border-left: 4px solid #0f2d5c; margin: 10px 0; padding: 6px 14px; background: #f0f4f8; color: #1e3a5f; }
+  hr { border: none; border-top: 1px solid #e5e7eb; margin: 18px 0; }
+  ul, ol { padding-left: 22px; }
+  li { margin-bottom: 3px; }
+  p { margin: 8px 0; }
+  .pdf-note { display: none; }
+  @media screen {
+    .pdf-note { display: block; background: #eff6ff; border: 1px solid #bfdbfe; border-radius: 8px; padding: 12px 16px; margin-bottom: 24px; color: #1e3a8a; }
+  }
+</style>
+</head>
+<body>
+<div class="pdf-note">
+  <strong>Lecture dans Cursor / navigateur :</strong> ce fichier HTML est la version lisible du plan.
+  Pour le PDF, ouvrez <code>PLAN_DEUXIEME_AME_CABLAGE_CLIENT.pdf</code> depuis le Finder (clic droit → Ouvrir avec Aperçu)
+  ou double-cliquez le fichier <code>Ouvrir_*_PDF.command</code> correspondant à la racine du projet.
+</div>
+<h1>Deuxième Âme — Câblage client &amp; Opportunités Volantes</h1>
+<p>Pont entre l'Event Engine (organe, déjà livré) et les surfaces mobiles. <strong>Aucune modification backend</strong> : toutes les routes et fonctions API existent déjà. On respecte la règle « la surface compose, l'organe ne connaît pas les portes ».</p>
+<h2>Objectif</h2>
+<p>Câbler côté mobile les 5 recommandations post-Event Engine :</p>
+<ol>
+<li>Les 6 portes de découverte (vues composées)</li>
+<li>Mode Réception habitant</li>
+<li>Écoute socket des Opportunités Volantes</li>
+<li>Onglet diffusion dans l'Épée + parcours billet/lanterne</li>
+<li>Règle d'extensibilité (nouveau producteur = type + mapping source)</li>
+</ol>
+<h2>Constat de faisabilité (déjà en place)</h2>
+<ul>
+<li>API client : <code>getEventDiscovery</code>, <code>getEventMurmurs</code>, <code>getModeReception</code>, <code>setModeReception</code>, <code>diffuseEvent</code>, <code>requestEventTicket</code>, <code>discoverLantern</code> dans <code>mobile/src/api/index.js</code> (l.138-171).</li>
+<li>Socket : chaque user rejoint <code>user_&lt;id&gt;</code> (<code>backend/src/socket/handlers.js</code> l.24) ; le serveur émet <code>event:opportunity</code> avec <code>{ event, channels }</code> (<code>backend/src/lib/eventEngine/diffusion.js</code> l.135).</li>
+<li>Routes billet/lanterne : <code>POST /api/events/:id/ticket</code> et <code>POST /api/events/:id/discover</code> (<code>backend/src/routes/events.js</code> l.194-206). Le billet/récompense arrive dans le Wallet et le socket <code>wallet:object_issued</code> rafraîchit déjà l'écran via <code>mobile/src/context/WalletContext.js</code>.</li>
+</ul>
+<h2>Flux visés</h2>
+<pre><code>Surface mobile                          Event Engine (inchangé)
+─────────────────                       ───────────────────────
+Écran Découvrir (6 portes)  ──────────► /feed/discover + /feed/murmurs
+Écran Mode Réception        ──────────► /reception GET-PUT
+Épée: Opportunité Volante   ──────────► /:id/diffuse
+        │                                      │
+        │                                      ▼
+        │                              event:opportunity (socket)
+        │                                      │
+        ▼                                      ▼
+Bannière Opportunité ◄─────────────────────────┘
+Demander un billet          ──────────► /:id/ticket
+Scanner Lanterne            ──────────► /:id/discover
+</code></pre>
+<h2>Prérequis technique</h2>
+<p>Ajouter <code>expo-camera</code> (choix validé) pour le scan de QR Lanterne.</p>
+<ul>
+<li>Installer la dépendance dans <code>mobile/package.json</code> et déclarer le plugin + permission caméra dans <code>mobile/app.json</code> (message <code>cameraPermission</code>, <code>NSCameraUsageDescription</code>).</li>
+<li>Vérifier le fallback web (react-native-web) : <code>expo-camera</code> a un support web limité ; prévoir une saisie manuelle du code sur web.</li>
+</ul>
+<h2>Chantier 1 — Les 6 portes (échafaudage fonctionnel)</h2>
+<p>Un écran <code>Découvrir</code> où chaque « porte » = une vue composée par un filtre passé aux projections existantes. L'organe ne connaît aucune de ces portes.</p>
+<ul>
+<li>Nouvel écran <code>mobile/src/screens/client/DiscoverScreen.js</code> : 6 sections branchées ainsi :</li>
+<li>Autour de moi → <code>getEventDiscovery({ zoneId })</code></li>
+<li>Culture &amp; Ateliers → <code>getEventDiscovery({ channel: 'culture' })</code></li>
+<li>Gastronomie → <code>getEventDiscovery({ channel: 'gastronomie' })</code></li>
+<li>Billetterie → <code>getEventDiscovery({ capability: 'canTicket' })</code></li>
+<li>Lanternes → <code>getEventDiscovery({ capability: 'isLantern' })</code></li>
+<li>Murmures → <code>getEventMurmurs()</code></li>
+<li>Nouvel écran <code>mobile/src/screens/client/EventDetailScreen.js</code> : détail d'une initiative via <code>getEventById</code>, affiche <code>event.display</code>, boutons contextuels (billet si <code>canTicket</code>).</li>
+<li>Navigation : ajouter un onglet <code>DécouvrirTab</code> dans <code>ClientTabs</code> et un <code>DiscoverStack</code> (Discover → EventDetail) dans <code>mobile/src/navigation/index.js</code>. Icône <code>compass-outline</code>.</li>
+<li>Rendu piloté par <code>event.display</code> fourni par l'organe (pas de logique métier dans la surface).</li>
+</ul>
+<h2>Chantier 2 — Mode Réception habitant</h2>
+<ul>
+<li>Nouvel écran <code>mobile/src/screens/client/ModeReceptionScreen.js</code> :</li>
+<li>Au montage : <code>getModeReception()</code> pour l'état courant ; liste des canaux via <code>getEventChannels()</code>.</li>
+<li>Toggles par canal ; à l'enregistrement : <code>setModeReception(subscriptions)</code> (forme <code>[{ channel, radiusKm?, zoneId? }]</code>).</li>
+<li>Accès : entrée dans le drawer client <code>mobile/src/components/client/ClientDrawerContent.js</code> + <code>Drawer.Screen</code> dans <code>HomeDrawer</code>.</li>
+</ul>
+<h2>Chantier 3 — Écoute socket <code>event:opportunity</code></h2>
+<p>Reproduire le pattern de <code>mobile/src/context/WalletContext.js</code> (abonnement sur <code>useApp().socket</code>).</p>
+<ul>
+<li>Nouveau <code>mobile/src/context/OpportunityContext.js</code> : <code>socket.on('event:opportunity', ({ event, channels }) =&gt; ...)</code> ; stocke la dernière opportunité et déclenche une bannière in-app.</li>
+<li>Composant <code>mobile/src/components/client/OpportunityBanner.js</code> : bannière/toast avec titre + CTA « Voir » → navigue vers <code>EventDetail</code>.</li>
+<li>Monter <code>OpportunityProvider</code> dans l'arbre de providers (au niveau de <code>WalletProvider</code>) et n'activer l'écoute que pour <code>role === 'client'</code>. Nettoyage <code>socket.off</code> au démontage.</li>
+</ul>
+<h2>Chantier 4a — Onglet Opportunité Volante (Épée)</h2>
+<p>La diffusion est une stratégie (pas un type), appliquée à une initiative existante et « flyable ».</p>
+<ul>
+<li>Nouvel écran <code>mobile/src/screens/merchant/DiffuseOpportunityScreen.js</code> : liste les initiatives publiées éligibles (<code>getMyEvents</code>, filtrées <code>isFlyable</code>), sélection des canaux + fenêtre + note, puis <code>diffuseEvent(id, { channels, windowStart, windowEnd, note, idempotencyKey })</code>. Générer un <code>idempotencyKey</code> côté client pour éviter les doubles diffusions.</li>
+<li>Déclarer le module dans <code>mobile/src/epee/moduleRegistry.js</code> (famille <code>animer</code>) : <code>{ id: 'opportunities', label: 'Opportunité Volante', icon: 'send-outline', route: 'DiffuseOpportunity', entitlement: 'store', enabled: true }</code>.</li>
+<li>Ajouter <code>Stack.Screen name="DiffuseOpportunity"</code> dans <code>EpeeStack</code> (<code>mobile/src/navigation/index.js</code>) ; option secondaire : bouton « Diffuser » sur les cartes de <code>mobile/src/screens/merchant/MerchantEventsScreen.js</code>.</li>
+</ul>
+<h2>Chantier 4b — Parcours billet + lanterne (client)</h2>
+<ul>
+<li><strong>Billet</strong> : sur <code>EventDetailScreen</code>, si <code>canTicket</code>, bouton « Demander un billet » → <code>requestEventTicket(id)</code>. Succès → « Billet ajouté à votre Wallet » (le Wallet se rafraîchit seul via socket) ; gérer l'erreur 409 « Complet ».</li>
+<li><strong>Lanterne</strong> : nouvel écran <code>mobile/src/screens/client/LanternScanScreen.js</code> utilisant <code>expo-camera</code> ; la valeur du QR = <code>event.id</code> de la Lanterne ; au scan → <code>discoverLantern(scannedId)</code>. Gérer <code>replayed: true</code> (« Déjà découverte »), succès (« Lanterne découverte, récompense ajoutée »), erreurs 409 (pas active / retirée).</li>
+<li>Fabrique des QR pour tester : afficher le QR d'une Lanterne (valeur = <code>event.id</code>) via <code>react-native-qrcode-svg</code> dans l'écran producteur (ex. détail sur <code>MerchantEventsScreen</code>), afin de scanner depuis un second appareil et boucler le parcours.</li>
+<li>Point d'accès du scanner : bouton sur <code>DiscoverScreen</code> (porte Lanternes) et/ou dans <code>ClientRoot</code>.</li>
+</ul>
+<h2>Chantier 5 — Règle d'extensibilité (gouvernance, zéro code cœur)</h2>
+<p>Rien à coder dans le cœur. Vérifier et documenter que tout nouveau producteur = 1 type déclaré + 1 mapping de source.</p>
+<ul>
+<li>Point d'extension type : <code>registerType()</code> dans <code>backend/src/lib/eventEngine/types/*</code> (index chargeur).</li>
+<li>Point d'extension source : <code>productionContext(user)</code> dans <code>backend/src/routes/events.js</code> (l.40-47) — ajouter un <code>sourceKind</code> par nouveau rôle, sans toucher au reste.</li>
+<li>Livrable : une courte note « Ajouter un producteur » (association/artiste/citoyen/IA) rappelant ces 2 seuls points de touche.</li>
+</ul>
+<h2>Roadmap d'exécution</h2>
+<table>
+<thead>
+<tr>
+<th>#</th>
+<th>Chantier</th>
+<th>Livrable principal</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>0</td>
+<td>Prérequis</td>
+<td><code>expo-camera</code> + permissions</td>
+</tr>
+<tr>
+<td>1</td>
+<td>6 portes</td>
+<td><code>DiscoverScreen</code> + <code>EventDetailScreen</code> + onglet</td>
+</tr>
+<tr>
+<td>2</td>
+<td>Mode Réception</td>
+<td><code>ModeReceptionScreen</code> + entrée drawer</td>
+</tr>
+<tr>
+<td>3</td>
+<td>Socket opportunité</td>
+<td><code>OpportunityContext</code> + bannière</td>
+</tr>
+<tr>
+<td>4a</td>
+<td>Épée diffusion</td>
+<td><code>DiffuseOpportunityScreen</code> + module registre</td>
+</tr>
+<tr>
+<td>4b</td>
+<td>Billet / Lanterne</td>
+<td>CTA billet + <code>LanternScanScreen</code></td>
+</tr>
+<tr>
+<td>5</td>
+<td>Gouvernance</td>
+<td>Note « Ajouter un producteur »</td>
+</tr>
+<tr>
+<td>—</td>
+<td>Tests</td>
+<td>Bout-en-bout diffusion → Wallet / scan idempotent</td>
+</tr>
+</tbody>
+</table>
+<h2>Tests</h2>
+<ul>
+<li>Manuel bout-en-bout : producteur diffuse (Épée) → habitant abonné reçoit la bannière (socket) → ouvre le détail → prend un billet → billet visible au Wallet.</li>
+<li>Lanterne : scan QR → récompense au Wallet ; re-scan → <code>replayed</code> sans double récompense.</li>
+<li>Portes : chaque porte renvoie les bonnes projections (vérifier <code>capability</code> isLantern/canTicket, <code>channel</code>, <code>zoneId</code>).</li>
+<li>Robustesse : Mode Réception vide → pas de bannière ; erreurs réseau → états d'erreur propres ; idempotence diffusion.</li>
+</ul>
+<h2>Points d'attention</h2>
+<ul>
+<li><code>expo-camera</code> sur web (react-native-web) : prévoir saisie manuelle de code en repli.</li>
+<li>La bannière ne doit apparaître que pour les clients et se nettoyer correctement (fuites de listeners socket).</li>
+<li>Ce lot reste un échafaudage : la mise en scène poétique finale des 6 portes est un chapitre Deuxième Âme ultérieur.</li>
+</ul>
+</body>
+</html>

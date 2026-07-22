@@ -3,6 +3,7 @@ import { Platform } from 'react-native';
 import { io } from 'socket.io-client';
 import { SOCKET_URL, API_URL } from '../config';
 import { appStorage } from '../utils/storage';
+import { navigateToSoul } from '../navigation/navigationRef';
 
 /**
  * Bac à Sable — passage de jeton d'imitation depuis le Laboratoire (web).
@@ -36,6 +37,10 @@ export function AppProvider({ children }) {
   const [token, setToken]     = useState(null);
   const [socket, setSocket]   = useState(null);
   const [loading, setLoading] = useState(true);
+  // Face active de Ma Zone : 'first' = Première Âme (Marketplace), 'second' =
+  // Deuxième Âme (vie de quartier). Les deux faces partagent la même session et
+  // les mêmes organes (panier, wallet, messagerie). Persisté pour la continuité.
+  const [activeSoul, setActiveSoul] = useState('first');
 
   const disconnectSocket = useCallback(() => {
     setSocket((current) => {
@@ -92,6 +97,8 @@ export function AppProvider({ children }) {
           setUser(parsedUser);
           connectSocket(savedToken, parsedUser);
         }
+        const savedSoul = await appStorage.getItem('activeSoul');
+        if (savedSoul === 'second' || savedSoul === 'first') setActiveSoul(savedSoul);
       } catch (e) {
         console.warn('Erreur restauration session', e);
       } finally {
@@ -122,8 +129,21 @@ export function AppProvider({ children }) {
     disconnectSocket();
     setUser(null);
     setToken(null);
+    setActiveSoul('first');
     await appStorage.clear();
   }
+
+  // Bascule entre les deux faces. Met à jour l'état persisté PUIS navigue vers
+  // l'écran frère correspondant (FirstSoul / SecondSoul) — sans démonter la racine.
+  const switchSoul = useCallback((target) => {
+    setActiveSoul((prev) => {
+      const next = target === 'first' || target === 'second' ? target : (prev === 'first' ? 'second' : 'first');
+      appStorage.setItem('activeSoul', next);
+      // Laisser le drawer se fermer / le rendu se stabiliser avant le reset.
+      setTimeout(() => navigateToSoul(next), 50);
+      return next;
+    });
+  }, []);
 
   return (
     <AppContext.Provider value={{
@@ -131,6 +151,8 @@ export function AppProvider({ children }) {
       token,
       socket,
       loading,
+      activeSoul,
+      switchSoul,
       loginUser,
       logoutUser,
       updateUser,

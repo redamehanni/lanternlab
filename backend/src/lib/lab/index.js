@@ -10,6 +10,7 @@ const registry = require('./actionRegistry');
 
 // Enregistre les actions disponibles (auto-déclaration par organe).
 require('./actions/wallet');
+require('./actions/events');
 
 function httpError(status, message) {
   const err = new Error(message);

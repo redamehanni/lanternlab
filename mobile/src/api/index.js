@@ -132,6 +132,44 @@ export const getWalletObject = (id) => api.get(`/api/wallet/objects/${id}`);
 export const getWalletObjectCapabilities = (id) => api.get(`/api/wallet/objects/${id}/capabilities`);
 export const getWalletObjectEvents = (id) => api.get(`/api/wallet/objects/${id}/events`);
 
+// ── Event Engine (initiatives locales) ────────────────────────────────────────
+// Production : le commerçant crée, édite, publie ses initiatives via l'Épée.
+// Découverte : projections publiques (consommées plus tard par la Deuxième Âme).
+export const getEventTypes    = () => api.get('/api/events/types');
+export const getEventChannels = () => api.get('/api/events/channels');
+export const getMyEvents      = () => api.get('/api/events/mine');
+export const createEvent      = (data) => api.post('/api/events', data);
+export const updateEvent      = (id, data) => api.patch(`/api/events/${id}`, data);
+export const publishEvent     = (id) => api.post(`/api/events/${id}/publish`);
+export const cancelEvent      = (id) => api.post(`/api/events/${id}/cancel`);
+export const getEventById     = (id) => api.get(`/api/events/${id}`);
+export const getEventJournal  = (id) => api.get(`/api/events/${id}/journal`);
+// Mode Réception (l'habitant construit ses canaux d'écoute).
+export const getModeReception = () => api.get('/api/events/reception');
+export const setModeReception = (subscriptions) => api.put('/api/events/reception', { subscriptions });
+// Opportunité Volante (le producteur diffuse activement son initiative).
+export const diffuseEvent     = (id, policy = {}) => api.post(`/api/events/${id}/diffuse`, policy);
+export const getEventDiffusions = (id) => api.get(`/api/events/${id}/diffusions`);
+export const getPublicEvents  = (params = {}) => {
+  const q = Object.entries(params)
+    .filter(([, v]) => v != null && v !== '')
+    .map(([k, v]) => `${encodeURIComponent(k)}=${encodeURIComponent(v)}`)
+    .join('&');
+  return api.get(`/api/events${q ? `?${q}` : ''}`);
+};
+// Découverte / portes de la Deuxième Âme (préparation).
+export const getEventDiscovery = (params = {}) => {
+  const q = Object.entries(params)
+    .filter(([, v]) => v != null && v !== '')
+    .map(([k, v]) => `${encodeURIComponent(k)}=${encodeURIComponent(v)}`)
+    .join('&');
+  return api.get(`/api/events/feed/discover${q ? `?${q}` : ''}`);
+};
+export const getEventMurmurs   = () => api.get('/api/events/feed/murmurs');
+// Orchestration côté habitant (billet Wallet, découverte Lanterne).
+export const requestEventTicket = (id) => api.post(`/api/events/${id}/ticket`);
+export const discoverLantern    = (id) => api.post(`/api/events/${id}/discover`);
+
 // ── Identity (preuve d'identité présentable) ──────────────────────────────────
 // Le QR n'est qu'un canal : le backend renvoie un handle neutre à présenter.
 export const getIdentityToken = () => api.get('/api/identity/token');

@@ -23,6 +23,7 @@ const driversRoutes = require('./routes/drivers');
 const merchantsRoutes = require('./routes/merchants');
 const walletRoutes = require('./routes/wallet');
 const identityRoutes = require('./routes/identity');
+const eventsRoutes = require('./routes/events');
 const adminRoutes = require('./routes/admin');
 const setupSocket = require('./socket/handlers');
 
@@ -67,6 +68,7 @@ app.use('/api/drivers', driversRoutes);
 app.use('/api/merchants', merchantsRoutes);
 app.use('/api/wallet', walletRoutes);
 app.use('/api/identity', identityRoutes);
+app.use('/api/events', eventsRoutes);
 app.use('/api/admin', adminRoutes);
 
 // Healthcheck

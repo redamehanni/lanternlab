@@ -1,0 +1,294 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Compte rendu — Deuxième Âme, première version de production</title>
+<style>
+  @page { margin: 16mm 14mm; }
+  body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Helvetica, Arial, sans-serif; font-size: 10.5pt; line-height: 1.45; color: #1a1a1a; max-width: 100%; }
+  h1 { font-size: 20pt; border-bottom: 2px solid #0f2d5c; padding-bottom: 8px; color: #0f2d5c; page-break-after: avoid; }
+  h2 { font-size: 14pt; margin-top: 22px; color: #0f2d5c; border-bottom: 1px solid #e5e7eb; padding-bottom: 4px; page-break-after: avoid; }
+  h3 { font-size: 11.5pt; margin-top: 14px; color: #1a4a8a; page-break-after: avoid; }
+  table { border-collapse: collapse; width: 100%; margin: 10px 0; font-size: 9pt; page-break-inside: avoid; }
+  th, td { border: 1px solid #d1d5db; padding: 5px 7px; text-align: left; vertical-align: top; }
+  th { background: #f3f4f6; font-weight: 600; }
+  code { background: #f3f4f6; padding: 1px 4px; border-radius: 3px; font-size: 8.5pt; }
+  pre { background: #f8fafc; border: 1px solid #e5e7eb; border-radius: 6px; padding: 10px; overflow-x: auto; font-size: 8pt; line-height: 1.35; white-space: pre-wrap; word-break: break-word; page-break-inside: avoid; }
+  pre code { background: none; padding: 0; }
+  blockquote { border-left: 4px solid #0f2d5c; margin: 10px 0; padding: 6px 14px; background: #f0f4f8; color: #1e3a5f; }
+  hr { border: none; border-top: 1px solid #e5e7eb; margin: 18px 0; }
+  ul, ol { padding-left: 22px; }
+  li { margin-bottom: 3px; }
+  p { margin: 8px 0; }
+  .pdf-note { display: none; }
+  @media screen {
+    .pdf-note { display: block; background: #eff6ff; border: 1px solid #bfdbfe; border-radius: 8px; padding: 12px 16px; margin-bottom: 24px; color: #1e3a8a; }
+  }
+</style>
+</head>
+<body>
+<div class="pdf-note">
+  <strong>Lecture dans Cursor / navigateur :</strong> ce fichier HTML est la version lisible du plan.
+  Pour le PDF, ouvrez <code>COMPTE_RENDU_DEUXIEME_AME_V1.pdf</code> depuis le Finder (clic droit → Ouvrir avec Aperçu)
+  ou double-cliquez le fichier <code>Ouvrir_*_PDF.command</code> correspondant à la racine du projet.
+</div>
+<h1>Compte rendu — Deuxième Âme, première version de production</h1>
+<p><strong>Date :</strong> 21 juillet 2026<br />
+<strong>Référence :</strong> <code>PLAN_DEUXIEME_AME_V1_PRODUCTION.md</code> (plan validé)<br />
+<strong>Périmètre :</strong> surface client (Deuxième Âme) + Épée (Opportunité Volante)<br />
+<strong>Backend Event Engine :</strong> inchangé (déjà prêt)</p>
+<hr />
+<h2>1. Synthèse</h2>
+<p>La première version officielle de la Deuxième Âme est livrée. Ce n'est ni un prototype ni un échafaudage : c'est une <strong>base de production</strong> destinée à évoluer, s'enrichir et être raffinée, pas à être remplacée.</p>
+<ul>
+<li>La <strong>Première Âme</strong> (Marketplace) reste strictement identique.</li>
+<li>La <strong>Deuxième Âme</strong> s'ajoute comme seconde face de Ma Zone.</li>
+<li>Le <strong>panier</strong>, le <strong>wallet</strong> et la <strong>messagerie</strong> sont partagés entre les deux faces.</li>
+<li>La philosophie Event Engine est respectée : <strong>la surface compose, l'organe fournit les projections</strong>. Aucune logique métier n'a remonté dans les écrans.</li>
+<li>Aucune modification backend n'a été nécessaire : les routes et sockets étaient déjà en place.</li>
+</ul>
+<hr />
+<h2>2. Éléments développés</h2>
+<h3>2.1 Architecture « deux faces » (additive)</h3>
+<table>
+<thead>
+<tr>
+<th>Élément</th>
+<th>Rôle</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>activeSoul</code> + <code>switchSoul()</code> dans <code>AppContext</code></td>
+<td>État persisté (<code>first</code> / <code>second</code>), réinitialisé à la déconnexion</td>
+</tr>
+<tr>
+<td><code>AppNavigator</code></td>
+<td>Branche <code>ClientRoot</code> ou <code>DeuxiemeAmeRoot</code> selon la face</td>
+</tr>
+<tr>
+<td>Drawer Première Âme</td>
+<td>Bouton « Entrer dans la Deuxième Âme »</td>
+</tr>
+<tr>
+<td>En-tête Deuxième Âme</td>
+<td>Icône boutique pour revenir à la Marketplace</td>
+</tr>
+</tbody>
+</table>
+<p>Les rôles marchand et livreur sont intacts. Un client non basculé voit exactement la Première Âme d'avant.</p>
+<h3>2.2 Face Deuxième Âme — navigation</h3>
+<p>Onglets : <strong>Accueil / Messages / Wallet / Panier</strong>.</p>
+<ul>
+<li>Accueil : stack dédiée (portes, détails, scan, Mode Réception…).</li>
+<li>Messages, Wallet, Panier : <strong>mêmes stacks</strong> que la Première Âme → continuité d'expérience réelle (pas de duplication d'état).</li>
+</ul>
+<h3>2.3 Accueil — composition validée</h3>
+<p>Ordre de composition (fidèle à la maquette de référence) :</p>
+<ol>
+<li><strong>AmeHeader</strong> — identité de face, cloche Mode Réception, messages, profil, bascule</li>
+<li><strong>WeatherHero</strong> — ancrage local + pouls du quartier (stats <strong>réelles</strong> : événements / lanternes)</li>
+<li><strong>AiIntentBar</strong> — barre d'intention + suggestions</li>
+<li><strong>Grille des 6 portes</strong> (<code>PorteCard</code>, config déclarative)</li>
+<li><strong>Murmures</strong> — carrousel horizontal + « Voir tout »</li>
+</ol>
+<h3>2.4 Les 6 portes (vues composées)</h3>
+<table>
+<thead>
+<tr>
+<th>Porte</th>
+<th>Projection / organe</th>
+<th>Écran</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Les Lanternes</td>
+<td><code>listDiscoverable</code> (capability <code>isLantern</code>) + scan</td>
+<td><code>LanternsScreen</code> → <code>LanternScanScreen</code></td>
+</tr>
+<tr>
+<td>Les Événements</td>
+<td><code>listDiscoverable</code> (hors lanternes)</td>
+<td><code>EventsScreen</code></td>
+</tr>
+<tr>
+<td>Participer</td>
+<td>Entrée ouverte (formes déclaratives)</td>
+<td><code>ParticiperScreen</code></td>
+</tr>
+<tr>
+<td>Découvrir mon quartier</td>
+<td>Commerces existants + catégories « Bientôt »</td>
+<td><code>DecouvrirQuartierScreen</code></td>
+</tr>
+<tr>
+<td>Mes adresses</td>
+<td>Favoris existants (<code>getFavoriteStores</code>)</td>
+<td><code>MesAdressesScreen</code></td>
+</tr>
+<tr>
+<td>Se laisser surprendre</td>
+<td>Tirage sur <code>listDiscoverable</code></td>
+<td><code>SurpriseScreen</code></td>
+</tr>
+</tbody>
+</table>
+<p>Les portes sont déclarées dans <code>mobile/src/data/deuxiemeAme.js</code>. Ajouter / renommer une porte = une entrée de config, sans toucher à l'organe.</p>
+<h3>2.5 Parcours branchés sur l'Event Engine</h3>
+<table>
+<thead>
+<tr>
+<th>Parcours</th>
+<th>API / socket</th>
+<th>Surface</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Mode Réception (toggle + réglage fin)</td>
+<td><code>GET/PUT /api/events/reception</code></td>
+<td>Popover + <code>ModeReceptionScreen</code></td>
+</tr>
+<tr>
+<td>Billet</td>
+<td><code>POST /api/events/:id/ticket</code></td>
+<td><code>EventDetailScreen</code> → Wallet</td>
+</tr>
+<tr>
+<td>Découverte Lanterne</td>
+<td><code>POST /api/events/:id/discover</code></td>
+<td><code>LanternScanScreen</code> (caméra + repli saisie)</td>
+</tr>
+<tr>
+<td>QR physique Lanterne</td>
+<td>— (affichage de l'<code>id</code>)</td>
+<td>Détail d'une lanterne</td>
+</tr>
+<tr>
+<td>Opportunité Volante (écoute)</td>
+<td>socket <code>event:opportunity</code></td>
+<td><code>OpportunityContext</code> + <code>OpportunityBanner</code></td>
+</tr>
+<tr>
+<td>Opportunité Volante (diffusion)</td>
+<td><code>POST /api/events/:id/diffuse</code></td>
+<td><code>DiffuseOpportunityScreen</code> (Épée)</td>
+</tr>
+<tr>
+<td>Murmures</td>
+<td><code>GET /api/events/feed/murmurs</code></td>
+<td>Section Accueil + <code>MurmursScreen</code></td>
+</tr>
+</tbody>
+</table>
+<h3>2.6 Épée — Opportunité Volante</h3>
+<ul>
+<li>Module <code>opportunities</code> déclaré dans <code>moduleRegistry.js</code> (famille Animer).</li>
+<li>Écran <code>DiffuseOpportunityScreen</code> : sélection d'une initiative publiée / flyable, canaux, note, clé d'idempotence déterministe.</li>
+</ul>
+<h3>2.7 Gouvernance Open/Closed</h3>
+<p>Note livrée : <code>backend/src/lib/eventEngine/AJOUTER_UN_PRODUCTEUR.md</code></p>
+<p>Règle rappelée : <strong>nouveau producteur = 1 type déclaré + 1 mapping de source</strong>, sans toucher au cœur.</p>
+<hr />
+<h2>3. Choix techniques</h2>
+<ol>
+<li><strong>Aucune modification backend</strong> — les projections, le Mode Réception, la diffusion et l'orchestration (billet / lanterne) étaient déjà prêts.</li>
+<li><strong>Référence de navigation globale</strong> (<code>navigationRef</code>) — permet à la bannière temps réel (hors navigateur) d'ouvrir le détail d'une initiative.</li>
+<li><strong>Config déclarative des portes et des formes de participation</strong> — extensibilité sans refonte d'écrans.</li>
+<li><strong>Idempotence de diffusion</strong> via clé <code>eventId:channels</code> (rejouer ne double pas).</li>
+<li><strong><code>expo-camera</code> ~56.0.8</strong> — dernière version compatible SDK Expo 56 ; permission caméra dans <code>app.json</code> ; repli saisie manuelle (web / refus caméra).</li>
+<li><strong>Pattern socket</strong> calqué sur <code>WalletContext</code> pour <code>OpportunityContext</code> (écoute <code>event:opportunity</code>, clients uniquement).</li>
+</ol>
+<hr />
+<h2>4. Adaptations mineures (par rapport au plan)</h2>
+<table>
+<thead>
+<tr>
+<th>Point</th>
+<th>Adaptation</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Utilitaire <code>timeAgo</code></td>
+<td>Ajouté dans <code>utils/format.js</code> (murmures / opportunités)</td>
+</tr>
+<tr>
+<td>Permission caméra</td>
+<td>Plugin <code>expo-camera</code> + <code>NSCameraUsageDescription</code> iOS</td>
+</tr>
+<tr>
+<td>Porte « Participer »</td>
+<td>Architecture <strong>ouverte</strong> : 6 formes déclarées ; seule « Créer une initiative » est active (source <code>CITIZEN</code>) ; les autres sont honnêtement marquées « Bientôt »</td>
+</tr>
+<tr>
+<td>Éléments sans organe</td>
+<td>Composants de production avec états honnêtes et points de branchement (<code>getLocalContext</code>, <code>onAssist</code>, catégories patrimoine/cafés…)</td>
+</tr>
+<tr>
+<td>Stats du hero</td>
+<td>Calculées côté surface à partir de <code>listDiscoverable</code> (événements vs lanternes) — l'organe ne connaît pas les portes</td>
+</tr>
+</tbody>
+</table>
+<hr />
+<h2>5. Vigilance produit respectée — porte « Participer »</h2>
+<p>La porte n'est <strong>pas</strong> réduite à la création d'initiatives citoyennes.</p>
+<p>Formes déclarées dans <code>PARTICIPATION_MODES</code> :</p>
+<ul>
+<li>Créer une initiative <em>(active — v1)</em></li>
+<li>Rejoindre une initiative <em>(Bientôt)</em></li>
+<li>Aider un commerçant <em>(Bientôt)</em></li>
+<li>Participer à une association <em>(Bientôt)</em></li>
+<li>Répondre à un besoin <em>(Bientôt)</em></li>
+<li>Prendre part à une mission <em>(Bientôt)</em></li>
+</ul>
+<p>Ajouter une forme = une entrée de config. Pas de refonte quand les organes arriveront.</p>
+<hr />
+<h2>6. Fichiers principaux créés / touchés</h2>
+<h3>Créés (surface)</h3>
+<ul>
+<li><code>mobile/src/data/deuxiemeAme.js</code></li>
+<li><code>mobile/src/context/OpportunityContext.js</code></li>
+<li><code>mobile/src/navigation/navigationRef.js</code></li>
+<li><code>mobile/src/components/deuxiemeAme/*</code> (AmeHeader, WeatherHero, AiIntentBar, PorteCard, MurmurCard, ModeReceptionPopover, OpportunityBanner, EventListItem)</li>
+<li><code>mobile/src/screens/deuxiemeAme/*</code> (Accueil, 6 portes, détail, scan, murmures, Mode Réception)</li>
+<li><code>mobile/src/screens/merchant/DiffuseOpportunityScreen.js</code></li>
+<li><code>backend/src/lib/eventEngine/AJOUTER_UN_PRODUCTEUR.md</code></li>
+</ul>
+<h3>Modifiés (câblage)</h3>
+<ul>
+<li><code>mobile/src/context/AppContext.js</code> — <code>activeSoul</code> / <code>switchSoul</code></li>
+<li><code>mobile/src/navigation/index.js</code> — <code>DeuxiemeAmeRoot</code> + route Épée</li>
+<li><code>mobile/src/components/client/ClientDrawerContent.js</code> — bascule</li>
+<li><code>mobile/App.js</code> — <code>OpportunityProvider</code> + <code>navigationRef</code></li>
+<li><code>mobile/src/epee/moduleRegistry.js</code> — module Opportunité Volante</li>
+<li><code>mobile/package.json</code> / <code>mobile/app.json</code> — expo-camera + permissions</li>
+<li><code>mobile/src/utils/format.js</code> — <code>timeAgo</code></li>
+</ul>
+<h3>Non touchés (volontairement)</h3>
+<ul>
+<li>Première Âme (<code>HomeScreen</code>, stacks Marketplace…)</li>
+<li>Backend Event Engine (cœur, routes, diffusion, orchestration)</li>
+</ul>
+<hr />
+<h2>7. Recommandations pour les prochaines itérations</h2>
+<ol>
+<li><strong>Organe ambiance / contexte local</strong> — alimenter le hero (météo, densité de vie) via <code>getLocalContext</code>.</li>
+<li><strong>Organe IA</strong> — brancher la barre d'intention et « Se laisser surprendre » (structure déjà prête).</li>
+<li><strong>Géolocalisation</strong> — <code>listDiscoverable</code> accepte déjà des filtres ; brancher position réelle + rayon du Mode Réception.</li>
+<li><strong>Porte Participer</strong> — activer les formes « Bientôt » au fur et à mesure de leurs organes (missions, associations, besoins…).</li>
+<li><strong>Badge cloche</strong> — refléter le volume d'opportunités reçues.</li>
+<li><strong>DA &amp; médias</strong> — illustrations, animations, micro-interactions et médias d'initiatives quand la direction artistique arrivera.</li>
+</ol>
+<hr />
+<h2>8. Philosophie rappelée</h2>
+<blockquote>
+<p>Nous ne construisons pas le miroir de la ville.<br />
+Nous construisons le moteur qui aide la ville à devenir plus vivante.</p>
+</blockquote>
+<p>La Deuxième Âme est la première expression visible de cette philosophie. Cette v1 en pose durablement l'architecture d'expérience ; les itérations suivantes raffineront, sans remplacer.</p>
+</body>
+</html>

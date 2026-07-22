@@ -82,6 +82,18 @@ function purgeUsers(userIds) {
     const objs = objRows.map((r) => r.id);
     const objIn = inClause(objs);
 
+    // Initiatives Event Engine du monde démo : produites par un acteur démo
+    // (source_id = user), par une de ses boutiques (store_id/source_id = store).
+    const eventRows = db
+      .prepare(`
+        SELECT id FROM events
+        WHERE source_id IN (${uIn})
+        ${stores.length ? `OR store_id IN (${sIn}) OR source_id IN (${sIn})` : ''}
+      `)
+      .all(...users, ...(stores.length ? [...stores, ...stores] : []));
+    const evts = eventRows.map((r) => r.id);
+    const evtIn = inClause(evts);
+
     // Présentations d'identité (+ événements).
     const presRows = db.prepare(`SELECT id FROM identity_presentations WHERE user_id IN (${uIn})`).all(...users);
     const pres = presRows.map((r) => r.id);
@@ -99,6 +111,13 @@ function purgeUsers(userIds) {
       del(`DELETE FROM digital_object_events WHERE object_id IN (${objIn})`, objs);
       del(`DELETE FROM digital_objects WHERE id IN (${objIn})`, objs);
     }
+    // Event Engine : initiatives (+ diffusions + journal) et abonnements Mode Réception.
+    if (evts.length) {
+      del(`DELETE FROM event_diffusions WHERE event_id IN (${evtIn})`, evts);
+      del(`DELETE FROM event_journal WHERE event_id IN (${evtIn})`, evts);
+      del(`DELETE FROM events WHERE id IN (${evtIn})`, evts);
+    }
+    del(`DELETE FROM event_subscriptions WHERE user_id IN (${uIn})`, users);
     // Identity
     if (pres.length) del(`DELETE FROM identity_events WHERE presentation_id IN (${presIn})`, pres);
     del(`DELETE FROM identity_events WHERE subject_id IN (${uIn}) OR verifier_id IN (${uIn})`, [...users, ...users]);

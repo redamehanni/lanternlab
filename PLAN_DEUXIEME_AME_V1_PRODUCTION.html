@@ -1,0 +1,191 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<title>Deuxième Âme — Première version de production</title>
+<style>
+  @page { margin: 16mm 14mm; }
+  body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Helvetica, Arial, sans-serif; font-size: 10.5pt; line-height: 1.45; color: #1a1a1a; max-width: 100%; }
+  h1 { font-size: 20pt; border-bottom: 2px solid #0f2d5c; padding-bottom: 8px; color: #0f2d5c; page-break-after: avoid; }
+  h2 { font-size: 14pt; margin-top: 22px; color: #0f2d5c; border-bottom: 1px solid #e5e7eb; padding-bottom: 4px; page-break-after: avoid; }
+  h3 { font-size: 11.5pt; margin-top: 14px; color: #1a4a8a; page-break-after: avoid; }
+  table { border-collapse: collapse; width: 100%; margin: 10px 0; font-size: 9pt; page-break-inside: avoid; }
+  th, td { border: 1px solid #d1d5db; padding: 5px 7px; text-align: left; vertical-align: top; }
+  th { background: #f3f4f6; font-weight: 600; }
+  code { background: #f3f4f6; padding: 1px 4px; border-radius: 3px; font-size: 8.5pt; }
+  pre { background: #f8fafc; border: 1px solid #e5e7eb; border-radius: 6px; padding: 10px; overflow-x: auto; font-size: 8pt; line-height: 1.35; white-space: pre-wrap; word-break: break-word; page-break-inside: avoid; }
+  pre code { background: none; padding: 0; }
+  blockquote { border-left: 4px solid #0f2d5c; margin: 10px 0; padding: 6px 14px; background: #f0f4f8; color: #1e3a5f; }
+  hr { border: none; border-top: 1px solid #e5e7eb; margin: 18px 0; }
+  ul, ol { padding-left: 22px; }
+  li { margin-bottom: 3px; }
+  p { margin: 8px 0; }
+</style>
+</head>
+<body>
+<h1>Deuxième Âme — Première version de production</h1>
+<p>Base de production durable (pas un échafaudage jetable) : écrans, hiérarchie, composants et interactions pensés pour être enrichis au fil des versions, pas remplacés. La DA (illustrations, animations) évoluera ; la composition, elle, se stabilise ici. Référence de composition = la maquette fournie (organisation, hiérarchie, rythme, 6 portes, place du Mode Réception / Murmures / bannière), pas pixel-perfect.</p>
+<h2>Principes de cadrage (décidés)</h2>
+<ul>
+<li>La Deuxième Âme est <strong>une des deux faces</strong> de Ma Zone (au même titre que la Première Âme), avec son propre Accueil complet.</li>
+<li><strong>Première Âme inchangée</strong> : aucun impact sur les parcours commerce existants (<code>mobile/src/screens/client/HomeScreen.js</code>, etc.).</li>
+<li><strong>Panier partagé</strong> : la barre de la Deuxième Âme est Accueil / Messages / Wallet / <strong>Panier</strong> (le « Panier » remplace le « Aide » de la maquette). Le panier reste celui de la Marketplace, rendu accessible depuis les deux faces.</li>
+<li>Les éléments sans organe (IA, météo, lieux/patrimoine) sont construits comme <strong>vrais composants de production</strong> avec états honnêtes (« Bientôt » / données d'exemple) et points de branchement clairs.</li>
+<li>Aucune modification backend : toutes les routes/API sont déjà en place (<code>mobile/src/api/index.js</code>).</li>
+</ul>
+<h2>Architecture des deux faces</h2>
+<p>Cart / Wallet / Communication sont déjà des providers app-wide (<code>mobile/App.js</code>) : le partage est automatique. On ajoute un état <code>activeSoul</code> et une seconde racine de navigation.</p>
+<pre><code>role === client
+        │
+        ▼
+   activeSoul
+   ┌────┴────┐
+   │         │
+ first     second
+   │         │
+   ▼         ▼
+Première   Deuxième Âme
+Âme        (nouvelle face)
+(inchan-
+gée)
+   │         │
+   └────┬────┘
+        ▼
+Providers app-wide déjà partagés
+  · CartProvider
+  · WalletProvider
+  · CommunicationProvider
+</code></pre>
+<ul>
+<li>Étendre <code>mobile/src/context/AppContext.js</code> : <code>activeSoul</code> (<code>'first' | 'second'</code>, défaut <code>'first'</code>, persisté via <code>appStorage</code>) + <code>switchSoul()</code>.</li>
+<li>Dans <code>mobile/src/navigation/index.js</code>, pour <code>role === 'client'</code> : rendre <code>ClientRoot</code> (face 1) ou un nouveau <code>DeuxiemeAmeRoot</code> selon <code>activeSoul</code>.</li>
+<li><code>DeuxiemeAmeRoot</code> = <code>Tab.Navigator</code> : <strong>Accueil</strong> (<code>DeuxiemeAmeHomeStack</code>), <strong>Messages</strong> (réutilise <code>MessagingStack</code>), <strong>Wallet</strong> (réutilise <code>WalletStack</code>), <strong>Panier</strong> (réutilise <code>CartStack</code>).</li>
+<li>Bascule (additive, seul point de contact avec la face 1) : entrée « Basculer vers la Deuxième Âme » dans <code>mobile/src/components/client/ClientDrawerContent.js</code>, et contrôle de retour dans l'en-tête de la Deuxième Âme. Ne modifie aucun parcours existant.</li>
+</ul>
+<h2>Écran Accueil — composition et mapping vers les organes</h2>
+<p>Nouvel écran <code>mobile/src/screens/deuxiemeAme/DeuxiemeAmeHomeScreen.js</code> (ScrollView), composé de blocs. Chaque bloc = un composant dédié dans <code>mobile/src/components/deuxiemeAme/</code>.</p>
+<ul>
+<li><strong>En-tête</strong> (<code>AmeHeader.js</code>) : logo « Ma Zone / Deuxième Âme », cloche notifications, icône Messages, avatar. La cloche ouvre <code>ModeReceptionPopover.js</code> (toggle rapide + lien « Gérer »).</li>
+<li><strong>Mode Réception</strong> (<code>ModeReceptionPopover.js</code> + écran <code>ModeReceptionScreen.js</code>) — RÉEL : <code>getModeReception()</code> / <code>setModeReception([{ channel, radiusKm?, zoneId? }])</code>, canaux via <code>getEventChannels()</code>.</li>
+<li><strong>Hero météo/lieu</strong> (<code>WeatherHero.js</code>) : lieu (zone/profil utilisateur), météo en <strong>données d'exemple</strong> avec point de branchement <code>getLocalContext()</code> (organe météo futur). Puces stats <strong>RÉELLES</strong> calculées depuis <code>getEventDiscovery</code> : « N événements en cours » et « N lanternes disponibles » (<code>capability: 'isLantern'</code>).</li>
+<li><strong>Barre d'intention IA</strong> (<code>AiIntentBar.js</code>) : champ + puces (« Idées pour ce soir », « Balade en 1h », « Surprends-moi »). Les puces mappables sont branchées sur des filtres Event Engine (ex. « Idées pour ce soir » → événements du jour) ; la saisie libre / vraie IA affiche un état « Bientôt » via un point de branchement <code>askAssistant()</code>.</li>
+<li><strong>Les 6 portes</strong> (grille 2 colonnes, <code>PorteCard.js</code>) :</li>
+<li><strong>Les Lanternes</strong> → <code>LanternsScreen.js</code> : <code>getEventDiscovery({ capability: 'isLantern' })</code> + accès scan. RÉEL.</li>
+<li><strong>Les Événements</strong> → <code>EventsScreen.js</code> : <code>getEventDiscovery({...})</code> (+ filtres canal/zone). RÉEL.</li>
+<li><strong>Participer</strong> → <code>ParticiperScreen.js</code> : production citoyenne (l'API supporte déjà <code>SOURCE_KIND.CITIZEN</code>, cf. <code>backend/src/routes/events.js</code>) ; première version = créer/rejoindre une initiative citoyenne (<code>createEvent</code> en contexte citoyen). RÉEL (première version), enrichie ensuite.</li>
+<li><strong>Découvrir mon quartier</strong> → <code>DecouvrirQuartierScreen.js</code> : commerces/lieux locaux via la Marketplace existante (<code>getFavoriteStores</code>, découverte boutiques, <code>StoreDetail</code>) ; sections patrimoine/lieux en « Bientôt ». RÉEL (première version).</li>
+<li><strong>Mes adresses</strong> → <code>MesAdressesScreen.js</code> : favoris existants (<code>getFavoriteStores</code>, réutilise la logique de <code>FavoriteStores</code>). RÉEL.</li>
+<li><strong>Se laisser surprendre</strong> → <code>SurpriseScreen.js</code> : première version = tirage d'une initiative découvrable au hasard depuis <code>getEventDiscovery</code> ; enrichissement IA ultérieur (<code>askAssistant()</code>). RÉEL (première version).</li>
+<li><strong>Les murmures du quartier</strong> (<code>MurmurCard.js</code> + <code>MurmursScreen.js</code>) — RÉEL : <code>getEventMurmurs()</code> ; « Voir tout » → écran dédié.</li>
+<li><strong>Bannière Opportunité Volante</strong> (<code>OpportunityBanner.js</code> + <code>OpportunityContext.js</code>) — RÉEL : écoute socket <code>event:opportunity</code> (rooms <code>user_&lt;id&gt;</code> déjà rejointes ; émission dans <code>backend/src/lib/eventEngine/diffusion.js</code>). Pattern d'abonnement calqué sur <code>mobile/src/context/WalletContext.js</code>. Provider monté app-wide (clients uniquement), bannière overlay dans la Deuxième Âme, CTA « Voir » → <code>EventDetail</code>.</li>
+</ul>
+<h2>Détail d'un événement + parcours billet / lanterne (client)</h2>
+<ul>
+<li><code>EventDetailScreen.js</code> : <code>getEventById</code>, rendu piloté par <code>event.display</code>. Si <code>canTicket</code> → « Demander un billet » → <code>requestEventTicket(id)</code> (succès « Billet ajouté au Wallet », le Wallet se rafraîchit seul via <code>wallet:object_issued</code> ; gérer 409 « Complet »).</li>
+<li><code>LanternScanScreen.js</code> : <strong>expo-camera</strong> (dépendance validée) ; QR = <code>event.id</code> de la Lanterne → <code>discoverLantern(scannedId)</code> ; gérer <code>replayed: true</code>, succès (récompense Wallet), 409 (pas active / retirée). Repli web (support caméra limité) = saisie manuelle du code.</li>
+</ul>
+<h2>Côté producteur (Épée) — Opportunité Volante</h2>
+<p>Navigation Épée inchangée par ailleurs.</p>
+<ul>
+<li><code>mobile/src/screens/merchant/DiffuseOpportunityScreen.js</code> : liste des initiatives publiées « flyables » (<code>getMyEvents</code>), choix canaux + fenêtre + note, <code>diffuseEvent(id, { channels, windowStart, windowEnd, note, idempotencyKey })</code> (clé d'idempotence côté client).</li>
+<li>Déclarer le module dans <code>mobile/src/epee/moduleRegistry.js</code> (famille <code>animer</code>) : <code>{ id: 'opportunities', label: 'Opportunité Volante', icon: 'send-outline', route: 'DiffuseOpportunity', entitlement: 'store', enabled: true }</code> + <code>Stack.Screen</code> dans <code>EpeeStack</code>.</li>
+<li>Fabrique de QR de test : afficher le QR d'une Lanterne (valeur = <code>event.id</code>) via <code>react-native-qrcode-svg</code> côté producteur pour boucler le parcours de scan.</li>
+</ul>
+<h2>Prérequis technique</h2>
+<ul>
+<li>Ajouter <code>expo-camera</code> dans <code>mobile/package.json</code> + permission caméra dans <code>mobile/app.json</code> (<code>NSCameraUsageDescription</code>, plugin expo-camera).</li>
+</ul>
+<h2>Extensibilité (gouvernance, zéro code cœur)</h2>
+<p>Tout nouveau producteur (association, artiste, citoyen, IA) = 1 type déclaré (<code>registerType()</code> dans <code>backend/src/lib/eventEngine/types/*</code>) + 1 mapping de source (<code>productionContext(user)</code> dans <code>backend/src/routes/events.js</code>). Côté surface, une nouvelle porte = une vue composée sur les projections, sans toucher à l'organe. Livrable : courte note « Ajouter un producteur ».</p>
+<h2>Nouveaux fichiers (récap)</h2>
+<ul>
+<li>Contexte : <code>mobile/src/context/OpportunityContext.js</code> ; extension <code>AppContext</code> (<code>activeSoul</code>).</li>
+<li>Écrans <code>mobile/src/screens/deuxiemeAme/</code> : <code>DeuxiemeAmeHomeScreen</code>, <code>EventsScreen</code>, <code>EventDetailScreen</code>, <code>LanternsScreen</code>, <code>LanternScanScreen</code>, <code>ParticiperScreen</code>, <code>DecouvrirQuartierScreen</code>, <code>MesAdressesScreen</code>, <code>SurpriseScreen</code>, <code>MurmursScreen</code>, <code>ModeReceptionScreen</code>.</li>
+<li>Composants <code>mobile/src/components/deuxiemeAme/</code> : <code>AmeHeader</code>, <code>ModeReceptionPopover</code>, <code>WeatherHero</code>, <code>AiIntentBar</code>, <code>PorteCard</code>, <code>MurmurCard</code>, <code>OpportunityBanner</code>.</li>
+<li>Merchant : <code>mobile/src/screens/merchant/DiffuseOpportunityScreen.js</code>.</li>
+<li>Navigation : <code>DeuxiemeAmeRoot</code> + <code>DeuxiemeAmeHomeStack</code> dans <code>mobile/src/navigation/index.js</code>.</li>
+</ul>
+<h2>Roadmap d'exécution</h2>
+<table>
+<thead>
+<tr>
+<th>#</th>
+<th>Chantier</th>
+<th>Livrable principal</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>1</td>
+<td>Deux faces</td>
+<td><code>activeSoul</code> + <code>DeuxiemeAmeRoot</code> + bascule additive</td>
+</tr>
+<tr>
+<td>2</td>
+<td>Prérequis</td>
+<td><code>expo-camera</code> + permissions</td>
+</tr>
+<tr>
+<td>3</td>
+<td>Accueil</td>
+<td><code>DeuxiemeAmeHomeScreen</code> + hero + barre IA</td>
+</tr>
+<tr>
+<td>4</td>
+<td>6 portes</td>
+<td><code>PorteCard</code> + 6 écrans dédiés</td>
+</tr>
+<tr>
+<td>5</td>
+<td>Mode Réception</td>
+<td>Popover + écran complet</td>
+</tr>
+<tr>
+<td>6</td>
+<td>Murmures</td>
+<td>Section + <code>MurmursScreen</code></td>
+</tr>
+<tr>
+<td>7</td>
+<td>Opportunité</td>
+<td><code>OpportunityContext</code> + bannière socket</td>
+</tr>
+<tr>
+<td>8</td>
+<td>Billet / Lanterne</td>
+<td><code>EventDetailScreen</code> + <code>LanternScanScreen</code></td>
+</tr>
+<tr>
+<td>9</td>
+<td>Épée</td>
+<td><code>DiffuseOpportunityScreen</code> + module registre</td>
+</tr>
+<tr>
+<td>10</td>
+<td>Gouvernance</td>
+<td>Note « Ajouter un producteur »</td>
+</tr>
+<tr>
+<td>—</td>
+<td>Tests</td>
+<td>Bascule Âmes, diffusion → Wallet, scan idempotent</td>
+</tr>
+</tbody>
+</table>
+<h2>Tests</h2>
+<ul>
+<li>Bascule Première ↔ Deuxième Âme : panier / wallet / messages continus (mêmes contenus des deux côtés).</li>
+<li>Bout-en-bout : producteur diffuse (Épée) → habitant abonné reçoit la bannière → détail → billet → Wallet.</li>
+<li>Lanterne : scan → récompense ; re-scan → <code>replayed</code> sans double récompense.</li>
+<li>Portes réelles : Événements / Lanternes / Murmures / Mes adresses renvoient les bonnes projections ; stats du hero cohérentes avec l'Event Engine.</li>
+<li>États honnêtes : IA / météo / patrimoine affichent « Bientôt » proprement, sans casser la page ; erreurs réseau gérées.</li>
+</ul>
+<h2>Points d'attention</h2>
+<ul>
+<li>Bascule entre Âmes = unique ajout additif côté Première Âme (entrée drawer) ; réévaluable plus tard comme demandé.</li>
+<li>Nettoyage des listeners socket (bannière) pour éviter les fuites ; bannière clients uniquement.</li>
+<li><code>expo-camera</code> sur web : prévoir la saisie manuelle en repli.</li>
+<li>Frontière stricte : la surface compose, l'organe ne connaît pas les portes ; ne pas réintroduire de logique métier dans les écrans.</li>
+</ul>
+</body>
+</html>

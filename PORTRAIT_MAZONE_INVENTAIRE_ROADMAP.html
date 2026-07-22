@@ -1,0 +1,750 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Ma Zone — Portrait complet, inventaire réalisé & feuille de route</title>
+<style>
+  @page { margin: 16mm 14mm; }
+  body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Helvetica, Arial, sans-serif; font-size: 10.5pt; line-height: 1.45; color: #1a1a1a; max-width: 100%; }
+  h1 { font-size: 20pt; border-bottom: 2px solid #0f2d5c; padding-bottom: 8px; color: #0f2d5c; page-break-after: avoid; }
+  h2 { font-size: 14pt; margin-top: 22px; color: #0f2d5c; border-bottom: 1px solid #e5e7eb; padding-bottom: 4px; page-break-after: avoid; }
+  h3 { font-size: 11.5pt; margin-top: 14px; color: #1a4a8a; page-break-after: avoid; }
+  table { border-collapse: collapse; width: 100%; margin: 10px 0; font-size: 9pt; page-break-inside: avoid; }
+  th, td { border: 1px solid #d1d5db; padding: 5px 7px; text-align: left; vertical-align: top; }
+  th { background: #f3f4f6; font-weight: 600; }
+  code { background: #f3f4f6; padding: 1px 4px; border-radius: 3px; font-size: 8.5pt; }
+  pre { background: #f8fafc; border: 1px solid #e5e7eb; border-radius: 6px; padding: 10px; overflow-x: auto; font-size: 8pt; line-height: 1.35; white-space: pre-wrap; word-break: break-word; page-break-inside: avoid; }
+  pre code { background: none; padding: 0; }
+  blockquote { border-left: 4px solid #0f2d5c; margin: 10px 0; padding: 6px 14px; background: #f0f4f8; color: #1e3a5f; }
+  hr { border: none; border-top: 1px solid #e5e7eb; margin: 18px 0; }
+  ul, ol { padding-left: 22px; }
+  li { margin-bottom: 3px; }
+  p { margin: 8px 0; }
+  .pdf-note { display: none; }
+  @media screen {
+    .pdf-note { display: block; background: #eff6ff; border: 1px solid #bfdbfe; border-radius: 8px; padding: 12px 16px; margin-bottom: 24px; color: #1e3a8a; }
+  }
+</style>
+</head>
+<body>
+<div class="pdf-note">
+  <strong>Lecture dans Cursor / navigateur :</strong> ce fichier HTML est la version lisible du plan.
+  Pour le PDF, ouvrez <code>PORTRAIT_MAZONE_INVENTAIRE_ROADMAP.pdf</code> depuis le Finder (clic droit → Ouvrir avec Aperçu)
+  ou double-cliquez le fichier <code>Ouvrir_*_PDF.command</code> correspondant à la racine du projet.
+</div>
+<h1>Ma Zone — Portrait complet, inventaire réalisé &amp; feuille de route</h1>
+<p><strong>Document de synthèse produit + technique</strong><br />
+<strong>Date :</strong> 19 juillet 2026<br />
+<strong>Version de référence :</strong> V0.9.2 (Bac à Sable v1) — tag <code>ma-zone-v0.9.2-bac-a-sable-v1-stable-16-07-26</code><br />
+<strong>Public :</strong> Direction produit, architecture, équipe de développement<br />
+<strong>Statut :</strong> Inventaire de l'état réel du code + vision déjà actée (Deuxième Âme : conception uniquement)</p>
+<hr />
+<h2>Document de référence</h2>
+<table>
+<thead>
+<tr>
+<th>Format</th>
+<th>Fichier</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><strong>PDF</strong></td>
+<td><code>PORTRAIT_MAZONE_INVENTAIRE_ROADMAP.pdf</code></td>
+</tr>
+<tr>
+<td>HTML</td>
+<td><code>PORTRAIT_MAZONE_INVENTAIRE_ROADMAP.html</code></td>
+</tr>
+<tr>
+<td>Markdown</td>
+<td><code>PORTRAIT_MAZONE_INVENTAIRE_ROADMAP.md</code></td>
+</tr>
+</tbody>
+</table>
+<hr />
+<h2>1. Qu'est-ce que Ma Zone ?</h2>
+<p>Ma Zone est une plateforme de <strong>vie locale</strong> organisée autour d'un territoire (quartier / ville). Elle n'est pas « une marketplace de plus » : le commerce local est un <strong>acteur</strong> parmi d'autres d'un écosystème vivant.</p>
+<h3>Deux âmes complémentaires</h3>
+<table>
+<thead>
+<tr>
+<th>Âme</th>
+<th>Intention</th>
+<th>Posture utilisateur</th>
+<th>État</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><strong>Première Âme</strong></td>
+<td>« J'ai besoin de quelque chose. »</td>
+<td>Client : chercher, comparer, commander, se faire livrer</td>
+<td><strong>Construite</strong> (MVP fonctionnel)</td>
+</tr>
+<tr>
+<td><strong>Deuxième Âme</strong></td>
+<td>« J'ai envie de vivre quelque chose. »</td>
+<td>Habitant : découvrir, sortir, rencontrer, participer, créer</td>
+<td><strong>Vision actée</strong> — pas encore développée</td>
+</tr>
+</tbody>
+</table>
+<p>La Première Âme construit l'<strong>activité</strong> (économie locale).<br />
+La Deuxième Âme lui donne un <strong>sens</strong> (Ville Augmentée : murmures, quêtes, lanternes, expériences).<br />
+Son succès ne se mesure pas au temps d'écran, mais aux <strong>expériences vécues dehors</strong>.</p>
+<h3>La place que Ma Zone doit prendre</h3>
+<ul>
+<li>Un <strong>pont</strong> entre le numérique et la rue (jamais une destination qui retient).</li>
+<li>Un <strong>outil professionnel</strong> pour les commerçants (l'Épée) qui alimente la vie locale.</li>
+<li>Un <strong>laboratoire</strong> pour inventer Ma Zone avant de la déployer (Bac à Sable).</li>
+<li>À terme : la façon dont une ville <strong>raconte ses histoires</strong> à ses habitants.</li>
+</ul>
+<h3>Rôles aujourd'hui dans le code</h3>
+<table>
+<thead>
+<tr>
+<th>Rôle</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>client</code></td>
+<td>Habitant-consommateur de la Première Âme</td>
+</tr>
+<tr>
+<td><code>merchant</code></td>
+<td>Commerçant — poste de travail « Épée »</td>
+</tr>
+<tr>
+<td><code>driver</code></td>
+<td>Livreur — courses locales</td>
+</tr>
+<tr>
+<td><code>admin</code></td>
+<td>Équipe Ma Zone — hors écosystème citoyen (<code>admin_users</code>)</td>
+</tr>
+</tbody>
+</table>
+<hr />
+<h2>2. Architecture : surfaces vs organes</h2>
+<p><strong>Principe fondamental</strong> (tenu partout : Wallet, Identity, Épée, Laboratoire, World Factory) :</p>
+<blockquote>
+<p>Les <strong>surfaces</strong> orchestrent. Les <strong>organes</strong> détiennent la logique métier.<br />
+Une surface qui réimplémente une règle métier est un bug d'architecture.</p>
+</blockquote>
+<pre><code>┌─────────────────────────────────────────────────────────────┐
+│ SURFACES (UI / orchestration)                               │
+│  App Client · Épée (commerçant) · App Livreur               │
+│  Laboratoire admin-web · (futur) Habitant / Ville Augmentée │
+└───────────────────────────┬─────────────────────────────────┘
+                            │ appelle les contrats publics
+┌───────────────────────────▼─────────────────────────────────┐
+│ ORGANES / MOTEURS                                           │
+│  Auth · Catalog/Stores · Cart · Orders · Dispatch           │
+│  Communication · Promotions · Wallet · Identity             │
+│  World Factory · Lab actions · (futurs : Event, Loyalty…)   │
+└───────────────────────────┬─────────────────────────────────┘
+                            │
+                    SQLite + Socket.io
+</code></pre>
+<h3>Stack technique</h3>
+<table>
+<thead>
+<tr>
+<th>Couche</th>
+<th>Technologie</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Mobile</td>
+<td>Expo / React Native, React Navigation, Axios, Socket.io-client</td>
+</tr>
+<tr>
+<td>Backend</td>
+<td>Node.js, Express, better-sqlite3, JWT, Socket.io</td>
+</tr>
+<tr>
+<td>Laboratoire</td>
+<td>React + Vite (<code>admin-web/</code>, port 5174)</td>
+</tr>
+<tr>
+<td>Persistance</td>
+<td>SQLite (<code>backend/data/mazone.db</code>)</td>
+</tr>
+</tbody>
+</table>
+<hr />
+<h2>3. Les organes / moteurs existants</h2>
+<h3>3.1 Auth &amp; utilisateurs</h3>
+<ul>
+<li>Inscription / connexion JWT par rôle.</li>
+<li>Profil (photo, téléphone, adresse client, transport livreur).</li>
+<li>Adresses client enregistrées.</li>
+</ul>
+<h3>3.2 Catalogue &amp; commerces</h3>
+<ul>
+<li>Boutiques (<code>stores</code>) : création / édition, photo, catégorie, story, géoloc.</li>
+<li>Produits : CRUD, stock, images, catégories.</li>
+<li>Recherche produits, détail produit / commerce.</li>
+</ul>
+<h3>3.3 Panier &amp; favoris</h3>
+<ul>
+<li>Panier client (ajout, quantité, checkout).</li>
+<li>Favoris commerces (« coups de cœur »).</li>
+</ul>
+<h3>3.4 Commandes (Orders)</h3>
+<ul>
+<li>Création commande unitaire ou depuis panier.</li>
+<li>Statuts : <code>pending_driver</code> → <code>driver_assigned</code> → <code>picking_up</code> → <code>picked_up</code> → <code>delivering</code> → <code>delivered</code> / <code>cancelled</code>.</li>
+<li>Suivi temps réel (sockets).</li>
+<li>Annulation client (statuts autorisés).</li>
+</ul>
+<h3>3.5 Dispatch &amp; missions</h3>
+<ul>
+<li>Attribution livreur (en ligne, sans mission active).</li>
+<li>Mode offre popup (Phase F UX) : proposition 20 s, accept / refuse.</li>
+<li>File d'attente si aucun livreur.</li>
+<li>Workflow livraison (slide confirm, navigation).</li>
+<li>Commission livreur (~5 % du panier).</li>
+</ul>
+<h3>3.6 Communication</h3>
+<ul>
+<li>Organe unifié : fils durables client↔commerce, éphémères liés commande, support.</li>
+<li>Non-lus, sockets <code>message:new</code> / <code>conversation:updated</code>.</li>
+<li>Messagerie client, inbox commerçant, inbox livreur, chat contextualisé.</li>
+</ul>
+<h3>3.7 Promotions</h3>
+<ul>
+<li>Création / gestion commerçant (discount, buy_get).</li>
+<li>Flash promotions côté client (accueil).</li>
+</ul>
+<h3>3.8 Wallet Engine</h3>
+<ul>
+<li>Registre personnel d'<strong>objets numériques vivants</strong> (pas un moteur métier).</li>
+<li>Familles : Billets, Retraits, Promotions, Fidélité, Badges, Points civiques.</li>
+<li>Kinds : <code>event_ticket</code>, <code>pickup_ticket</code>, <code>promo_voucher</code>, <code>loyalty_card</code>, <code>badge</code>, <code>civic_points</code>.</li>
+<li>Cycle de vie : issue → active → consume / revoke / expire ; journal append-only.</li>
+<li>Facette <strong>souvenir</strong> (retention keepsake).</li>
+<li>Capacités déclaratives (<code>handledBy</code>: wallet / source / device) — beaucoup encore stub UI (« sera géré par… »).</li>
+</ul>
+<h3>3.9 Identity Engine</h3>
+<ul>
+<li>Présentation d'identité (jeton rotatif, handle neutre).</li>
+<li>Canal QR aujourd'hui ; architecture prête pour NFC / Wallet Apple plus tard.</li>
+<li>Principe : <strong>identifie, ne décide pas</strong> (n'accorde aucun droit).</li>
+<li>Écran Identity client (plein écran depuis le drawer).</li>
+</ul>
+<h3>3.10 World Factory (Bac à Sable)</h3>
+<ul>
+<li>Recettes déclaratives (<code>quartier_anime</code> : habitants, commerçants, <strong>livreurs</strong>, produits, favoris, wallets).</li>
+<li>Provenance <code>demo_batches</code> / <code>demo_entities</code>.</li>
+<li>Reset par appartenance (purge propre même après impersonation).</li>
+<li>Principe : <strong>orchestre les organes</strong>, ne réécrit jamais leur logique.</li>
+</ul>
+<h3>3.11 Laboratoire (admin + lab actions)</h3>
+<ul>
+<li>Auth admin séparée (<code>ADMIN_JWT_SECRET</code>).</li>
+<li>Explorateur acteurs démo (lecture seule).</li>
+<li>Impersonation = <strong>authentification</strong> (jeton user réel), sandbox + démo-only.</li>
+<li>Actions de labo via organes (Wallet issue/consume aujourd'hui).</li>
+<li>UI <code>admin-web</code> : Monde + Explorateur + Devenir X.</li>
+</ul>
+<h3>3.12 Organes « annoncés » mais absents</h3>
+<p>Déclarés dans le Shell Épée en « Bientôt » (<code>enabled: false</code>) :
+- <strong>Event Engine</strong>
+- <strong>Loyalty Engine</strong> (cartes fidélité côté Wallet existent comme <em>kinds</em> ; pas d'organe métier commerçant)
+- <strong>Collaboration Engine</strong></p>
+<p>Vision Deuxième Âme (pas d'organe encore) :
+- Murmures / Ville
+- Quêtes + guide IA
+- Lanternes (objets physiques + scan)
+- Passions / météo humaine
+- Switch Client ↔ Habitant</p>
+<hr />
+<h2>4. Fonctionnalités &amp; écrans par profil</h2>
+<h3>4.1 Auth (commun)</h3>
+<table>
+<thead>
+<tr>
+<th>Écran</th>
+<th>Rôle</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>RoleSelectScreen</code></td>
+<td>Choix du rôle</td>
+</tr>
+<tr>
+<td><code>LoginScreen</code> / <code>RegisterScreen</code></td>
+<td>Connexion / inscription</td>
+</tr>
+</tbody>
+</table>
+<hr />
+<h3>4.2 Client (Première Âme) — navigation actuelle</h3>
+<p><strong>Onglets :</strong> Home · Messagerie · Wallet · Panier</p>
+<h4>Home + drawer</h4>
+<table>
+<thead>
+<tr>
+<th>Élément</th>
+<th>Contenu</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>HomeScreen</code></td>
+<td>Catégories produits, recherche, flash promos, résultats</td>
+</tr>
+<tr>
+<td>Drawer</td>
+<td>Profil, coups de cœur, commandes, FAQ, devenir livreur, contact, aide, paramètres</td>
+</tr>
+<tr>
+<td><code>ProductDetailScreen</code></td>
+<td>Fiche produit → panier / commande</td>
+</tr>
+<tr>
+<td><code>StoreDetailScreen</code></td>
+<td>Fiche commerce</td>
+</tr>
+<tr>
+<td><code>OrderConfirmScreen</code></td>
+<td>Confirmation commande</td>
+</tr>
+<tr>
+<td><code>OrderTrackingScreen</code></td>
+<td>Suivi + chat livreur / commerçant</td>
+</tr>
+</tbody>
+</table>
+<h4>Messagerie</h4>
+<table>
+<thead>
+<tr>
+<th>Écran</th>
+<th>Contenu</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>ClientMessagingHomeScreen</code></td>
+<td>Hub messagerie</td>
+</tr>
+<tr>
+<td><code>MesCommercesScreen</code></td>
+<td>Conversations durables avec commerces</td>
+</tr>
+<tr>
+<td><code>SupportChatScreen</code></td>
+<td>Assistance Ma Zone</td>
+</tr>
+<tr>
+<td><code>ChatScreen</code></td>
+<td>Fil de messages</td>
+</tr>
+</tbody>
+</table>
+<h4>Wallet</h4>
+<table>
+<thead>
+<tr>
+<th>Écran</th>
+<th>Contenu</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>WalletScreen</code></td>
+<td>Familles d'objets</td>
+</tr>
+<tr>
+<td><code>WalletFamilyScreen</code></td>
+<td>Liste d'une famille</td>
+</tr>
+<tr>
+<td><code>WalletObjectDetailScreen</code></td>
+<td>Détail + capacités + biographie</td>
+</tr>
+</tbody>
+</table>
+<h4>Panier &amp; identité</h4>
+<table>
+<thead>
+<tr>
+<th>Écran</th>
+<th>Contenu</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>CartScreen</code></td>
+<td>Panier → checkout</td>
+</tr>
+<tr>
+<td><code>IdentityScreen</code></td>
+<td>QR identité (modal plein écran)</td>
+</tr>
+</tbody>
+</table>
+<h4>Autres (drawer / hub)</h4>
+<p>Profil hub, infos perso, favoris, historique commandes, FAQ, devenir livreur, contact, aide, paramètres.</p>
+<p><strong>Services proposés au client aujourd'hui :</strong> chercher / acheter / se faire livrer · suivre une commande · chatter · stocker des objets numériques · présenter son identité QR · gérer favoris &amp; profil.</p>
+<hr />
+<h3>4.3 Commerçant — Épée (Shell Phase 1)</h3>
+<p><strong>Navigation :</strong> Drawer + Cockpit (plus de 4 onglets monolithes).</p>
+<h4>Familles du registre</h4>
+<table>
+<thead>
+<tr>
+<th>Famille</th>
+<th>Modules actifs</th>
+<th>Modules « Bientôt »</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><strong>Vendre</strong></td>
+<td>Catalogue &amp; stock, Commandes</td>
+<td>—</td>
+</tr>
+<tr>
+<td><strong>Animer</strong></td>
+<td>Promotions</td>
+<td>Événements, Fidélité</td>
+</tr>
+<tr>
+<td><strong>Réseau</strong></td>
+<td>Clients, Messages</td>
+<td>Collaborations</td>
+</tr>
+<tr>
+<td><strong>Piloter</strong></td>
+<td>Mon commerce, Statistiques</td>
+<td>—</td>
+</tr>
+</tbody>
+</table>
+<h4>Écrans branchés</h4>
+<table>
+<thead>
+<tr>
+<th>Écran</th>
+<th>Service</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>MerchantCockpitScreen</code></td>
+<td>Briefing (priorités, vie du commerce, accès rapides) + stubs Objectifs / Suggestions / Santé</td>
+</tr>
+<tr>
+<td><code>ManageStockScreen</code> / <code>AddProductScreen</code></td>
+<td>Catalogue &amp; stocks</td>
+</tr>
+<tr>
+<td><code>MerchantOrdersScreen</code></td>
+<td>Commandes reçues</td>
+</tr>
+<tr>
+<td><code>ManagePromotions*</code></td>
+<td>Promotions</td>
+</tr>
+<tr>
+<td><code>MesClientsScreen</code></td>
+<td>Clients ayant commandé</td>
+</tr>
+<tr>
+<td><code>MerchantInboxScreen</code></td>
+<td>Notifications + assistance</td>
+</tr>
+<tr>
+<td><code>CreateStoreScreen</code></td>
+<td>Boutique</td>
+</tr>
+<tr>
+<td><code>MerchantStatsScreen</code></td>
+<td>Agrégats simples (commandes, CA livré)</td>
+</tr>
+<tr>
+<td><code>ProfileScreen</code></td>
+<td>Profil</td>
+</tr>
+</tbody>
+</table>
+<p><strong>Services proposés au commerçant aujourd'hui :</strong> gérer boutique &amp; stock · recevoir &amp; suivre commandes · lancer des promos · voir clients · messagerie / support · briefing cockpit · stats basiques.</p>
+<p><strong>Non utilisables (volontairement) :</strong> Événements, Fidélité, Collaborations — emplacements réservés sans organe.</p>
+<hr />
+<h3>4.4 Livreur</h3>
+<p><strong>Onglets :</strong> Accueil · Revenu · Boîte de réception · Menu</p>
+<table>
+<thead>
+<tr>
+<th>Écran</th>
+<th>Service</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>DriverHomeScreen</code></td>
+<td>Carte, online/offline, offre de course, mission active (drawer)</td>
+</tr>
+<tr>
+<td><code>DriverEarningsScreen</code></td>
+<td>Revenus / stats</td>
+</tr>
+<tr>
+<td><code>DriverInboxScreen</code></td>
+<td>Notifications + support</td>
+</tr>
+<tr>
+<td><code>DriverMenuScreen</code> + Info / Aide / Settings</td>
+<td>Compte</td>
+</tr>
+<tr>
+<td><code>ChatScreen</code></td>
+<td>Chat lié à la course</td>
+</tr>
+</tbody>
+</table>
+<p><strong>Services :</strong> se mettre en ligne · recevoir / accepter / refuser une offre · réaliser le parcours de livraison · chatter · consulter revenus.</p>
+<hr />
+<h3>4.5 Laboratoire (équipe Ma Zone) — web</h3>
+<table>
+<thead>
+<tr>
+<th>Page</th>
+<th>Service</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Login admin</td>
+<td>Auth séparée</td>
+</tr>
+<tr>
+<td>Monde</td>
+<td>Recettes World Factory, run, batches, reset</td>
+</tr>
+<tr>
+<td>Explorateur</td>
+<td>Acteurs démo, détail, <strong>Devenir X</strong>, pouvoirs Wallet</td>
+</tr>
+</tbody>
+</table>
+<hr />
+<h3>4.6 Habitant (Deuxième Âme) — vision uniquement</h3>
+<p>Pas d'écrans dans le code. Cible conceptuelle :
+- Switch Client ↔ Habitant
+- Accueil « fenêtre sur le quartier » (7 familles : Découvrir, Participer, Rencontrer, Chercher, Recevoir, Contribuer, Créer)
+- Murmures, Quêtes, Lanternes (objets physiques), passions, météo humaine, IA-guide
+- Lien Épée → initiatives découvertes côté Habitant</p>
+<hr />
+<h2>5. Inventaire — TOUT CE QUI A DÉJÀ ÉTÉ RÉALISÉ</h2>
+<h3>A. Socle technique</h3>
+<ol>
+<li>Backend Express + SQLite + migrations incrémentales  </li>
+<li>Auth JWT multi-rôles + profils  </li>
+<li>Socket.io (rooms user / order / conversation / merchant / drivers)  </li>
+<li>App Expo multi-rôles (client, merchant, driver)  </li>
+<li>Config réseau locale (simulator / emulator / <code>EXPO_PUBLIC_API_URL</code>)  </li>
+<li>Design tokens THEME + composants UI de base  </li>
+<li>Cartes Premium (native + web)  </li>
+</ol>
+<h3>B. Première Âme — Client</h3>
+<ol start="8">
+<li>Accueil catégories + recherche produits  </li>
+<li>Flash promotions  </li>
+<li>Fiches produit / commerce  </li>
+<li>Panier + checkout  </li>
+<li>Commande + suivi temps réel  </li>
+<li>Annulation commande (statuts autorisés)  </li>
+<li>Favoris commerces  </li>
+<li>Messagerie (commerces, support, chat commande)  </li>
+<li>Historique commandes  </li>
+<li>Drawer (FAQ, contact, aide, paramètres, devenir livreur)  </li>
+<li>Hub profil + infos personnelles  </li>
+<li>Wallet (familles, détail, biographie)  </li>
+<li>Identity QR (présentation)  </li>
+</ol>
+<h3>C. Livraison &amp; livreur</h3>
+<ol start="21">
+<li>Moteur de dispatch + file d'attente  </li>
+<li>Mode offre popup (accept / refuse, timer)  </li>
+<li>Workflow mission (picking_up → delivered)  </li>
+<li>Écran carte livreur + online  </li>
+<li>Revenus livreur  </li>
+<li>Inbox / support livreur  </li>
+<li>Chat client–livreur–commerçant selon contexte  </li>
+</ol>
+<h3>D. Commerçant — Épée</h3>
+<ol start="28">
+<li>Shell Épée (Cockpit + drawer + registre modules)  </li>
+<li>Briefing (adaptateurs marketplace, messages, store, promotions, clients)  </li>
+<li>Catalogue &amp; stock  </li>
+<li>Commandes commerçant  </li>
+<li>Promotions CRUD  </li>
+<li>Mes clients  </li>
+<li>Inbox / notifications / support  </li>
+<li>Boutique (création / édition)  </li>
+<li>Statistiques lecture seule  </li>
+<li>Emplacements « Bientôt » Event / Fidélité / Collaborations  </li>
+</ol>
+<h3>E. Wallet Engine (organe)</h3>
+<ol start="38">
+<li>Schéma <code>digital_objects</code> + journal <code>digital_object_events</code>  </li>
+<li>API issue / consume / revoke / lecture familles  </li>
+<li>Registre kinds + capacités + retention / souvenirs  </li>
+<li>Seed / démo World Factory peuplant des wallets  </li>
+</ol>
+<h3>F. Identity Engine (organe)</h3>
+<ol start="42">
+<li>Présentations + événements d'audit  </li>
+<li>Routes identity  </li>
+<li>Écran QR client  </li>
+</ol>
+<h3>G. Communication Engine</h3>
+<ol start="45">
+<li>Politiques de fils (durable / éphémère)  </li>
+<li>API threads / messages / read  </li>
+<li>Contextes mobile non-lus + badges  </li>
+</ol>
+<h3>H. Bac à Sable</h3>
+<ol start="48">
+<li>Tables <code>admin_users</code>, <code>demo_batches</code>, <code>demo_entities</code>  </li>
+<li>Auth admin séparée + script <code>create-admin.js</code>  </li>
+<li>World Factory (registre recettes, contexte, reset)  </li>
+<li>Recette <code>quartier_anime</code> (+ <strong>livreurs</strong>)  </li>
+<li>Explorateur lecture seule  </li>
+<li>Impersonation sandbox / démo-only  </li>
+<li>Lab actions via Wallet  </li>
+<li>App <code>admin-web</code> (Monde + Explorateur)  </li>
+<li>Passage de jeton <code>#labToken</code> (web)  </li>
+</ol>
+<h3>I. Documentation &amp; gouvernance</h3>
+<ol start="57">
+<li>Plans / chantiers / audits PDF (Wallet, Identity, Bac à Sable, Épée, Laboratoire, UX messagerie, etc.)  </li>
+<li>Sauvegarde GitHub V0.9.2 taguée  </li>
+</ol>
+<h3>J. Explicitement NON réalisé (pour éviter la confusion)</h3>
+<ul>
+<li>Paiement réel (CB, PSP)  </li>
+<li>Deuxième Âme / Switch Habitant / Murmures / Quêtes / Lanternes  </li>
+<li>Event / Loyalty / Collaboration Engines  </li>
+<li>Notifications push natives (APNs / FCM)  </li>
+<li>Déploiement production (App Store, Play Store, serveur cloud, HTTPS, secrets prod)  </li>
+<li>Multi-villes / multi-zones avancé  </li>
+<li>Modération / KYC / conformité RGPD outillage complet  </li>
+<li>Objectifs / Suggestions / Santé du commerce (stubs Cockpit seulement)  </li>
+</ul>
+<hr />
+<h2>6. TODO — pour une application FONCTIONNELLE et DÉPLOYABLE</h2>
+<p>Deux horizons distincts. Ne pas les mélanger.</p>
+<h3>Horizon A — MVP Première Âme « déployable » (priorité opérationnelle)</h3>
+<p>Sans cela, Ma Zone reste un <strong>labo local</strong>, pas un produit en production.</p>
+<h4>A1. Fiabilité métier (bloquant produit)</h4>
+<ol>
+<li>Stabiliser bout-en-bout le parcours <strong>commande → offre livreur → livraison → livré</strong> (régressions connues historiques : file silencieuse, missions fantômes).  </li>
+<li>Clarifier &amp; tester les cas limites (aucun livreur, annulation mid-course, multi-commandes).  </li>
+<li>Brancher réellement les <strong>capacités Wallet</strong> critiques ou masquer celles encore stub.  </li>
+<li>Vérifier Identity en conditions réelles (scan / présentation sur téléphone physique).  </li>
+<li>Nettoyer écrans / flux legacy non branchés (anciens écrans livreur) pour éviter la dette.  </li>
+</ol>
+<h4>A2. Paiement &amp; confiance (bloquant business)</h4>
+<ol start="6">
+<li>Choisir et intégrer un <strong>PSP</strong> (Stripe / autre) : paiement commande, webhooks, remboursements.  </li>
+<li>Tickets / reçus cohérents (Wallet <code>pickup_ticket</code> / souvenirs d'achat réellement émis à la livraison).  </li>
+<li>Mentions légales, CGU, politique de confidentialité <strong>dans l'app</strong>.  </li>
+<li>Gestion des litiges / support opérationnel (processus + outils minimum).  </li>
+</ol>
+<h4>A3. Production technique (bloquant déploiement)</h4>
+<ol start="10">
+<li>Héberger le backend (VM / PaaS) avec <strong>HTTPS</strong>, secrets (<code>JWT_SECRET</code>, <code>ADMIN_JWT_SECRET</code>) hors code.  </li>
+<li>Base de données de prod (backup, restauration) — SQLite OK pour petit volume ou migration Postgres si besoin.  </li>
+<li>Builds <strong>iOS App Store</strong> + <strong>Android Play Store</strong> (certificates, privacy nutrition labels).  </li>
+<li>Config réseau prod (<code>EXPO_PUBLIC_API_URL</code>, sockets WSS).  </li>
+<li>Monitoring / logs / alertes (erreurs API, dispatch, sockets).  </li>
+<li>Désactiver / verrouiller le Bac à Sable hors environnement sandbox (<code>SANDBOX_MODE</code>).  </li>
+<li>Rate limiting, durcissement CORS, rotation secrets.  </li>
+</ol>
+<h4>A4. Qualité &amp; ops</h4>
+<ol start="17">
+<li>Suite de tests automatisés (au minimum : auth, commande, dispatch, reset demo).  </li>
+<li>Environnements séparés (dev / staging / prod).  </li>
+<li>Procédure de rollback (tag Git déjà en place — formaliser le runbook).  </li>
+<li>Onboarding commerçants / livreurs (données réelles, pas seulement World Factory).  </li>
+</ol>
+<h3>Horizon B — Enrichir la Première Âme (après A, avant ou en parallèle de la Deuxième Âme)</h3>
+<ol start="21">
+<li>Event Engine + écrans Épée « Événements »  </li>
+<li>Loyalty Engine (au-delà des kinds Wallet)  </li>
+<li>Collaboration Engine  </li>
+<li>Cockpit : Objectifs / Suggestions / Santé (vrais organes ou adapters)  </li>
+<li>Notifications push  </li>
+<li>Analytics métier (sans trahir la future métrique « vie réelle »)  </li>
+<li>Amélioration UX commerce (photos, stories, vidéos verticales — déjà dans la vision)  </li>
+</ol>
+<h3>Horizon C — Deuxième Âme / Ville Augmentée (chapitre stratégique)</h3>
+<p><strong>Prérequis :</strong> architecture conceptuelle validée (en cours) — <strong>aucun code tant que l'expérience n'est pas certaine.</strong></p>
+<ol start="28">
+<li>Architecture conceptuelle formalisée (surfaces Habitant, organes Murmures / Quêtes / Lanternes)  </li>
+<li>Switch Client ↔ Habitant (changement d'intention, pas seulement de thème)  </li>
+<li>Onboarding passions (ce qui émerveille, pas ce qu'on achète)  </li>
+<li>Organe Murmures + écran d'accueil Habitant  </li>
+<li>Quêtes + guide IA (parcours, pas listes)  </li>
+<li>Sept familles d'expériences (Découvrir → Créer)  </li>
+<li>Lanternes : objets physiques, QR, Identity, Wallet (récompense / souvenir), curation Back Office, candidature Épée « Devenir une Lanterne »  </li>
+<li>Météo humaine du quartier  </li>
+<li>Lien Épée → découverte Habitant (événements, collabs, histoires)  </li>
+<li>Métriques de succès « sorties / expériences » (pas de rétention d'écran)  </li>
+<li>Recettes World Factory enrichies pour peupler la Deuxième Âme dans le Laboratoire  </li>
+</ol>
+<hr />
+<h2>7. Synthèse exécutive</h2>
+<table>
+<thead>
+<tr>
+<th>Question</th>
+<th>Réponse courte</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Que sait faire Ma Zone <strong>aujourd'hui</strong> ?</td>
+<td>Marketplace locale complète (client / commerçant / livreur) + Wallet + Identity + Bac à Sable (générer un monde, y entrer).</td>
+</tr>
+<tr>
+<td>Qu'est-ce qui est <strong>annoncé mais vide</strong> ?</td>
+<td>Modules Épée Event / Fidélité / Collaborations ; stubs Cockpit ; capacités Wallet partiellement stub.</td>
+</tr>
+<tr>
+<td>Qu'est-ce qui est <strong>vision pure</strong> ?</td>
+<td>Deuxième Âme, Murmures, Quêtes, Lanternes, Switch Habitant.</td>
+</tr>
+<tr>
+<td>Que faut-il pour <strong>déployer</strong> ?</td>
+<td>Horizon A : fiabiliser le parcours, paiement, hébergement HTTPS, stores, secrets, sandbox off en prod.</td>
+</tr>
+<tr>
+<td>Que faut-il pour <strong>accomplir la promesse</strong> ?</td>
+<td>Horizon C : construire l'Habitant sans trahir « faire fermer le téléphone ».</td>
+</tr>
+</tbody>
+</table>
+<hr />
+<h2>8. Verdict CTO</h2>
+<p>Ma Zone V0.9.2 est un <strong>MVP Première Âme solide</strong> avec une architecture d'organes mature et un Bac à Sable réellement utilisable pour inventer la suite. Ce n'est <strong>pas</strong> encore un produit production-ready (paiement, hébergement, stores, durcissement).</p>
+<p>La Deuxième Âme est le <strong>chapitre stratégique</strong> : elle ne doit pas être improvisée en features. Elle doit naître d'une architecture conceptuelle aussi exigeante que celle du Wallet / de l'Épée — surfaces qui orchestrent, organes qui décident, et une métrique de succès qui mesure la <strong>vie</strong>, pas l'écran.</p>
+<p><strong>Prochaine étape recommandée (ordre) :</strong>
+1. Clôturer Horizon A (déployabilité Première Âme).<br />
+2. Finaliser l'architecture conceptuelle de la Deuxième Âme (document de conception, sans code).<br />
+3. Ouvrir Horizon C par le plus petit organe fidèle à la philosophie (souvent : Murmures ou Lanternes — à trancher ensemble).</p>
+<hr />
+<p><em>Fin du document — généré à partir de l'état réel du dépôt Ma Zone au 19/07/2026.</em></p>
+</body>
+</html>

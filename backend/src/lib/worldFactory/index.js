@@ -22,6 +22,7 @@ const { purgeUsers } = require('./demoWorld');
 
 // Enregistre les recettes disponibles (chaque fichier s'auto-déclare).
 require('./recipes/quartierAnime');
+require('./recipes/mondeEvenementiel');
 
 function httpError(status, message) {
   const err = new Error(message);
@@ -87,6 +88,12 @@ function removeEntities(entities) {
   for (const e of byType('wallet_object')) {
     db.prepare('DELETE FROM digital_object_events WHERE object_id = ?').run(e.entity_id);
     db.prepare('DELETE FROM digital_objects WHERE id = ?').run(e.entity_id);
+  }
+  // Initiatives Event Engine (+ journal + diffusions).
+  for (const e of byType('event')) {
+    db.prepare('DELETE FROM event_diffusions WHERE event_id = ?').run(e.entity_id);
+    db.prepare('DELETE FROM event_journal WHERE event_id = ?').run(e.entity_id);
+    db.prepare('DELETE FROM events WHERE id = ?').run(e.entity_id);
   }
   for (const e of byType('favorite')) {
     db.prepare('DELETE FROM store_favorites WHERE id = ?').run(e.entity_id);

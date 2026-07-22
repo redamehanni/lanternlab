@@ -1,0 +1,339 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Compte rendu — Event Engine (implémentation complète)</title>
+<style>
+  @page { margin: 16mm 14mm; }
+  body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Helvetica, Arial, sans-serif; font-size: 10.5pt; line-height: 1.45; color: #1a1a1a; max-width: 100%; }
+  h1 { font-size: 20pt; border-bottom: 2px solid #0f2d5c; padding-bottom: 8px; color: #0f2d5c; page-break-after: avoid; }
+  h2 { font-size: 14pt; margin-top: 22px; color: #0f2d5c; border-bottom: 1px solid #e5e7eb; padding-bottom: 4px; page-break-after: avoid; }
+  h3 { font-size: 11.5pt; margin-top: 14px; color: #1a4a8a; page-break-after: avoid; }
+  table { border-collapse: collapse; width: 100%; margin: 10px 0; font-size: 9pt; page-break-inside: avoid; }
+  th, td { border: 1px solid #d1d5db; padding: 5px 7px; text-align: left; vertical-align: top; }
+  th { background: #f3f4f6; font-weight: 600; }
+  code { background: #f3f4f6; padding: 1px 4px; border-radius: 3px; font-size: 8.5pt; }
+  pre { background: #f8fafc; border: 1px solid #e5e7eb; border-radius: 6px; padding: 10px; overflow-x: auto; font-size: 8pt; line-height: 1.35; white-space: pre-wrap; word-break: break-word; page-break-inside: avoid; }
+  pre code { background: none; padding: 0; }
+  blockquote { border-left: 4px solid #0f2d5c; margin: 10px 0; padding: 6px 14px; background: #f0f4f8; color: #1e3a5f; }
+  hr { border: none; border-top: 1px solid #e5e7eb; margin: 18px 0; }
+  ul, ol { padding-left: 22px; }
+  li { margin-bottom: 3px; }
+  p { margin: 8px 0; }
+  .pdf-note { display: none; }
+  @media screen {
+    .pdf-note { display: block; background: #eff6ff; border: 1px solid #bfdbfe; border-radius: 8px; padding: 12px 16px; margin-bottom: 24px; color: #1e3a8a; }
+  }
+</style>
+</head>
+<body>
+<div class="pdf-note">
+  <strong>Lecture dans Cursor / navigateur :</strong> ce fichier HTML est la version lisible du plan.
+  Pour le PDF, ouvrez <code>COMPTE_RENDU_EVENT_ENGINE.pdf</code> depuis le Finder (clic droit → Ouvrir avec Aperçu)
+  ou double-cliquez le fichier <code>Ouvrir_*_PDF.command</code> correspondant à la racine du projet.
+</div>
+<h1>Compte rendu — Event Engine (implémentation complète)</h1>
+<p><strong>Date :</strong> 21 juillet 2026<br />
+<strong>Statut :</strong> Plan d'architecture validé et <strong>exécuté</strong> (phases 1 → 7)<br />
+<strong>Référence architecture :</strong> <code>PLAN_EVENT_ENGINE.pdf</code><br />
+<strong>Public :</strong> Architectes Ma Zone</p>
+<hr />
+<h2>Document de référence</h2>
+<table>
+<thead>
+<tr>
+<th>Format</th>
+<th>Fichier</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><strong>PDF</strong></td>
+<td><code>COMPTE_RENDU_EVENT_ENGINE.pdf</code></td>
+</tr>
+<tr>
+<td>HTML</td>
+<td><code>COMPTE_RENDU_EVENT_ENGINE.html</code></td>
+</tr>
+<tr>
+<td>Markdown</td>
+<td><code>COMPTE_RENDU_EVENT_ENGINE.md</code></td>
+</tr>
+</tbody>
+</table>
+<hr />
+<h2>Philosophie tenue</h2>
+<p>L'Event Engine est un <strong>organe dédié aux initiatives locales et à leur cycle de vie</strong> (du brouillon à l'archivage).</p>
+<p>Il n'est :</p>
+<ul>
+<li>ni un Event Bus technique universel ;</li>
+<li>ni un fourre-tout pour les événements internes de l'application ;</li>
+<li>ni un agenda / catalogue / miroir de la ville.</li>
+</ul>
+<p>Il <strong>orchestre</strong> Wallet et Identity lorsqu'une initiative le nécessite ; il n'absorbe jamais leurs responsabilités.</p>
+<p>Une <strong>Opportunité Volante</strong> est traitée comme une <strong>stratégie de diffusion</strong>, jamais comme un type d'événement.</p>
+<blockquote>
+<p>Nous ne construisons pas le miroir de la ville.<br />
+Nous construisons le moteur qui aide la ville à devenir plus vivante.</p>
+</blockquote>
+<hr />
+<h2>Ce qui a été implémenté</h2>
+<h3>Backend — <code>backend/src/lib/eventEngine/</code></h3>
+<table>
+<thead>
+<tr>
+<th>Fichier / dossier</th>
+<th>Rôle</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>lifecycle.js</code></td>
+<td>Graphe de statuts canonique (<code>draft → scheduled → published → live → ended → archived</code>, <code>cancelled</code>) + <code>canTransition</code> fail-fast, spécialisable par type</td>
+</tr>
+<tr>
+<td><code>eventRegistry.js</code></td>
+<td>Registre Open/Closed (<code>registerType</code>), canaux du Mode Réception, capacités connues, sources ouvertes (merchant, admin, association, artist, citizen, ai…)</td>
+</tr>
+<tr>
+<td><code>types/</code></td>
+<td><code>atelier</code> (générique), <code>degustation</code> (billetterie), <code>promo</code> (projection), <code>lanterne</code> (cycle spécialisé). Auto-déclarés</td>
+</tr>
+<tr>
+<td><code>index.js</code></td>
+<td>API publique : create / update / transition / publish / cancel / queries + journal append-only + émissions socket</td>
+</tr>
+<tr>
+<td><code>diffusion.js</code></td>
+<td>Mode Réception (<code>event_subscriptions</code>) + Opportunités Volantes (<code>event_diffusions</code>) avec idempotence et garde <code>isFlyable</code></td>
+</tr>
+<tr>
+<td><code>orchestration.js</code></td>
+<td>Billet → <code>wallet.issueObject</code> (jauge) ; Lanterne → récompense Wallet + transition (idempotent par citoyen)</td>
+</tr>
+<tr>
+<td><code>bus.js</code> + <code>subscribers/insights.js</code></td>
+<td>Hook interne emit/subscribe ; abonné stats/activité en lecture seule ; isolation défensive</td>
+</tr>
+</tbody>
+</table>
+<h3>Base de données — <code>backend/src/db/index.js</code></h3>
+<p>Tables ajoutées :</p>
+<ul>
+<li><code>events</code></li>
+<li><code>event_journal</code></li>
+<li><code>event_subscriptions</code></li>
+<li><code>event_diffusions</code></li>
+</ul>
+<h3>Routes — <code>backend/src/routes/events.js</code></h3>
+<ul>
+<li>Production (commerçant / Épée)</li>
+<li>Mode Réception (habitant)</li>
+<li>Opportunité Volante</li>
+<li>Billet / découverte Lanterne (habitant)</li>
+<li>Découverte / Murmures (préparation Deuxième Âme)</li>
+<li>Insights (hook interne)</li>
+</ul>
+<h3>Bac à Sable</h3>
+<table>
+<thead>
+<tr>
+<th>Zone</th>
+<th>Contenu</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>worldFactory/context.js</code></td>
+<td>Primitives <code>createEventInitiative</code> / <code>setModeReception</code> (via l'organe), provenance <code>event</code></td>
+</tr>
+<tr>
+<td><code>recipes/quartierAnime.js</code></td>
+<td>Seed d'initiatives + Mode Réception des habitants</td>
+</tr>
+<tr>
+<td><code>lab/actions/events.js</code></td>
+<td>Actions <code>create_event</code> / <code>publish_event</code> / <code>diffuse_event</code> (toujours via l'organe)</td>
+</tr>
+<tr>
+<td>Reset</td>
+<td>Étendu aux initiatives, diffusions, abonnements (purge par appartenance)</td>
+</tr>
+</tbody>
+</table>
+<h3>Mobile — Épée</h3>
+<ul>
+<li>Module <code>events</code> activé dans <code>moduleRegistry</code></li>
+<li>Écrans <strong>Mes initiatives</strong> + <strong>Créer une initiative</strong></li>
+<li>Branchés dans <code>EpeeStack</code></li>
+<li>Fonctions API : production, diffusion, découverte, billet, lanterne</li>
+</ul>
+<hr />
+<h2>Roadmap exécutée</h2>
+<table>
+<thead>
+<tr>
+<th>Phase</th>
+<th>Contenu</th>
+<th>Statut</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><strong>1 · Cœur</strong></td>
+<td>Tables + registre + lifecycle + API create/publish/query + types de base</td>
+<td>Fait</td>
+</tr>
+<tr>
+<td><strong>2 · Épée</strong></td>
+<td>Module events activé + écrans création / liste</td>
+<td>Fait</td>
+</tr>
+<tr>
+<td><strong>3 · Diffusion</strong></td>
+<td>Canaux + Mode Réception + Opportunités Volantes</td>
+<td>Fait</td>
+</tr>
+<tr>
+<td><strong>4 · Orchestration</strong></td>
+<td>Billetterie / récompenses Wallet ; Lanternes</td>
+<td>Fait</td>
+</tr>
+<tr>
+<td><strong>5 · Hook</strong></td>
+<td>Bus interne + abonné insights</td>
+<td>Fait</td>
+</tr>
+<tr>
+<td><strong>6 · Bac à Sable</strong></td>
+<td>Recette World Factory + actions labo + reset propre</td>
+<td>Fait</td>
+</tr>
+<tr>
+<td><strong>7 · Consommation</strong></td>
+<td>Projections <code>listDiscoverable</code> / <code>listMurmurs</code> (préparation Deuxième Âme)</td>
+<td>Fait</td>
+</tr>
+</tbody>
+</table>
+<hr />
+<h2>Choix techniques importants</h2>
+<ol>
+<li><strong>Registre + payload opaque + <code>display</code> séparé + journal append-only</strong> — calque exact de Wallet / Identity pour cohérence et zéro logique métier dans le cœur.</li>
+<li><strong>Cycle de vie spécialisable par type</strong> — la Lanterne (<code>hidden → active → discovered → retired</code>) prouve l'extensibilité sans toucher au cœur.</li>
+<li><strong>Diffusion et orchestration découplées</strong> — <code>diffusion.js</code> et <code>orchestration.js</code> reçoivent l'initiative projetée ; pas de cycle d'import avec le cœur.</li>
+<li><strong>Idempotence</strong> partout où un rejeu est possible (diffusion, découverte, journal).</li>
+<li><strong>Filtre canal / capacité en mémoire</strong> (canaux stockés en JSON) — simple et générique pour le volume actuel.</li>
+<li><strong>Sources déjà ouvertes</strong> — association, artiste, citoyen, IA déclarés dans le registre sans attendre une refonte.</li>
+</ol>
+<hr />
+<h2>Adaptations mineures (justifiées)</h2>
+<h3>Identité du scanneur de Lanterne</h3>
+<p>Fournie par la couche d'authentification (le citoyen est déjà identifié par son token), plutôt que par un aller-retour Identity <code>issuePresentation</code> / <code>verifyPresentation</code> — qui modéliserait l'inverse (une personne se présentant à un vérificateur).</p>
+<p>La frontière du plan reste respectée : Event <strong>orchestre</strong>, Wallet <strong>récompense</strong>. L'intégration Identity « scan signé hors-ligne » reste un raffinement futur sans refonte.</p>
+<h3>Insights en mémoire</h3>
+<p>Compteurs + fil d'activité récent pour démontrer le hook sans inventer de table stats. À persister quand le besoin analytique sera réel.</p>
+<hr />
+<h2>Tests effectués</h2>
+<p>Suite headless : <strong>75 assertions</strong>, toutes vertes.</p>
+<table>
+<thead>
+<tr>
+<th>Script</th>
+<th>Assertions</th>
+<th>Couverture</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>test-event-engine</code></td>
+<td>22</td>
+<td>Registre, validation fail-fast, cycle de vie générique + Lanterne, journal, bus</td>
+</tr>
+<tr>
+<td><code>test-events-http</code></td>
+<td>14</td>
+<td>Routes HTTP production, découverte, garde d'appartenance</td>
+</tr>
+<tr>
+<td><code>test-diffusion</code></td>
+<td>10</td>
+<td>Mode Réception, Opportunité Volante, idempotence, garde <code>isFlyable</code></td>
+</tr>
+<tr>
+<td><code>test-orchestration</code></td>
+<td>11</td>
+<td>Billetterie + jauge, récompense Lanterne, anti-double</td>
+</tr>
+<tr>
+<td><code>test-bus</code></td>
+<td>3</td>
+<td>Insights + isolation défensive (abonné qui plante)</td>
+</tr>
+<tr>
+<td><code>test-sandbox-events</code></td>
+<td>7</td>
+<td>Seed, actions labo, reset propre</td>
+</tr>
+<tr>
+<td><code>test-discovery</code></td>
+<td>8</td>
+<td>Projections découverte / Murmures / filtres</td>
+</tr>
+</tbody>
+</table>
+<p>Smoke test serveur : démarrage complet, <code>/health</code> OK.</p>
+<hr />
+<h2>Points d'attention pour la suite</h2>
+<table>
+<thead>
+<tr>
+<th>Sujet</th>
+<th>Note</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>event_participations</code></td>
+<td>Table réservée ; à créer quand la participation déclarative (RSVP) arrivera</td>
+</tr>
+<tr>
+<td>Filtrage géographique</td>
+<td>Aujourd'hui borné sur <code>zoneId</code> ; rayon / haversine à enrichir</td>
+</tr>
+<tr>
+<td>Persistance insights</td>
+<td>Compteurs en mémoire → table / API admin quand le besoin analytique sera réel</td>
+</tr>
+<tr>
+<td>Récurrence</td>
+<td>Champ <code>recurrence</code> réservé, non implémenté</td>
+</tr>
+<tr>
+<td>Endpoint <code>/insights</code></td>
+<td>Ouvert à tout authentifié ; restreindre (admin) avant production</td>
+</tr>
+<tr>
+<td>Index / volume</td>
+<td>Indexer davantage si le flux d'initiatives grossit</td>
+</tr>
+</tbody>
+</table>
+<hr />
+<h2>Recommandations avant la Deuxième Âme</h2>
+<ol>
+<li>Construire les <strong>6 portes</strong> comme <strong>vues composées</strong> sur <code>listDiscoverable</code> / <code>listMurmurs</code> (déjà prêtes) — la surface compose, l'organe ne connaît pas les portes.</li>
+<li>Câbler l'écran <strong>Mode Réception</strong> habitant sur <code>GET</code> / <code>PUT /api/events/reception</code>.</li>
+<li>Faire écouter au client le socket <strong><code>event:opportunity</code></strong> (rooms <code>user_*</code> déjà en place) pour la diffusion active.</li>
+<li>Ajouter l'onglet <strong>Opportunité Volante</strong> dans l'Épée (API <code>diffuseEvent</code> prête) et le parcours <strong>billet / lanterne</strong> côté client (<code>requestEventTicket</code>, <code>discoverLantern</code>).</li>
+<li>Garder la règle : tout nouveau producteur (association, artiste, citoyen, IA) = <strong>un type déclaré + un mapping de source</strong>, sans toucher au cœur.</li>
+</ol>
+<hr />
+<h2>Verdict</h2>
+<p>Rien dans le développement n'a remis en cause l'architecture validée. Aucune décision majeure n'a nécessité d'arrêt.</p>
+<p>L'organe est en place, testé, extensible, et prêt à accompagner Ma Zone — et en particulier la construction de la Deuxième Âme.</p>
+<hr />
+<p><em>Fin du compte rendu.</em></p>
+</body>
+</html>
