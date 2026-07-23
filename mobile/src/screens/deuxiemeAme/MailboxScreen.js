@@ -5,7 +5,7 @@ import {
 import { useFocusEffect } from '@react-navigation/native';
 import { Ionicons } from '@expo/vector-icons';
 import { getOpportunityInbox } from '../../api';
-import { THEME } from '../../theme';
+import { AME } from '../../theme';
 
 const SORTS = [
   { id: 'date', label: 'Date', icon: 'time-outline' },
@@ -50,7 +50,7 @@ export default function MailboxScreen({ navigation }) {
   }
 
   if (loading && !refreshing) {
-    return <ActivityIndicator style={styles.center} color={THEME.colors.accent} />;
+    return <ActivityIndicator style={styles.center} color={AME.colors.accent} />;
   }
 
   return (
@@ -60,7 +60,7 @@ export default function MailboxScreen({ navigation }) {
           const on = sort === s.id;
           return (
             <TouchableOpacity key={s.id} style={[styles.sortChip, on && styles.sortChipOn]} onPress={() => changeSort(s.id)}>
-              <Ionicons name={s.icon} size={14} color={on ? '#fff' : THEME.colors.textSecondary} />
+              <Ionicons name={s.icon} size={14} color={on ? '#fff' : AME.colors.textSecondary} />
               <Text style={[styles.sortText, on && styles.sortTextOn]}>{s.label}</Text>
             </TouchableOpacity>
           );
@@ -74,7 +74,7 @@ export default function MailboxScreen({ navigation }) {
         refreshControl={<RefreshControl refreshing={refreshing} onRefresh={() => { setRefreshing(true); load(); }} />}
         ListEmptyComponent={(
           <View style={styles.empty}>
-            <Ionicons name="mail-open-outline" size={42} color={THEME.colors.textMuted} />
+            <Ionicons name="mail-open-outline" size={42} color={AME.colors.textMuted} />
             <Text style={styles.emptyTitle}>Boîte vide</Text>
             <Text style={styles.emptyHint}>Les opportunités volantes autour de vous apparaîtront ici.</Text>
           </View>
@@ -115,40 +115,40 @@ export default function MailboxScreen({ navigation }) {
 function Meta({ icon, text }) {
   return (
     <View style={styles.meta}>
-      <Ionicons name={icon} size={12} color={THEME.colors.textMuted} />
+      <Ionicons name={icon} size={12} color={AME.colors.textMuted} />
       <Text style={styles.metaText}>{text}</Text>
     </View>
   );
 }
 
 const styles = StyleSheet.create({
-  bg: { flex: 1, backgroundColor: THEME.colors.bg },
+  bg: { flex: 1, backgroundColor: AME.colors.bg },
   center: { flex: 1 },
-  sortRow: { flexDirection: 'row', flexWrap: 'wrap', gap: 8, paddingHorizontal: THEME.spacing.md, paddingTop: 12, paddingBottom: 4 },
+  sortRow: { flexDirection: 'row', flexWrap: 'wrap', gap: 8, paddingHorizontal: AME.spacing.md, paddingTop: 12, paddingBottom: 4 },
   sortChip: {
     flexDirection: 'row', alignItems: 'center', gap: 5,
-    paddingHorizontal: 12, paddingVertical: 8, borderRadius: THEME.radius.full,
-    borderWidth: 1.5, borderColor: THEME.colors.border, backgroundColor: THEME.colors.card,
+    paddingHorizontal: 12, paddingVertical: 8, borderRadius: AME.radius.full,
+    borderWidth: 1.5, borderColor: AME.colors.border, backgroundColor: AME.colors.card,
   },
-  sortChipOn: { backgroundColor: THEME.colors.primary, borderColor: THEME.colors.primary },
-  sortText: { fontSize: 12.5, fontWeight: '700', color: THEME.colors.textSecondary },
+  sortChipOn: { backgroundColor: AME.colors.primary, borderColor: AME.colors.primary },
+  sortText: { fontSize: 12.5, fontWeight: '700', color: AME.colors.textSecondary },
   sortTextOn: { color: '#fff' },
-  list: { padding: THEME.spacing.md, paddingBottom: 40 },
+  list: { padding: AME.spacing.md, paddingBottom: 40 },
   empty: { alignItems: 'center', paddingTop: 60, paddingHorizontal: 24 },
-  emptyTitle: { fontSize: 17, fontWeight: '800', color: THEME.colors.text, marginTop: 12 },
-  emptyHint: { fontSize: 14, color: THEME.colors.textSecondary, textAlign: 'center', marginTop: 6, lineHeight: 20 },
+  emptyTitle: { fontSize: 17, fontWeight: '800', color: AME.colors.text, marginTop: 12 },
+  emptyHint: { fontSize: 14, color: AME.colors.textSecondary, textAlign: 'center', marginTop: 6, lineHeight: 20 },
   card: {
-    backgroundColor: THEME.colors.card, borderRadius: THEME.radius.lg, padding: 16, marginBottom: 12,
-    borderWidth: 1, borderColor: THEME.colors.borderLight,
+    backgroundColor: AME.colors.card, borderRadius: AME.radius.lg, padding: 16, marginBottom: 12,
+    borderWidth: 1, borderColor: AME.colors.borderLight,
   },
   cardTop: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
-  category: { fontSize: 10.5, fontWeight: '800', letterSpacing: 1, color: THEME.colors.accent },
-  pill: { backgroundColor: THEME.colors.accentSoft, borderRadius: 8, paddingHorizontal: 8, paddingVertical: 3 },
-  pillMuted: { backgroundColor: THEME.colors.borderLight },
-  pillText: { fontSize: 11, fontWeight: '700', color: THEME.colors.text },
-  title: { fontSize: 16, fontWeight: '800', color: THEME.colors.text, marginTop: 6 },
-  summary: { fontSize: 13.5, color: THEME.colors.textSecondary, marginTop: 4, lineHeight: 19 },
+  category: { fontSize: 10.5, fontWeight: '800', letterSpacing: 1, color: AME.colors.accent },
+  pill: { backgroundColor: AME.colors.accentSoft, borderRadius: 8, paddingHorizontal: 8, paddingVertical: 3 },
+  pillMuted: { backgroundColor: AME.colors.borderLight },
+  pillText: { fontSize: 11, fontWeight: '700', color: AME.colors.text },
+  title: { fontSize: 16, fontWeight: '800', color: AME.colors.text, marginTop: 6 },
+  summary: { fontSize: 13.5, color: AME.colors.textSecondary, marginTop: 4, lineHeight: 19 },
   metaRow: { flexDirection: 'row', flexWrap: 'wrap', gap: 10, marginTop: 12 },
   meta: { flexDirection: 'row', alignItems: 'center', gap: 4 },
-  metaText: { fontSize: 12, color: THEME.colors.textMuted, fontWeight: '600' },
+  metaText: { fontSize: 12, color: AME.colors.textMuted, fontWeight: '600' },
 });

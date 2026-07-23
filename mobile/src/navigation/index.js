@@ -7,7 +7,7 @@ import { createDrawerNavigator } from '@react-navigation/drawer';
 import { useApp } from '../context/AppContext';
 import { useCart } from '../context/CartContext';
 import { useCommunication } from '../context/CommunicationContext';
-import { THEME } from '../theme';
+import { THEME, AME } from '../theme';
 import ClientDrawerContent from '../components/client/ClientDrawerContent';
 import { navigateToFreshHome } from './navigateToFreshHome';
 import { navigate } from './navigationRef';
@@ -103,12 +103,32 @@ const screenOptions = {
   animation: 'slide_from_right',
 };
 
-function TabIcon({ name, focused, badge }) {
+function TabIcon({ name, focused, badge, accent, muted }) {
+  const active = accent || THEME.colors.accent;
+  const idle = muted || THEME.colors.textMuted;
   return (
     <View>
-      <Ionicons name={name} size={24} color={focused ? THEME.colors.accent : THEME.colors.textMuted} />
+      <Ionicons name={name} size={24} color={focused ? active : idle} />
       {badge > 0 && (
         <View style={styles.badge}>
+          <Text style={styles.badgeText}>{badge > 9 ? '9+' : badge}</Text>
+        </View>
+      )}
+    </View>
+  );
+}
+
+function AmeTabIcon({ name, focused, badge }) {
+  return (
+    <View style={{ alignItems: 'center' }}>
+      <Ionicons
+        name={name}
+        size={focused ? 25 : 23}
+        color={focused ? AME.colors.accentDeep : AME.colors.textMuted}
+      />
+      {focused ? <View style={styles.ameActiveDot} /> : <View style={styles.ameActiveDotSpacer} />}
+      {badge > 0 && (
+        <View style={[styles.badge, styles.ameBadge]}>
           <Text style={styles.badgeText}>{badge > 9 ? '9+' : badge}</Text>
         </View>
       )}
@@ -128,6 +148,42 @@ const tabOptions = {
     ...THEME.shadow.md,
   },
   tabBarLabelStyle: { fontSize: 11, fontWeight: '600' },
+};
+
+/** Tab bar Deuxième Âme — terracotta doux, fond crème. */
+const ameTabOptions = {
+  headerShown: false,
+  tabBarActiveTintColor: AME.colors.accentDeep,
+  tabBarInactiveTintColor: AME.colors.textMuted,
+  tabBarStyle: {
+    height: 68,
+    paddingBottom: 10,
+    paddingTop: 8,
+    backgroundColor: AME.colors.bgElevated,
+    borderTopColor: AME.colors.borderLight,
+    borderTopWidth: 1,
+    ...AME.shadow.sm,
+  },
+  tabBarLabelStyle: {
+    fontSize: 11,
+    fontFamily: AME.fonts.uiSemiBold,
+    fontWeight: '600',
+  },
+};
+
+const ameScreenOptions = {
+  headerStyle: { backgroundColor: AME.colors.bg },
+  headerTintColor: AME.colors.text,
+  headerTitleStyle: {
+    fontFamily: AME.fonts.display,
+    fontWeight: '600',
+    fontSize: 20,
+    color: AME.colors.text,
+  },
+  headerShadowVisible: false,
+  contentStyle: { backgroundColor: AME.colors.bg },
+  animation: 'slide_from_right',
+  animationDuration: 320,
 };
 
 const clientDrawerHeader = (title) => ({
@@ -361,7 +417,7 @@ function ClientRoot() {
 // Âme : panier, wallet et messagerie sont partagés entre les deux faces.
 function DeuxiemeAmeHomeStack() {
   return (
-    <Stack.Navigator screenOptions={screenOptions}>
+    <Stack.Navigator screenOptions={ameScreenOptions}>
       <Stack.Screen name="DeuxiemeAmeHome" component={DeuxiemeAmeHomeScreen} options={{ headerShown: false }} />
       <Stack.Screen name="Events" component={EventsScreen} options={{ title: 'Les Événements' }} />
       <Stack.Screen name="EventDetail" component={EventDetailScreen} options={{ title: 'Initiative' }} />
@@ -391,13 +447,13 @@ function DeuxiemeAmeTabs() {
   const messagingUnread = getTotalUnreadMessagingTab();
 
   return (
-    <Tab.Navigator screenOptions={tabOptions}>
+    <Tab.Navigator screenOptions={ameTabOptions}>
       <Tab.Screen
         name="AccueilTab"
         component={DeuxiemeAmeHomeStack}
         options={{
           title: 'Accueil',
-          tabBarIcon: ({ focused }) => <TabIcon name={focused ? 'home' : 'home-outline'} focused={focused} />,
+          tabBarIcon: ({ focused }) => <AmeTabIcon name={focused ? 'home' : 'home-outline'} focused={focused} />,
         }}
       />
       <Tab.Screen
@@ -406,7 +462,7 @@ function DeuxiemeAmeTabs() {
         options={{
           title: 'Messages',
           tabBarIcon: ({ focused }) => (
-            <TabIcon name={focused ? 'chatbubbles' : 'chatbubbles-outline'} focused={focused} badge={messagingUnread} />
+            <AmeTabIcon name={focused ? 'chatbubbles' : 'chatbubbles-outline'} focused={focused} badge={messagingUnread} />
           ),
         }}
       />
@@ -415,7 +471,7 @@ function DeuxiemeAmeTabs() {
         component={WalletStack}
         options={{
           title: 'Wallet',
-          tabBarIcon: ({ focused }) => <TabIcon name={focused ? 'wallet' : 'wallet-outline'} focused={focused} />,
+          tabBarIcon: ({ focused }) => <AmeTabIcon name={focused ? 'wallet' : 'wallet-outline'} focused={focused} />,
         }}
       />
       <Tab.Screen
@@ -423,7 +479,7 @@ function DeuxiemeAmeTabs() {
         component={CartStack}
         options={{
           title: 'Panier',
-          tabBarIcon: ({ focused }) => <TabIcon name={focused ? 'cart' : 'cart-outline'} focused={focused} badge={count} />,
+          tabBarIcon: ({ focused }) => <AmeTabIcon name={focused ? 'cart' : 'cart-outline'} focused={focused} badge={count} />,
         }}
       />
     </Tab.Navigator>
@@ -434,7 +490,7 @@ function DeuxiemeAmeTabs() {
 function SecondSoulScreen() {
   return (
     <SoulErrorBoundary>
-      <View style={{ flex: 1, backgroundColor: THEME.colors.bg }}>
+      <View style={{ flex: 1, backgroundColor: AME.colors.bg }}>
         <View style={{ flex: 1 }}>
           <DeuxiemeAmeTabs />
         </View>
@@ -596,4 +652,19 @@ const styles = StyleSheet.create({
     minWidth: 18, height: 18, alignItems: 'center', justifyContent: 'center',
   },
   badgeText: { color: '#fff', fontSize: 10, fontWeight: '800' },
+  ameBadge: {
+    backgroundColor: AME.colors.error,
+    top: -2,
+    right: -10,
+  },
+  ameActiveDot: {
+    width: 14,
+    height: 2.5,
+    borderRadius: 2,
+    backgroundColor: AME.colors.accent,
+    marginTop: 3,
+  },
+  ameActiveDotSpacer: {
+    height: 5.5,
+  },
 });

@@ -5,7 +5,7 @@ import { Ionicons } from '@expo/vector-icons';
 import QRCode from 'react-native-qrcode-svg';
 import { getEventById, requestEventTicket } from '../../api';
 import { useToast } from '../../components/ui/Toast';
-import { THEME } from '../../theme';
+import { AME } from '../../theme';
 
 /**
  * Détail d'une initiative. Rendu piloté par `event.display` (aucune règle métier
@@ -46,11 +46,11 @@ export default function EventDetailScreen({ route, navigation }) {
     }
   }
 
-  if (loading) return <ActivityIndicator style={styles.center} color={THEME.colors.accent} />;
+  if (loading) return <ActivityIndicator style={styles.center} color={AME.colors.accent} />;
   if (!event) {
     return (
       <View style={styles.center}>
-        <Ionicons name="cloud-offline-outline" size={40} color={THEME.colors.textMuted} />
+        <Ionicons name="cloud-offline-outline" size={40} color={AME.colors.textMuted} />
         <Text style={styles.errText}>Initiative introuvable</Text>
       </View>
     );
@@ -87,7 +87,7 @@ export default function EventDetailScreen({ route, navigation }) {
       {resv && resv.required ? (
         <View style={styles.reservationCard}>
           <View style={styles.reservationHead}>
-            <Ionicons name="ticket-outline" size={18} color={THEME.colors.accent} />
+            <Ionicons name="ticket-outline" size={18} color={AME.colors.accent} />
             <Text style={styles.reservationTitle}>Sur réservation · {priceLabel}</Text>
           </View>
           {resv.capacity != null ? (
@@ -96,7 +96,7 @@ export default function EventDetailScreen({ route, navigation }) {
             </Text>
           ) : null}
           <TouchableOpacity
-            style={[styles.cta, resv.soldOut && styles.ctaDisabled, THEME.shadow.md]}
+            style={[styles.cta, resv.soldOut && styles.ctaDisabled, AME.shadow.md]}
             onPress={handleTicket}
             disabled={ticketing || resv.soldOut}
             activeOpacity={0.9}
@@ -113,17 +113,17 @@ export default function EventDetailScreen({ route, navigation }) {
         </View>
       ) : caps.canTicket ? (
         <View style={styles.openCard}>
-          <Ionicons name="people-outline" size={18} color={THEME.colors.accent} />
+          <Ionicons name="people-outline" size={18} color={AME.colors.accent} />
           <Text style={styles.openText}>Ouvert à tous — participation libre, aucune réservation nécessaire.</Text>
         </View>
       ) : null}
 
       {caps.isLantern ? (
-        <View style={[styles.qrCard, THEME.shadow.sm]}>
+        <View style={[styles.qrCard, AME.shadow.sm]}>
           <Text style={styles.qrTitle}>QR de cette lanterne</Text>
           <Text style={styles.qrHint}>À imprimer et poser sur le lieu. Les habitants le scannent pour révéler la lanterne.</Text>
           <View style={styles.qrBox}>
-            <QRCode value={String(event.id)} size={180} backgroundColor="#FFFFFF" color={THEME.colors.primary} />
+            <QRCode value={String(event.id)} size={180} backgroundColor="#FFFFFF" color={AME.colors.primary} />
           </View>
         </View>
       ) : null}
@@ -134,7 +134,7 @@ export default function EventDetailScreen({ route, navigation }) {
 function Meta({ icon, label, value }) {
   return (
     <View style={styles.metaRow}>
-      <Ionicons name={icon} size={16} color={THEME.colors.textMuted} />
+      <Ionicons name={icon} size={16} color={AME.colors.textMuted} />
       <Text style={styles.metaLabel}>{label}</Text>
       <Text style={styles.metaValue}>{value}</Text>
     </View>
@@ -142,44 +142,44 @@ function Meta({ icon, label, value }) {
 }
 
 const styles = StyleSheet.create({
-  bg: { flex: 1, backgroundColor: THEME.colors.bg },
+  bg: { flex: 1, backgroundColor: AME.colors.bg },
   center: { flex: 1, alignItems: 'center', justifyContent: 'center', gap: 10 },
-  errText: { color: THEME.colors.textSecondary, fontSize: 15, fontWeight: '600' },
-  content: { padding: THEME.spacing.md, paddingBottom: 48 },
-  category: { fontSize: 11, fontWeight: '800', letterSpacing: 1, color: THEME.colors.accent },
-  title: { ...THEME.typography.hero, fontSize: 26, color: THEME.colors.text, marginTop: 6 },
-  subtitle: { fontSize: 15, color: THEME.colors.textSecondary, marginTop: 8, lineHeight: 22 },
+  errText: { color: AME.colors.textSecondary, fontSize: 15, fontWeight: '600' },
+  content: { padding: AME.spacing.md, paddingBottom: 48 },
+  category: { fontSize: 11, fontWeight: '800', letterSpacing: 1, color: AME.colors.accent },
+  title: { ...AME.typography.hero, fontSize: 26, color: AME.colors.text, marginTop: 6 },
+  subtitle: { fontSize: 15, color: AME.colors.textSecondary, marginTop: 8, lineHeight: 22 },
   metaCard: {
-    backgroundColor: THEME.colors.card, borderRadius: THEME.radius.lg, padding: 16, marginTop: 18,
-    borderWidth: 1, borderColor: THEME.colors.borderLight, gap: 12,
+    backgroundColor: AME.colors.card, borderRadius: AME.radius.lg, padding: 16, marginTop: 18,
+    borderWidth: 1, borderColor: AME.colors.borderLight, gap: 12,
   },
   metaRow: { flexDirection: 'row', alignItems: 'center', gap: 8 },
-  metaLabel: { fontSize: 12.5, fontWeight: '700', color: THEME.colors.textMuted, width: 56 },
-  metaValue: { fontSize: 13.5, color: THEME.colors.text, flex: 1 },
-  body: { fontSize: 15, color: THEME.colors.text, lineHeight: 23, marginTop: 18 },
+  metaLabel: { fontSize: 12.5, fontWeight: '700', color: AME.colors.textMuted, width: 56 },
+  metaValue: { fontSize: 13.5, color: AME.colors.text, flex: 1 },
+  body: { fontSize: 15, color: AME.colors.text, lineHeight: 23, marginTop: 18 },
   cta: {
     flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 10,
-    backgroundColor: THEME.colors.primary, borderRadius: THEME.radius.md, padding: 16, marginTop: 14,
+    backgroundColor: AME.colors.primary, borderRadius: AME.radius.md, padding: 16, marginTop: 14,
   },
-  ctaDisabled: { backgroundColor: THEME.colors.textMuted },
+  ctaDisabled: { backgroundColor: AME.colors.textMuted },
   ctaText: { color: '#fff', fontWeight: '800', fontSize: 16 },
   reservationCard: {
-    backgroundColor: THEME.colors.card, borderRadius: THEME.radius.lg, padding: 16, marginTop: 22,
-    borderWidth: 1, borderColor: THEME.colors.borderLight,
+    backgroundColor: AME.colors.card, borderRadius: AME.radius.lg, padding: 16, marginTop: 22,
+    borderWidth: 1, borderColor: AME.colors.borderLight,
   },
   reservationHead: { flexDirection: 'row', alignItems: 'center', gap: 8 },
-  reservationTitle: { fontSize: 15, fontWeight: '800', color: THEME.colors.text },
-  reservationSeats: { fontSize: 13, color: THEME.colors.textSecondary, marginTop: 6 },
+  reservationTitle: { fontSize: 15, fontWeight: '800', color: AME.colors.text },
+  reservationSeats: { fontSize: 13, color: AME.colors.textSecondary, marginTop: 6 },
   openCard: {
     flexDirection: 'row', alignItems: 'center', gap: 10, marginTop: 22,
-    backgroundColor: THEME.colors.accentSoft, borderRadius: THEME.radius.md, padding: 14,
+    backgroundColor: AME.colors.accentSoft, borderRadius: AME.radius.md, padding: 14,
   },
-  openText: { flex: 1, fontSize: 13.5, color: THEME.colors.text, lineHeight: 19 },
+  openText: { flex: 1, fontSize: 13.5, color: AME.colors.text, lineHeight: 19 },
   qrCard: {
-    backgroundColor: THEME.colors.card, borderRadius: THEME.radius.lg, padding: 18, marginTop: 22,
-    borderWidth: 1, borderColor: THEME.colors.borderLight, alignItems: 'center',
+    backgroundColor: AME.colors.card, borderRadius: AME.radius.lg, padding: 18, marginTop: 22,
+    borderWidth: 1, borderColor: AME.colors.borderLight, alignItems: 'center',
   },
-  qrTitle: { fontSize: 15, fontWeight: '800', color: THEME.colors.text },
-  qrHint: { fontSize: 12.5, color: THEME.colors.textSecondary, textAlign: 'center', marginTop: 6, lineHeight: 18 },
-  qrBox: { backgroundColor: '#fff', padding: 16, borderRadius: THEME.radius.md, marginTop: 16 },
+  qrTitle: { fontSize: 15, fontWeight: '800', color: AME.colors.text },
+  qrHint: { fontSize: 12.5, color: AME.colors.textSecondary, textAlign: 'center', marginTop: 6, lineHeight: 18 },
+  qrBox: { backgroundColor: '#fff', padding: 16, borderRadius: AME.radius.md, marginTop: 16 },
 });

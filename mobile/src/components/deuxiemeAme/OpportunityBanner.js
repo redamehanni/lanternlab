@@ -2,13 +2,11 @@ import React, { useEffect, useRef } from 'react';
 import { Animated, Text, TouchableOpacity, StyleSheet, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
-import { THEME } from '../../theme';
+import { AME, MOTION } from '../../theme';
 import { useOpportunity } from '../../context/OpportunityContext';
 
 /**
- * Bannière d'Opportunité Volante : quand l'organe diffuse une initiative vers
- * l'habitant (socket event:opportunity), on la porte visuellement en haut de la
- * Deuxième Âme. Présentationnel : l'organe décide du contenu et des cibles.
+ * Bannière d'Opportunité Volante — flash pastel / sérénité.
  */
 export default function OpportunityBanner({ onOpen }) {
   const { current, dismiss } = useOpportunity();
@@ -17,7 +15,11 @@ export default function OpportunityBanner({ onOpen }) {
 
   useEffect(() => {
     if (current) {
-      Animated.spring(translateY, { toValue: 0, useNativeDriver: true, tension: 60, friction: 11 }).start();
+      Animated.spring(translateY, {
+        toValue: 0,
+        useNativeDriver: true,
+        ...MOTION.spring.soft,
+      }).start();
       const timer = setTimeout(hide, 8000);
       return () => clearTimeout(timer);
     }
@@ -26,7 +28,11 @@ export default function OpportunityBanner({ onOpen }) {
   }, [current]);
 
   function hide() {
-    Animated.timing(translateY, { toValue: -160, duration: 220, useNativeDriver: true }).start(() => dismiss());
+    Animated.timing(translateY, {
+      toValue: -160,
+      duration: MOTION.duration.base,
+      useNativeDriver: true,
+    }).start(() => dismiss());
   }
 
   if (!current) return null;
@@ -38,12 +44,12 @@ export default function OpportunityBanner({ onOpen }) {
   return (
     <Animated.View style={[styles.wrap, { paddingTop: insets.top + 8, transform: [{ translateY }] }]}>
       <TouchableOpacity
-        style={[styles.card, THEME.shadow.lg]}
+        style={[styles.card, AME.shadow.lg]}
         activeOpacity={0.92}
         onPress={() => { onOpen?.(current); hide(); }}
       >
         <View style={styles.iconWrap}>
-          <Ionicons name="flash" size={18} color="#fff" />
+          <Ionicons name="flash" size={18} color={AME.colors.textOnAccent} />
         </View>
         <View style={styles.body}>
           <Text style={styles.kicker}>OPPORTUNITÉ VOLANTE</Text>
@@ -51,7 +57,7 @@ export default function OpportunityBanner({ onOpen }) {
           <Text style={styles.sub} numberOfLines={1}>{subtitle}</Text>
         </View>
         <TouchableOpacity onPress={hide} hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}>
-          <Ionicons name="close" size={20} color={THEME.colors.textMuted} />
+          <Ionicons name="close" size={20} color={AME.colors.textMuted} />
         </TouchableOpacity>
       </TouchableOpacity>
     </Animated.View>
@@ -59,18 +65,49 @@ export default function OpportunityBanner({ onOpen }) {
 }
 
 const styles = StyleSheet.create({
-  wrap: { position: 'absolute', top: 0, left: 0, right: 0, paddingHorizontal: THEME.spacing.md, zIndex: 9998 },
+  wrap: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    paddingHorizontal: AME.spacing.md,
+    zIndex: 9998,
+  },
   card: {
-    flexDirection: 'row', alignItems: 'center', gap: 12,
-    backgroundColor: THEME.colors.card, borderRadius: THEME.radius.lg, padding: 14,
-    borderWidth: 1, borderColor: THEME.colors.borderLight,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 12,
+    backgroundColor: AME.colors.card,
+    borderRadius: AME.radius.lg,
+    padding: 14,
+    borderWidth: 1,
+    borderColor: AME.colors.borderLight,
   },
   iconWrap: {
-    width: 40, height: 40, borderRadius: 12, backgroundColor: THEME.colors.warning,
-    alignItems: 'center', justifyContent: 'center',
+    width: 42,
+    height: 42,
+    borderRadius: 14,
+    backgroundColor: AME.colors.warning,
+    alignItems: 'center',
+    justifyContent: 'center',
   },
   body: { flex: 1 },
-  kicker: { fontSize: 10, fontWeight: '900', letterSpacing: 1, color: THEME.colors.warning },
-  title: { fontSize: 15, fontWeight: '800', color: THEME.colors.text, marginTop: 2 },
-  sub: { fontSize: 12.5, color: THEME.colors.textSecondary, marginTop: 1 },
+  kicker: {
+    fontSize: 10,
+    fontFamily: AME.fonts.uiBold,
+    letterSpacing: 1.1,
+    color: AME.colors.warning,
+  },
+  title: {
+    fontFamily: AME.fonts.display,
+    fontSize: 17,
+    color: AME.colors.text,
+    marginTop: 2,
+  },
+  sub: {
+    fontFamily: AME.fonts.ui,
+    fontSize: 12.5,
+    color: AME.colors.textSecondary,
+    marginTop: 1,
+  },
 });

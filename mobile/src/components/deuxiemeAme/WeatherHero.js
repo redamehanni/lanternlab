@@ -1,32 +1,47 @@
 import React from 'react';
-import { View, Text, StyleSheet } from 'react-native';
+import { View, Text, StyleSheet, ImageBackground } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
-import { THEME } from '../../theme';
+import { AME } from '../../theme';
+import { getIllustration } from '../../illustrations/registry';
 
 /**
- * Hero de la Deuxième Âme : ancrage local (lieu + ambiance) et pouls du quartier.
+ * Hero de la Deuxième Âme : fenêtre ouverte sur le quartier.
  *
- * NOTE PRODUCTION : la météo n'a pas encore d'organe. On affiche une ambiance
- * neutre issue de `getLocalContext()` (point de branchement futur), sans jamais
- * bloquer la page. En revanche, les statistiques (événements / lanternes) sont
- * RÉELLES, calculées à partir des projections de l'Event Engine.
+ * Structure prête pour météo / saison / heure (props ambiance).
+ * Stats Event Engine réelles. Illustration via registry (`banner.quartier`).
  */
-export default function WeatherHero({ location, ambiance, stats, loading }) {
+export default function WeatherHero({
+  location,
+  ambiance,
+  stats,
+  loading,
+  illustrationKey = 'banner.quartier',
+  headline = 'Le quartier est vivant.',
+  subline = 'Et aujourd\u2019hui, il vous réserve de belles choses.',
+}) {
   const a = ambiance || {};
-  return (
-    <View style={[styles.card, THEME.shadow.md]}>
-      <View style={styles.top}>
-        <View style={styles.locRow}>
-          <Ionicons name="location-outline" size={15} color="#fff" />
-          <Text style={styles.loc}>{(location || 'Mon quartier').toUpperCase()}</Text>
-        </View>
-        {a.condition ? <Text style={styles.cond}>{a.condition}</Text> : null}
-      </View>
+  const illu = getIllustration(illustrationKey);
 
-      <View style={styles.tempRow}>
-        <Text style={styles.temp}>{a.temp != null ? `${a.temp}°` : '—'}</Text>
-        <Ionicons name={a.icon || 'partly-sunny-outline'} size={40} color="#FCD34D" />
-      </View>
+  return (
+    <View style={[styles.shell, AME.shadow.md]}>
+      <ImageBackground source={illu.source} style={styles.banner} imageStyle={styles.bannerImg}>
+        <View style={styles.wash} />
+        <View style={styles.top}>
+          <View style={styles.locRow}>
+            <Ionicons name="location-outline" size={14} color="rgba(255,251,247,0.9)" />
+            <Text style={styles.loc}>{(location || 'Mon quartier').toUpperCase()}</Text>
+          </View>
+          {a.condition ? <Text style={styles.cond}>{a.condition}</Text> : null}
+        </View>
+
+        <View style={styles.poetry}>
+          <Text style={styles.headline}>{headline}</Text>
+          <Text style={styles.subline}>{subline}</Text>
+          {a.temp != null ? (
+            <Text style={styles.tempHint}>{a.temp}° · {a.condition || 'dehors'}</Text>
+          ) : null}
+        </View>
+      </ImageBackground>
 
       <View style={styles.stats}>
         <Stat
@@ -48,7 +63,9 @@ export default function WeatherHero({ location, ambiance, stats, loading }) {
 function Stat({ icon, value, label }) {
   return (
     <View style={styles.stat}>
-      <Ionicons name={icon} size={18} color="#fff" />
+      <View style={styles.statIcon}>
+        <Ionicons name={icon} size={16} color={AME.colors.accentDeep} />
+      </View>
       <View style={styles.statText}>
         <Text style={styles.statValue}>{value}</Text>
         <Text style={styles.statLabel} numberOfLines={2}>{label}</Text>
@@ -58,25 +75,98 @@ function Stat({ icon, value, label }) {
 }
 
 const styles = StyleSheet.create({
-  card: {
-    backgroundColor: THEME.colors.primary,
-    borderRadius: THEME.radius.xl,
-    padding: 18,
+  shell: {
+    borderRadius: AME.radius.xl,
     overflow: 'hidden',
+    backgroundColor: AME.colors.card,
+    borderWidth: 1,
+    borderColor: AME.colors.borderLight,
   },
-  top: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
+  banner: {
+    minHeight: 200,
+    justifyContent: 'space-between',
+    padding: 18,
+  },
+  bannerImg: {
+    resizeMode: 'cover',
+  },
+  wash: {
+    ...StyleSheet.absoluteFillObject,
+    // Léger voile bas pour la lisibilité du texte, sans noyer le café
+    backgroundColor: 'rgba(28, 22, 18, 0.28)',
+  },
+  top: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    zIndex: 1,
+  },
   locRow: { flexDirection: 'row', alignItems: 'center', gap: 5 },
-  loc: { color: '#fff', fontSize: 12, fontWeight: '800', letterSpacing: 1 },
-  cond: { color: 'rgba(255,255,255,0.8)', fontSize: 13, fontWeight: '600' },
-  tempRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginTop: 6 },
-  temp: { color: '#fff', fontSize: 44, fontWeight: '300', letterSpacing: -1 },
+  loc: {
+    color: 'rgba(255,251,247,0.92)',
+    fontSize: 11,
+    fontFamily: AME.fonts.uiSemiBold,
+    letterSpacing: 1.2,
+  },
+  cond: {
+    color: 'rgba(255,251,247,0.8)',
+    fontSize: 12.5,
+    fontFamily: AME.fonts.uiMedium,
+  },
+  poetry: { zIndex: 1, marginTop: 36, paddingBottom: 4 },
+  headline: {
+    fontFamily: AME.fonts.display,
+    fontSize: 26,
+    color: AME.colors.textOnDark,
+    letterSpacing: -0.3,
+    lineHeight: 30,
+  },
+  subline: {
+    fontFamily: AME.fonts.ui,
+    fontSize: 14,
+    color: 'rgba(255,251,247,0.88)',
+    marginTop: 6,
+    lineHeight: 20,
+    maxWidth: '92%',
+  },
+  tempHint: {
+    marginTop: 10,
+    fontFamily: AME.fonts.uiMedium,
+    fontSize: 12.5,
+    color: 'rgba(255,251,247,0.75)',
+  },
   stats: {
-    flexDirection: 'row', alignItems: 'stretch', marginTop: 16,
-    backgroundColor: 'rgba(255,255,255,0.10)', borderRadius: THEME.radius.md, padding: 12,
+    flexDirection: 'row',
+    alignItems: 'stretch',
+    padding: 14,
+    backgroundColor: AME.colors.bgElevated,
+    borderTopWidth: 1,
+    borderTopColor: AME.colors.borderLight,
   },
   stat: { flex: 1, flexDirection: 'row', alignItems: 'center', gap: 10 },
+  statIcon: {
+    width: 34,
+    height: 34,
+    borderRadius: 12,
+    backgroundColor: AME.colors.accentSoft,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
   statText: { flex: 1 },
-  statValue: { color: '#fff', fontSize: 20, fontWeight: '800' },
-  statLabel: { color: 'rgba(255,255,255,0.75)', fontSize: 11.5, lineHeight: 14 },
-  statDivider: { width: 1, backgroundColor: 'rgba(255,255,255,0.18)', marginHorizontal: 12 },
+  statValue: {
+    fontFamily: AME.fonts.display,
+    fontSize: 22,
+    color: AME.colors.text,
+  },
+  statLabel: {
+    fontFamily: AME.fonts.ui,
+    color: AME.colors.textSecondary,
+    fontSize: 11.5,
+    lineHeight: 15,
+  },
+  statDivider: {
+    width: 1,
+    backgroundColor: AME.colors.border,
+    marginHorizontal: 10,
+  },
 });

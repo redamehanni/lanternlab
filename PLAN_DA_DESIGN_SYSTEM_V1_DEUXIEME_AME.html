@@ -1,0 +1,237 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Plan — Direction Artistique & Design System V1 (Deuxième Âme)</title>
+<style>
+  @page { margin: 16mm 14mm; }
+  body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Helvetica, Arial, sans-serif; font-size: 10.5pt; line-height: 1.45; color: #1a1a1a; max-width: 100%; }
+  h1 { font-size: 20pt; border-bottom: 2px solid #0f2d5c; padding-bottom: 8px; color: #0f2d5c; page-break-after: avoid; }
+  h2 { font-size: 14pt; margin-top: 22px; color: #0f2d5c; border-bottom: 1px solid #e5e7eb; padding-bottom: 4px; page-break-after: avoid; }
+  h3 { font-size: 11.5pt; margin-top: 14px; color: #1a4a8a; page-break-after: avoid; }
+  table { border-collapse: collapse; width: 100%; margin: 10px 0; font-size: 9pt; page-break-inside: avoid; }
+  th, td { border: 1px solid #d1d5db; padding: 5px 7px; text-align: left; vertical-align: top; }
+  th { background: #f3f4f6; font-weight: 600; }
+  code { background: #f3f4f6; padding: 1px 4px; border-radius: 3px; font-size: 8.5pt; }
+  pre { background: #f8fafc; border: 1px solid #e5e7eb; border-radius: 6px; padding: 10px; overflow-x: auto; font-size: 8pt; line-height: 1.35; white-space: pre-wrap; word-break: break-word; page-break-inside: avoid; }
+  pre code { background: none; padding: 0; }
+  blockquote { border-left: 4px solid #0f2d5c; margin: 10px 0; padding: 6px 14px; background: #f0f4f8; color: #1e3a5f; }
+  hr { border: none; border-top: 1px solid #e5e7eb; margin: 18px 0; }
+  ul, ol { padding-left: 22px; }
+  li { margin-bottom: 3px; }
+  p { margin: 8px 0; }
+  .pdf-note { display: none; }
+  @media screen {
+    .pdf-note { display: block; background: #eff6ff; border: 1px solid #bfdbfe; border-radius: 8px; padding: 12px 16px; margin-bottom: 24px; color: #1e3a8a; }
+  }
+</style>
+</head>
+<body>
+<div class="pdf-note">
+  <strong>Lecture dans Cursor / navigateur :</strong> ce fichier HTML est la version lisible du plan.
+  Pour le PDF, ouvrez <code>PLAN_DA_DESIGN_SYSTEM_V1_DEUXIEME_AME.pdf</code> depuis le Finder (clic droit → Ouvrir avec Aperçu)
+  ou double-cliquez le fichier <code>Ouvrir_*_PDF.command</code> correspondant à la racine du projet.
+</div>
+<h1>Plan — Direction Artistique &amp; Design System V1 (Deuxième Âme)</h1>
+<p><strong>Statut :</strong> en attente de validation avant exécution<br />
+<strong>Date :</strong> 23 juillet 2026<br />
+<strong>Périmètre V1 :</strong> Deuxième Âme uniquement (extension Marketplace / Épée / Livreur plus tard)</p>
+<hr />
+<h2>Intention du chantier</h2>
+<p>Jusqu’ici, Ma Zone a surtout construit des fondations techniques (Marketplace, Deuxième Âme, Event Engine, Wallet, boîte aux lettres, monde simulé, Opportunités Volantes).</p>
+<p>Ce chantier ne concerne <strong>pas</strong> les fonctionnalités. Il concerne <strong>l’émotion</strong>.</p>
+<blockquote>
+<p><strong>Règle fondamentale :</strong> on change le costume, pas le corps.<br />
+Pas de refonte d’architecture UX, pas de déplacement de fonctionnalités, pas de nouveaux parcours.</p>
+</blockquote>
+<hr />
+<h2>Confirmation des références</h2>
+<p>Les deux images de référence sont reçues et prises en compte :</p>
+<ol>
+<li><strong>Vision globale Accueil</strong> — crème chaud, hero du café au crépuscule, titres élégants, portes en cartes pastel illustrées, murmures chaleureux, nav basse sobre.</li>
+<li><strong>Banque d’icônes / illustrations</strong> — style aquarelle artisanal pour header, 6 portes, murmures, barre d’état.</li>
+</ol>
+<p><strong>Règle d’interprétation :</strong> inspiration DA uniquement. On conserve le corps actuel (6 portes, routes, Mode Réception boîte aux lettres, SoulSwitchFab, AiIntentBar, OpportunityBanner, Wallet / Panier / Messages). On change le costume.</p>
+<hr />
+<h2>Principes DA (contrat émotionnel)</h2>
+<table>
+<thead>
+<tr>
+<th>Principe</th>
+<th>Traduction concrète</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Quartier vivant, humain, intemporel</td>
+<td>Crème / ivoire, pastels désaturés, terracotta léger, sauge, bleu doux</td>
+</tr>
+<tr>
+<td>Respiration</td>
+<td>Espacements plus généreux, moins de bordures dures, peu d’ombre</td>
+</tr>
+<tr>
+<td>Éditorial + lisible</td>
+<td>Titres serif aérés ; corps / UI sans-serif moderne (pas Inter / Roboto / Arial)</td>
+</tr>
+<tr>
+<td>Illustrations = identité</td>
+<td>Composants référencent des <strong>clés d’assets</strong>, jamais d’illustration générée en dur</td>
+</tr>
+<tr>
+<td>Calme</td>
+<td>Animations lentes (FadeIn existant, springs adoucis)</td>
+</tr>
+<tr>
+<td>Anti-SaaS</td>
+<td>Pas de bleu startup agressif, pas de glassmorphism, pas de néons</td>
+</tr>
+</tbody>
+</table>
+<h3>Palette cible (tokens)</h3>
+<p>Remplacer le thème actuel « Apple / Linear » (<code>#0A1628</code> / <code>#2563EB</code> / <code>#F8FAFC</code>) dans <code>mobile/src/theme/index.js</code> :</p>
+<ul>
+<li>Fond : ivoire / papier (<code>~#F7F1EA</code>)</li>
+<li>Surface carte : crème (<code>~#FFFBF7</code>)</li>
+<li>Texte : encre chaude (<code>~#2C2420</code>)</li>
+<li>Secondaire / muted : gris chauds</li>
+<li>Accents portes : lavande, terracotta, sauge, bleu ciel, rose poussiéreux, violet doux (désaturés)</li>
+<li>Accent UI global : terracotta / ocre doux (remplace le bleu <code>#2563EB</code>)</li>
+<li>Ombres : opacity ≤ 0.06, radius large, teinte brune chaude — surfaces « posées », pas flottantes</li>
+</ul>
+<h3>Typographie</h3>
+<p>Via <code>@expo-google-fonts</code> (<code>expo-font</code> déjà présent) :</p>
+<ul>
+<li>Display / titres émotionnels : <strong>Cormorant Garamond</strong> (élégant, aéré)</li>
+<li>UI / corps : <strong>Source Sans 3</strong> (moderne, lisible, non-générique startup)</li>
+</ul>
+<p>Chargement des fonts au boot dans <code>mobile/App.js</code> ; splash / loader crème pendant le chargement.</p>
+<hr />
+<h2>Architecture illustrations (fondation durable)</h2>
+<pre><code>mobile/assets/illustrations/
+  README.md
+  registry.js
+  placeholders/
+  portes/
+  murmures/
+  banner/
+  nav/
+  header/
+</code></pre>
+<p>API prévue :</p>
+<pre><code class="language-js">getIllustration('portes.lanternes') // → { source, alt }
+</code></pre>
+<p>Chaque composant consomme <strong>uniquement la clé</strong>. Remplacer une illustration officielle = changer le fichier + une ligne du registry, zéro refactor UI.</p>
+<p><strong>V1 :</strong> placeholders alignés sur la banque, marqués <code>placeholder: true</code>. Quand les illustrations finales arriveront, on swappe les fichiers.</p>
+<hr />
+<h2>Ce qu’on restyle (corps inchangé)</h2>
+<h3>1. Design System de base</h3>
+<ul>
+<li>Refondre <code>mobile/src/theme/index.js</code> : colors, radius, shadow, spacing, typography (+ <code>fontFamily</code>)</li>
+<li>Enrichir / créer sous <code>mobile/src/components/ui/</code> : Card, boutons, badges, chips</li>
+<li>Documenter les principes dans <code>DESIGN_SYSTEM_DEUXIEME_AME.md</code></li>
+</ul>
+<h3>2. Accueil — composition actuelle, costume nouveau</h3>
+<p>Fichiers pivots : <code>DeuxiemeAmeHomeScreen</code>, <code>AmeHeader</code>, <code>WeatherHero</code>, <code>AiIntentBar</code>, <code>PorteCard</code>, <code>MurmurCard</code>, <code>ModeReceptionPopover</code></p>
+<table>
+<thead>
+<tr>
+<th>Zone</th>
+<th>Corps (conservé)</th>
+<th>Costume (DA)</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Header</td>
+<td>Mailbox Mode Réception + profil</td>
+<td>Fond crème, icônes plus douces, badge non-lus ; <strong>pas</strong> d’enveloppe messagerie</td>
+</tr>
+<tr>
+<td>Hero / bannière</td>
+<td>Stats Event Engine + ancrage lieu</td>
+<td>Grande bannière illustrée (<code>banner.quartier</code>), overlay typo serif poétique, structure prête pour météo / saison / heure</td>
+</tr>
+<tr>
+<td>AiIntentBar</td>
+<td>Suggestions + placeholder IA</td>
+<td>Carte crème, sparkle discret</td>
+</tr>
+<tr>
+<td>Portes</td>
+<td>6 portes, mêmes routes, grille 2×3</td>
+<td>Cartes pastel + illustration aquarelle + flèche colorée ; <code>illustrationKey</code> dans <code>PORTES</code></td>
+</tr>
+<tr>
+<td>Murmures</td>
+<td>Liste <strong>horizontale</strong> existante</td>
+<td>Cartes plus chaleureuses, vignette illustrée, badge doux</td>
+</tr>
+<tr>
+<td>SoulSwitchFab</td>
+<td>Bascule d’Âme</td>
+<td>Pilule crème / terracotta — intégré à la DA même absent de la maquette</td>
+</tr>
+<tr>
+<td>OpportunityBanner</td>
+<td>Flash OV</td>
+<td>Restyle pastel / sérénité</td>
+</tr>
+</tbody>
+</table>
+<h3>3. Navigation Deuxième Âme</h3>
+<p>Dans <code>mobile/src/navigation/index.js</code> : styles de tab bar <strong>uniquement pour <code>DeuxiemeAmeTabs</code></strong> (terracotta doux, fond crème) — sans changer Première Âme / Épée / Driver.</p>
+<h3>4. Écrans secondaires Deuxième Âme</h3>
+<p>Pass de cohérence tokens sur Events, EventDetail, Lanterns, Participer, Mailbox, ModeReception, Surprise, etc. — même palette / typo / cartes, <strong>sans</strong> redessiner chaque parcours.</p>
+<h3>5. Hors périmètre V1</h3>
+<ul>
+<li>Première Âme (Marketplace)</li>
+<li>Épée / Livreur</li>
+<li>Remplacement des placeholders par la bibliothèque officielle finale</li>
+<li>Illustrations animées / bannière dynamique météo réelle</li>
+</ul>
+<hr />
+<h2>Décisions figées</h2>
+<ol>
+<li><strong>Périmètre V1</strong> = Deuxième Âme uniquement (choix A confirmé).</li>
+<li><strong>Typo</strong> = Cormorant Garamond + Source Sans 3.</li>
+<li><strong>Accent global Âme</strong> = terracotta / ocre doux, pas bleu startup.</li>
+<li><strong>Murmures</strong> restent en scroll horizontal.</li>
+<li><strong>Mailbox Mode Réception</strong> reste la métaphore boîte aux lettres.</li>
+<li><strong>SoulSwitchFab</strong> restylé dans le langage DA.</li>
+<li><strong>Illustrations</strong> = registry + placeholders ; swap futur sans toucher aux composants.</li>
+</ol>
+<hr />
+<h2>Ordre d’exécution (qualité &gt; vitesse)</h2>
+<ol>
+<li>Tokens + fonts + App bootstrap</li>
+<li>Registry illustrations + placeholders</li>
+<li>Restyle composants Accueil (Header → Banner → Intent → Portes → Murmures)</li>
+<li>SoulSwitchFab + tab bar SecondSoul + OpportunityBanner</li>
+<li>Harmonisation écrans secondaires Âme</li>
+<li>Relecture visuelle + compte rendu / PDF</li>
+</ol>
+<hr />
+<h2>Livrables attendus en fin de chantier</h2>
+<ul>
+<li>Design System tokens + fonts chargées</li>
+<li>Registry d’illustrations + placeholders</li>
+<li>Accueil Deuxième Âme transformé visuellement</li>
+<li>Composants Âme + tab bar + switch harmonisés</li>
+<li>Écrans secondaires Âme cohérents</li>
+<li>Compte rendu détaillé (principes, fichiers, prochaines itérations) + PDF</li>
+</ul>
+<hr />
+<h2>Ce que ce plan ne fera pas</h2>
+<ul>
+<li>Revoir l’architecture UX</li>
+<li>Déplacer ou supprimer des fonctionnalités</li>
+<li>Refaire la Deuxième Âme fonctionnellement</li>
+<li>Imposer la disposition exacte de la maquette quand elle diverge du corps actuel</li>
+<li>Dépendre d’illustrations générées automatiquement</li>
+</ul>
+<hr />
+<p><em>Document de validation — Ma Zone · Direction Artistique &amp; Design System V1 · 23/07/2026</em></p>
+</body>
+</html>

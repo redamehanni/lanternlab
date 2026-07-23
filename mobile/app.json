@@ -30,7 +30,8 @@
         {
           "cameraPermission": "Ma Zone utilise la caméra pour scanner les Lanternes du quartier et révéler ce qu'elles cachent."
         }
-      ]
+      ],
+      "expo-font"
     ]
   }
 }

@@ -4,7 +4,7 @@ import { useFocusEffect } from '@react-navigation/native';
 import { Ionicons } from '@expo/vector-icons';
 import { getEventDiscovery } from '../../api';
 import EventListItem from '../../components/deuxiemeAme/EventListItem';
-import { THEME } from '../../theme';
+import { AME } from '../../theme';
 
 /**
  * Porte « Les Événements » — vue composée sur la projection listDiscoverable.
@@ -29,7 +29,7 @@ export default function EventsScreen({ navigation }) {
 
   useFocusEffect(useCallback(() => { load(); }, [load]));
 
-  if (loading) return <ActivityIndicator style={styles.center} color={THEME.colors.accent} />;
+  if (loading) return <ActivityIndicator style={styles.center} color={AME.colors.accent} />;
 
   return (
     <FlatList
@@ -43,7 +43,7 @@ export default function EventsScreen({ navigation }) {
       }
       ListEmptyComponent={
         <View style={styles.empty}>
-          <Ionicons name="calendar-outline" size={40} color={THEME.colors.textMuted} />
+          <Ionicons name="calendar-outline" size={40} color={AME.colors.textMuted} />
           <Text style={styles.emptyText}>Aucun événement pour l'instant</Text>
           <Text style={styles.emptyHint}>De nouvelles initiatives naîtront bientôt près de chez vous.</Text>
         </View>
@@ -56,11 +56,28 @@ export default function EventsScreen({ navigation }) {
 }
 
 const styles = StyleSheet.create({
-  bg: { flex: 1, backgroundColor: THEME.colors.bg },
+  bg: { flex: 1, backgroundColor: AME.colors.bg },
   center: { flex: 1 },
-  list: { padding: THEME.spacing.md, paddingBottom: 40, flexGrow: 1 },
-  intro: { color: THEME.colors.textSecondary, fontSize: 14, marginBottom: 14 },
+  list: { padding: AME.spacing.md, paddingBottom: 40, flexGrow: 1 },
+  intro: {
+    fontFamily: AME.fonts.ui,
+    color: AME.colors.textSecondary,
+    fontSize: 15,
+    lineHeight: 22,
+    marginBottom: 18,
+  },
   empty: { alignItems: 'center', paddingTop: 80, paddingHorizontal: 24 },
-  emptyText: { color: THEME.colors.text, fontWeight: '700', marginTop: 12, fontSize: 16 },
-  emptyHint: { color: THEME.colors.textSecondary, marginTop: 6, textAlign: 'center', lineHeight: 20 },
+  emptyText: {
+    fontFamily: AME.fonts.display,
+    color: AME.colors.text,
+    marginTop: 12,
+    fontSize: 20,
+  },
+  emptyHint: {
+    fontFamily: AME.fonts.ui,
+    color: AME.colors.textSecondary,
+    marginTop: 6,
+    textAlign: 'center',
+    lineHeight: 20,
+  },
 });

@@ -1,6 +1,6 @@
 import React from 'react';
 import { View, Text, StyleSheet } from 'react-native';
-import { THEME } from '../../theme';
+import { AME } from '../../theme';
 
 /**
  * Filet de sécurité : un crash silencieux dans la Deuxième Âme produisait un
@@ -31,7 +31,17 @@ export default class SoulErrorBoundary extends React.Component {
 }
 
 const styles = StyleSheet.create({
-  wrap: { flex: 1, justifyContent: 'center', padding: 24, backgroundColor: THEME.colors.bg },
-  title: { fontSize: 18, fontWeight: '800', color: THEME.colors.text, marginBottom: 12 },
-  msg: { fontSize: 13, color: THEME.colors.error, lineHeight: 20 },
+  wrap: { flex: 1, justifyContent: 'center', padding: 24, backgroundColor: AME.colors.bg },
+  title: {
+    fontFamily: AME.fonts.display,
+    fontSize: 22,
+    color: AME.colors.text,
+    marginBottom: 12,
+  },
+  msg: {
+    fontFamily: AME.fonts.ui,
+    fontSize: 13.5,
+    color: AME.colors.error,
+    lineHeight: 20,
+  },
 });

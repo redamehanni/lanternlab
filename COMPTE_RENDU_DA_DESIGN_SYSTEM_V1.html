@@ -1,0 +1,328 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Compte rendu — Direction Artistique & Design System V1 (Deuxième Âme)</title>
+<style>
+  @page { margin: 16mm 14mm; }
+  body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Helvetica, Arial, sans-serif; font-size: 10.5pt; line-height: 1.45; color: #1a1a1a; max-width: 100%; }
+  h1 { font-size: 20pt; border-bottom: 2px solid #0f2d5c; padding-bottom: 8px; color: #0f2d5c; page-break-after: avoid; }
+  h2 { font-size: 14pt; margin-top: 22px; color: #0f2d5c; border-bottom: 1px solid #e5e7eb; padding-bottom: 4px; page-break-after: avoid; }
+  h3 { font-size: 11.5pt; margin-top: 14px; color: #1a4a8a; page-break-after: avoid; }
+  table { border-collapse: collapse; width: 100%; margin: 10px 0; font-size: 9pt; page-break-inside: avoid; }
+  th, td { border: 1px solid #d1d5db; padding: 5px 7px; text-align: left; vertical-align: top; }
+  th { background: #f3f4f6; font-weight: 600; }
+  code { background: #f3f4f6; padding: 1px 4px; border-radius: 3px; font-size: 8.5pt; }
+  pre { background: #f8fafc; border: 1px solid #e5e7eb; border-radius: 6px; padding: 10px; overflow-x: auto; font-size: 8pt; line-height: 1.35; white-space: pre-wrap; word-break: break-word; page-break-inside: avoid; }
+  pre code { background: none; padding: 0; }
+  blockquote { border-left: 4px solid #0f2d5c; margin: 10px 0; padding: 6px 14px; background: #f0f4f8; color: #1e3a5f; }
+  hr { border: none; border-top: 1px solid #e5e7eb; margin: 18px 0; }
+  ul, ol { padding-left: 22px; }
+  li { margin-bottom: 3px; }
+  p { margin: 8px 0; }
+  .pdf-note { display: none; }
+  @media screen {
+    .pdf-note { display: block; background: #eff6ff; border: 1px solid #bfdbfe; border-radius: 8px; padding: 12px 16px; margin-bottom: 24px; color: #1e3a8a; }
+  }
+</style>
+</head>
+<body>
+<div class="pdf-note">
+  <strong>Lecture dans Cursor / navigateur :</strong> ce fichier HTML est la version lisible du plan.
+  Pour le PDF, ouvrez <code>COMPTE_RENDU_DA_DESIGN_SYSTEM_V1.pdf</code> depuis le Finder (clic droit → Ouvrir avec Aperçu)
+  ou double-cliquez le fichier <code>Ouvrir_*_PDF.command</code> correspondant à la racine du projet.
+</div>
+<h1>Compte rendu — Direction Artistique &amp; Design System V1 (Deuxième Âme)</h1>
+<p><strong>Date :</strong> 23 juillet 2026<br />
+<strong>Statut :</strong> chantier livré<br />
+<strong>Périmètre :</strong> Deuxième Âme uniquement (costume, pas le corps)</p>
+<hr />
+<h2>Synthèse</h2>
+<p>Ma Zone possède désormais une <strong>identité visuelle officielle</strong> sur la face Deuxième Âme.</p>
+<p>Ce n’est plus une UI « startup froide » (slate / bleu <code>#2563EB</code>). C’est un langage crème, terracotta, éditorial — pensé comme une fenêtre ouverte sur le quartier : cafés du soir, artisans, promenades, souvenirs heureux.</p>
+<p>Les parcours, l’Event Engine, le Mode Réception, le SoulSwitchFab, la boîte aux lettres et les 6 portes sont <strong>inchangés fonctionnellement</strong>. Seul le costume a changé.</p>
+<hr />
+<h2>Philosophie appliquée</h2>
+<table>
+<thead>
+<tr>
+<th>Intention</th>
+<th>Traduction concrète</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Rues connues par cœur</td>
+<td>Bannière poétique + ancrage lieu</td>
+</tr>
+<tr>
+<td>Cafés / librairies / marchés</td>
+<td>Pastels portes, cartes crème posées</td>
+</tr>
+<tr>
+<td>Promenades du soir</td>
+<td>Hero warm wash + typo serif</td>
+</tr>
+<tr>
+<td>Quotidien simple / poèmes</td>
+<td>Cormorant Garamond sur titres</td>
+</tr>
+<tr>
+<td>Jamais froid</td>
+<td>Fond <code>#F7F1EA</code>, ombres brunes ≤ 0.06</td>
+</tr>
+<tr>
+<td>Premium sans ostentation</td>
+<td>Peu d’ombre, beaucoup d’air</td>
+</tr>
+<tr>
+<td>Une seule main de studio</td>
+<td>SoftIcon + Illustration registry</td>
+</tr>
+</tbody>
+</table>
+<hr />
+<h2>Principes du Design System</h2>
+<p>Document vivant : <a href="DESIGN_SYSTEM_DEUXIEME_AME.md"><code>DESIGN_SYSTEM_DEUXIEME_AME.md</code></a></p>
+<ol>
+<li><strong>Surface composes, organ decides</strong> — inchangé ; la DA ne touche que la surface.</li>
+<li><strong>Tokens AME</strong> isolés du marketplace (<code>THEME</code> conservé pour Première Âme / Épée / Livreur).</li>
+<li><strong>Illustrations par clé</strong> — aucun composant ne <code>require</code> une image directement.</li>
+<li><strong>Iconographie sémantique</strong> — dictionnaire <code>AME_ICONS</code>, rendu <code>SoftIcon</code>.</li>
+<li><strong>Motion calme</strong> — <code>MOTION</code> (durées lentes, springs soft, stagger 70 ms).</li>
+</ol>
+<hr />
+<h2>Nouveaux tokens (<code>AME</code>)</h2>
+<p>Fichier : <code>mobile/src/theme/ame.js</code></p>
+<h3>Palette</h3>
+<ul>
+<li><code>bg</code> <code>#F7F1EA</code> — papier</li>
+<li><code>card</code> / <code>bgElevated</code> <code>#FFFBF7</code> — crème</li>
+<li><code>text</code> <code>#2C2420</code> — encre chaude</li>
+<li><code>accent</code> <code>#C4785A</code> — terracotta</li>
+<li><code>primary</code> <code>#8B5E45</code> — ocre profond</li>
+<li>Accents portes désaturés : lavande, terracotta, sauge, bleu ciel, rose, violet doux (+ versions soft)</li>
+</ul>
+<h3>Radius / spacing / shadow</h3>
+<ul>
+<li>Radius plus généreux (<code>lg</code> 22, <code>xl</code> 28)</li>
+<li><code>spacing.section</code> 28 pour le rythme vertical</li>
+<li>Ombres brunes chaudes, opacity ≤ 0.06</li>
+</ul>
+<h3>Typographie</h3>
+<table>
+<thead>
+<tr>
+<th>Rôle</th>
+<th>Font</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Display / titres</td>
+<td>Cormorant Garamond 500 / 600 / 700</td>
+</tr>
+<tr>
+<td>UI / corps</td>
+<td>Source Sans 3 400 / 500 / 600 / 700</td>
+</tr>
+</tbody>
+</table>
+<p>Chargement au boot dans <code>App.js</code> via <code>useAmeFonts()</code> ; splash crème pendant le load.</p>
+<h3>Motion</h3>
+<p>Fichier : <code>mobile/src/theme/motion.js</code><br />
+FadeIn ~480 ms, springs soft/gentle/settle, press scale 0.975.</p>
+<hr />
+<h2>Choix iconographiques</h2>
+<ul>
+<li>Dictionnaire : <code>mobile/src/icons/ameIcons.js</code></li>
+<li>Composant : <code>SoftIcon</code> — outline dans un puits pastel</li>
+<li>Tab bar SecondSoul : icônes Ionicons + <strong>trait actif terracotta</strong> sous l’icône</li>
+<li>Mailbox Mode Réception conservée (fanion levé / baissé) — pas remplacée par cloche/enveloppe maquette</li>
+</ul>
+<hr />
+<h2>Choix de composition</h2>
+<h3>Accueil</h3>
+<ol>
+<li>Header : marque serif + « Bonjour {prénom} » + mailbox + avatar  </li>
+<li>Hero : bannière illustrée + overlay poétique + stats Event Engine en bandeau crème  </li>
+<li>Intention : carte crème, chips papier  </li>
+<li>Section « Les portes d’entrée » (titre serif + sous-titre)  </li>
+<li>Grille 2×3 aérée (rowGap 14, cartes pastel + illustration + flèche colorée)  </li>
+<li>Murmures horizontaux (cartes xl radius, vignette, badge Nouveau)</li>
+</ol>
+<h3>Respiration</h3>
+<ul>
+<li>Marges section plus larges (<code>section</code> 28, murmures marginTop 32)</li>
+<li>Moins de bordures dures, ombres très légères</li>
+<li>Hiérarchie : serif pour guider le regard, sans-serif pour lire</li>
+</ul>
+<hr />
+<h2>Animations ajoutées / adoucies</h2>
+<ul>
+<li><code>FadeIn</code> recalibré (MOTION) — encre qui s’installe</li>
+<li>Stagger portes &amp; murmures</li>
+<li>Apparition hero / intent bar décalée</li>
+<li>OpportunityBanner : spring soft + fade out 380 ms</li>
+<li>Transitions stack Âme : <code>fade_from_bottom</code> ~320 ms</li>
+<li>PressableScale : scale plus doux (0.975)</li>
+</ul>
+<hr />
+<h2>Architecture illustrations</h2>
+<pre><code>mobile/assets/illustrations/
+  portes/ · murmures/ · banner/ · nav/ · header/ · placeholders/
+mobile/src/illustrations/
+  registry.js · Illustration.js
+</code></pre>
+<p>Clés : <code>banner.quartier</code>, <code>banner.quartierSoft</code>, <code>portes.*</code>, <code>murmures.default</code>, <code>header.mailbox</code>, <code>nav.*</code></p>
+<p>Placeholders V1 = washes pastel + bannière soft (marqués <code>placeholder: true</code>).<br />
+Références DA copiées dans <code>docs/da-references/</code>.</p>
+<hr />
+<h2>Fichiers créés</h2>
+<table>
+<thead>
+<tr>
+<th>Fichier</th>
+<th>Rôle</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>mobile/src/theme/ame.js</code></td>
+<td>Tokens officiels Deuxième Âme</td>
+</tr>
+<tr>
+<td><code>mobile/src/theme/marketplace.js</code></td>
+<td>Ancien THEME isolé</td>
+</tr>
+<tr>
+<td><code>mobile/src/theme/motion.js</code></td>
+<td>Micro-interactions</td>
+</tr>
+<tr>
+<td><code>mobile/src/theme/fonts.js</code></td>
+<td>Chargement Cormorant + Source Sans 3</td>
+</tr>
+<tr>
+<td><code>mobile/src/illustrations/registry.js</code></td>
+<td>Clé → asset</td>
+</tr>
+<tr>
+<td><code>mobile/src/illustrations/Illustration.js</code></td>
+<td>Composant Image via clé</td>
+</tr>
+<tr>
+<td><code>mobile/src/icons/ameIcons.js</code></td>
+<td>Langage iconographique</td>
+</tr>
+<tr>
+<td><code>mobile/src/components/ui/SoftIcon.js</code></td>
+<td>Icône en puits pastel</td>
+</tr>
+<tr>
+<td><code>mobile/src/components/ui/AmeCard.js</code></td>
+<td>Card / Badge / SectionTitle</td>
+</tr>
+<tr>
+<td><code>mobile/assets/illustrations/**</code></td>
+<td>Placeholders + README</td>
+</tr>
+<tr>
+<td><code>docs/da-references/**</code></td>
+<td>Images de référence validées</td>
+</tr>
+<tr>
+<td><code>DESIGN_SYSTEM_DEUXIEME_AME.md</code></td>
+<td>Contrat DA</td>
+</tr>
+<tr>
+<td><code>PLAN_DA_DESIGN_SYSTEM_V1_DEUXIEME_AME.md</code></td>
+<td>Plan validé</td>
+</tr>
+</tbody>
+</table>
+<hr />
+<h2>Fichiers modifiés (principaux)</h2>
+<table>
+<thead>
+<tr>
+<th>Fichier</th>
+<th>Changement</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>mobile/App.js</code></td>
+<td>Fonts + splash crème + StatusBar soul-aware</td>
+</tr>
+<tr>
+<td><code>mobile/src/theme/index.js</code></td>
+<td>Export THEME (market) + AME + MOTION</td>
+</tr>
+<tr>
+<td><code>mobile/src/data/deuxiemeAme.js</code></td>
+<td><code>illustrationKey</code>, couleurs désaturées</td>
+</tr>
+<tr>
+<td><code>mobile/src/components/deuxiemeAme/*</code></td>
+<td>Costume DA complet</td>
+</tr>
+<tr>
+<td><code>mobile/src/screens/deuxiemeAme/*</code></td>
+<td>Tokens AME + typo</td>
+</tr>
+<tr>
+<td><code>mobile/src/components/common/SoulSwitchFab.js</code></td>
+<td>Pilule crème sur SecondSoul</td>
+</tr>
+<tr>
+<td><code>mobile/src/navigation/index.js</code></td>
+<td><code>ameTabOptions</code>, <code>ameScreenOptions</code>, <code>AmeTabIcon</code></td>
+</tr>
+<tr>
+<td><code>mobile/src/components/ui/FadeIn.js</code></td>
+<td>Motion calme</td>
+</tr>
+<tr>
+<td><code>mobile/package.json</code></td>
+<td>expo-font + Google Fonts</td>
+</tr>
+</tbody>
+</table>
+<hr />
+<h2>Ce qui n’a PAS changé (volontairement)</h2>
+<ul>
+<li>Parcours utilisateur &amp; architecture fonctionnelle</li>
+<li>Event Engine, Wallet, Mode Réception, OV, boîte aux lettres</li>
+<li>Position / rôle du SoulSwitchFab</li>
+<li>Scroll horizontal des murmures</li>
+<li>Première Âme, Épée, Livreur (THEME marketplace intact)</li>
+<li>Logique métier / API</li>
+</ul>
+<hr />
+<h2>Recommandations — prochaines itérations</h2>
+<ol>
+<li><strong>Bibliothèque aquarelle officielle</strong> — remplacer les placeholders (<code>placeholder: false</code>) porte par porte, puis nav / header / murmures.</li>
+<li><strong>Photo hero propre</strong> — image café crépuscule sans chrome UI ; brancher <code>banner.quartier</code>.</li>
+<li><strong>Première Âme DA V2</strong> — étendre le même langage (ou un cousin marketplace) pour une marque unifiée.</li>
+<li><strong>Icônes custom SVG</strong> — remplacer Ionicons dans SoftIcon / tab bar par traits aquarelle maison.</li>
+<li><strong>Bannière dynamique</strong> — brancher météo / saison / heure sur <code>WeatherHero</code> (slots déjà prévus).</li>
+<li><strong>Wallet / Messages / Panier en SecondSoul</strong> — pass DA léger sur ces stacks partagés (aujourd’hui tab bar Âme + contenu encore marketplace).</li>
+<li><strong>Dark evening variant</strong> — mode crépuscule optionnel aligné sur l’hero.</li>
+</ol>
+<hr />
+<h2>Objectif atteint ?</h2>
+<p>Lorsqu’un habitant ouvre la Deuxième Âme, il voit désormais :</p>
+<ul>
+<li>un fond papier, pas un dashboard gris ;</li>
+<li>une marque et des titres qui évoquent un livre de quartier ;</li>
+<li>des portes illustrées, pas des tuiles SaaS ;</li>
+<li>une navigation terracotta calme ;</li>
+<li>une bascule d’Âme intégrée au même langage.</li>
+</ul>
+<p><strong>L’identité graphique commence à raconter quelque chose avant la première interaction.</strong></p>
+<hr />
+<p><em>Ma Zone · Direction Artistique &amp; Design System V1 · 23/07/2026</em></p>
+</body>
+</html>

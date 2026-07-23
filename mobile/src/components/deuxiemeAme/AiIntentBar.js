@@ -1,16 +1,12 @@
 import React, { useState } from 'react';
 import { View, Text, TextInput, TouchableOpacity, ScrollView, StyleSheet } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
-import { THEME } from '../../theme';
+import { AME } from '../../theme';
 import { INTENT_SUGGESTIONS } from '../../data/deuxiemeAme';
+import SoftIcon from '../ui/SoftIcon';
 
 /**
- * Barre d'intention de la Deuxième Âme.
- *
- * NOTE PRODUCTION : l'assistant conversationnel n'a pas encore d'organe. Les
- * suggestions branchées sur une projection (route) fonctionnent dès aujourd'hui ;
- * la saisie libre passe par `onAssist` qui, tant que l'IA n'existe pas, présente
- * un état honnête « Bientôt ». La structure est prête à recevoir l'organe IA.
+ * Barre d'intention — carte crème, sparkle discret, pas de look chatbot SaaS.
  */
 export default function AiIntentBar({ onSuggestion, onAssist }) {
   const [text, setText] = useState('');
@@ -23,23 +19,21 @@ export default function AiIntentBar({ onSuggestion, onAssist }) {
   }
 
   return (
-    <View style={[styles.card, THEME.shadow.sm]}>
+    <View style={[styles.card, AME.shadow.sm]}>
       <View style={styles.row}>
-        <View style={styles.sparkle}>
-          <Ionicons name="sparkles" size={16} color="#fff" />
-        </View>
+        <SoftIcon name="sparkle" size={16} wellSize={36} color={AME.colors.accentDeep} wellColor={AME.colors.accentSoft} radius={12} />
         <TextInput
           style={styles.input}
           value={text}
           onChangeText={setText}
           placeholder="Une demande ou un objectif aujourd'hui ?"
-          placeholderTextColor={THEME.colors.textMuted}
+          placeholderTextColor={AME.colors.textMuted}
           returnKeyType="search"
           onSubmitEditing={submit}
         />
         {text.trim() ? (
           <TouchableOpacity onPress={submit} style={styles.sendBtn} activeOpacity={0.85}>
-            <Ionicons name="arrow-up" size={18} color="#fff" />
+            <Ionicons name="arrow-up" size={18} color={AME.colors.textOnAccent} />
           </TouchableOpacity>
         ) : null}
       </View>
@@ -57,26 +51,40 @@ export default function AiIntentBar({ onSuggestion, onAssist }) {
 
 const styles = StyleSheet.create({
   card: {
-    backgroundColor: THEME.colors.card,
-    borderRadius: THEME.radius.lg,
-    padding: 12,
+    backgroundColor: AME.colors.card,
+    borderRadius: AME.radius.lg,
+    padding: 14,
     borderWidth: 1,
-    borderColor: THEME.colors.borderLight,
+    borderColor: AME.colors.borderLight,
   },
   row: { flexDirection: 'row', alignItems: 'center', gap: 10 },
-  sparkle: {
-    width: 34, height: 34, borderRadius: 12, backgroundColor: THEME.colors.accent,
-    alignItems: 'center', justifyContent: 'center',
+  input: {
+    flex: 1,
+    fontSize: 15,
+    fontFamily: AME.fonts.ui,
+    color: AME.colors.text,
+    paddingVertical: 6,
   },
-  input: { flex: 1, fontSize: 14.5, color: THEME.colors.text, paddingVertical: 6 },
   sendBtn: {
-    width: 34, height: 34, borderRadius: 12, backgroundColor: THEME.colors.primary,
-    alignItems: 'center', justifyContent: 'center',
+    width: 36,
+    height: 36,
+    borderRadius: 12,
+    backgroundColor: AME.colors.primary,
+    alignItems: 'center',
+    justifyContent: 'center',
   },
-  chips: { gap: 8, paddingTop: 12, paddingRight: 4 },
+  chips: { gap: 8, paddingTop: 14, paddingRight: 4 },
   chip: {
-    paddingHorizontal: 12, paddingVertical: 8, borderRadius: THEME.radius.full,
-    backgroundColor: THEME.colors.accentSoft,
+    paddingHorizontal: 14,
+    paddingVertical: 9,
+    borderRadius: AME.radius.full,
+    backgroundColor: AME.colors.paper,
+    borderWidth: 1,
+    borderColor: AME.colors.borderLight,
   },
-  chipText: { fontSize: 12.5, fontWeight: '600', color: THEME.colors.accent },
+  chipText: {
+    fontSize: 13,
+    fontFamily: AME.fonts.uiMedium,
+    color: AME.colors.textSecondary,
+  },
 });

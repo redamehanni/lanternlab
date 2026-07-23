@@ -4,7 +4,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { getEventDiscovery } from '../../api';
 import EventListItem from '../../components/deuxiemeAme/EventListItem';
 import FadeIn from '../../components/ui/FadeIn';
-import { THEME } from '../../theme';
+import { AME } from '../../theme';
 
 /**
  * Porte « Se laisser surprendre ».
@@ -44,7 +44,7 @@ export default function SurpriseScreen({ navigation }) {
     setPick(next);
   }
 
-  if (loading) return <ActivityIndicator style={styles.center} color={THEME.colors.accent} />;
+  if (loading) return <ActivityIndicator style={styles.center} color={AME.colors.accent} />;
 
   return (
     <View style={styles.bg}>
@@ -67,7 +67,7 @@ export default function SurpriseScreen({ navigation }) {
         )}
 
         {pool.length > 1 ? (
-          <TouchableOpacity style={[styles.againBtn, THEME.shadow.md]} onPress={again} activeOpacity={0.9}>
+          <TouchableOpacity style={[styles.againBtn, AME.shadow.md]} onPress={again} activeOpacity={0.9}>
             <Ionicons name="shuffle" size={18} color="#fff" />
             <Text style={styles.againText}>Une autre surprise</Text>
           </TouchableOpacity>
@@ -78,22 +78,22 @@ export default function SurpriseScreen({ navigation }) {
 }
 
 const styles = StyleSheet.create({
-  bg: { flex: 1, backgroundColor: THEME.colors.bg },
+  bg: { flex: 1, backgroundColor: AME.colors.bg },
   center: { flex: 1 },
-  content: { padding: THEME.spacing.md },
+  content: { padding: AME.spacing.md },
   hero: { alignItems: 'center', paddingVertical: 24 },
   wand: {
-    width: 60, height: 60, borderRadius: 20, backgroundColor: THEME.colors.accent,
+    width: 60, height: 60, borderRadius: 20, backgroundColor: AME.colors.accent,
     alignItems: 'center', justifyContent: 'center', marginBottom: 14,
   },
-  heroTitle: { ...THEME.typography.title, color: THEME.colors.text },
-  heroSub: { fontSize: 14, color: THEME.colors.textSecondary, textAlign: 'center', marginTop: 6, lineHeight: 20 },
+  heroTitle: { ...AME.typography.title, color: AME.colors.text },
+  heroSub: { fontSize: 14, color: AME.colors.textSecondary, textAlign: 'center', marginTop: 6, lineHeight: 20 },
   empty: { alignItems: 'center', padding: 32 },
-  emptyText: { color: THEME.colors.text, fontWeight: '700', fontSize: 16 },
-  emptyHint: { color: THEME.colors.textSecondary, marginTop: 6, textAlign: 'center', lineHeight: 20 },
+  emptyText: { color: AME.colors.text, fontWeight: '700', fontSize: 16 },
+  emptyHint: { color: AME.colors.textSecondary, marginTop: 6, textAlign: 'center', lineHeight: 20 },
   againBtn: {
     flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 10,
-    backgroundColor: THEME.colors.primary, borderRadius: THEME.radius.md, padding: 16, marginTop: 20,
+    backgroundColor: AME.colors.primary, borderRadius: AME.radius.md, padding: 16, marginTop: 20,
   },
   againText: { color: '#fff', fontWeight: '800', fontSize: 16 },
 });

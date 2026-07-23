@@ -1,21 +1,24 @@
 import React from 'react';
 import { View, Text, TouchableOpacity, StyleSheet } from 'react-native';
-import { Ionicons } from '@expo/vector-icons';
-import { THEME } from '../../theme';
+import { AME } from '../../theme';
 import { timeAgo } from '../../utils/format';
+import Illustration from '../../illustrations/Illustration';
+import { AmeBadge } from '../ui/AmeCard';
 
 /**
- * Un murmure du quartier : une projection poétique (isMurmur) présentée comme un
- * petit fragment de vie locale. Présentationnel uniquement.
+ * Murmure du quartier — carte chaleureuse, vignette illustrée.
  */
 export default function MurmurCard({ murmur, onPress }) {
   const d = murmur.display || {};
   const title = d.subtitle || d.title || murmur.title || murmur.summary || 'Un murmure du quartier';
   const when = murmur.startsAt || murmur.createdAt;
+  const isNew = when && (Date.now() - new Date(when).getTime()) < 1000 * 60 * 60 * 24;
+
   return (
-    <TouchableOpacity style={[styles.card, THEME.shadow.sm]} onPress={onPress} activeOpacity={0.9}>
-      <View style={styles.iconWrap}>
-        <Ionicons name="sparkles-outline" size={16} color={THEME.colors.accent} />
+    <TouchableOpacity style={[styles.card, AME.shadow.sm]} onPress={onPress} activeOpacity={0.9}>
+      <View style={styles.top}>
+        <Illustration name="murmures.default" size={40} style={styles.thumb} />
+        {isNew ? <AmeBadge label="Nouveau" tone="nouveau" /> : null}
       </View>
       <Text style={styles.text} numberOfLines={3}>{title}</Text>
       {when ? <Text style={styles.time}>{timeAgo(when)}</Text> : null}
@@ -25,19 +28,33 @@ export default function MurmurCard({ murmur, onPress }) {
 
 const styles = StyleSheet.create({
   card: {
-    width: 190,
-    backgroundColor: THEME.colors.card,
-    borderRadius: THEME.radius.lg,
+    width: 200,
+    backgroundColor: AME.colors.card,
+    borderRadius: AME.radius.xl,
     padding: 14,
     borderWidth: 1,
-    borderColor: THEME.colors.borderLight,
+    borderColor: AME.colors.borderLight,
     justifyContent: 'space-between',
-    minHeight: 120,
+    minHeight: 136,
   },
-  iconWrap: {
-    width: 30, height: 30, borderRadius: 10, backgroundColor: THEME.colors.accentSoft,
-    alignItems: 'center', justifyContent: 'center', marginBottom: 8,
+  top: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    marginBottom: 10,
   },
-  text: { fontSize: 13.5, color: THEME.colors.text, lineHeight: 19, fontWeight: '500', flex: 1 },
-  time: { fontSize: 11.5, color: THEME.colors.textMuted, marginTop: 10 },
+  thumb: { borderRadius: 20 },
+  text: {
+    fontFamily: AME.fonts.uiMedium,
+    fontSize: 14,
+    color: AME.colors.text,
+    lineHeight: 20,
+    flex: 1,
+  },
+  time: {
+    fontFamily: AME.fonts.ui,
+    fontSize: 12,
+    color: AME.colors.textMuted,
+    marginTop: 10,
+  },
 });

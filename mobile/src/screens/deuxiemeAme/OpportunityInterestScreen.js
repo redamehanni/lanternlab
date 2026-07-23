@@ -5,7 +5,7 @@ import {
 import { Ionicons } from '@expo/vector-icons';
 import { acceptOpportunity, dismissOpportunity } from '../../api';
 import { useToast } from '../../components/ui/Toast';
-import { THEME } from '../../theme';
+import { AME } from '../../theme';
 
 /**
  * Parcours d'acceptation d'une Opportunité Volante.
@@ -58,7 +58,7 @@ export default function OpportunityInterestScreen({ route, navigation }) {
       <View style={styles.bg}>
         <View style={styles.successCard}>
           <View style={styles.successIcon}>
-            <Ionicons name="ticket-outline" size={36} color={THEME.colors.accent} />
+            <Ionicons name="ticket-outline" size={36} color={AME.colors.accent} />
           </View>
           <Text style={styles.successTitle}>Super !</Text>
           <Text style={styles.successText}>
@@ -111,7 +111,7 @@ export default function OpportunityInterestScreen({ route, navigation }) {
           </Text>
           <View style={styles.askRow}>
             <TouchableOpacity style={styles.noBtn} onPress={onNo} disabled={busy} activeOpacity={0.85}>
-              {busy ? <ActivityIndicator color={THEME.colors.text} /> : <Text style={styles.noText}>Non</Text>}
+              {busy ? <ActivityIndicator color={AME.colors.text} /> : <Text style={styles.noText}>Non</Text>}
             </TouchableOpacity>
             <TouchableOpacity style={styles.yesBtn} onPress={onYes} disabled={busy} activeOpacity={0.9}>
               {busy ? <ActivityIndicator color="#fff" /> : (
@@ -135,7 +135,7 @@ export default function OpportunityInterestScreen({ route, navigation }) {
 function Row({ icon, label, value }) {
   return (
     <View style={styles.row}>
-      <Ionicons name={icon} size={16} color={THEME.colors.textMuted} />
+      <Ionicons name={icon} size={16} color={AME.colors.textMuted} />
       <Text style={styles.rowLabel}>{label}</Text>
       <Text style={styles.rowValue}>{value}</Text>
     </View>
@@ -143,47 +143,47 @@ function Row({ icon, label, value }) {
 }
 
 const styles = StyleSheet.create({
-  bg: { flex: 1, backgroundColor: THEME.colors.bg },
-  content: { padding: THEME.spacing.md, paddingBottom: 48 },
-  category: { fontSize: 11, fontWeight: '800', letterSpacing: 1, color: THEME.colors.accent },
-  title: { ...THEME.typography.hero, fontSize: 26, color: THEME.colors.text, marginTop: 6 },
-  summary: { fontSize: 15, color: THEME.colors.textSecondary, marginTop: 8, lineHeight: 22 },
+  bg: { flex: 1, backgroundColor: AME.colors.bg },
+  content: { padding: AME.spacing.md, paddingBottom: 48 },
+  category: { fontSize: 11, fontWeight: '800', letterSpacing: 1, color: AME.colors.accent },
+  title: { ...AME.typography.hero, fontSize: 26, color: AME.colors.text, marginTop: 6 },
+  summary: { fontSize: 15, color: AME.colors.textSecondary, marginTop: 8, lineHeight: 22 },
   metaCard: {
-    backgroundColor: THEME.colors.card, borderRadius: THEME.radius.lg, padding: 16, marginTop: 18,
-    borderWidth: 1, borderColor: THEME.colors.borderLight, gap: 12,
+    backgroundColor: AME.colors.card, borderRadius: AME.radius.lg, padding: 16, marginTop: 18,
+    borderWidth: 1, borderColor: AME.colors.borderLight, gap: 12,
   },
   row: { flexDirection: 'row', alignItems: 'center', gap: 8 },
-  rowLabel: { fontSize: 12.5, fontWeight: '700', color: THEME.colors.textMuted, width: 88 },
-  rowValue: { fontSize: 13.5, color: THEME.colors.text, flex: 1 },
+  rowLabel: { fontSize: 12.5, fontWeight: '700', color: AME.colors.textMuted, width: 88 },
+  rowValue: { fontSize: 13.5, color: AME.colors.text, flex: 1 },
   askCard: {
-    marginTop: 24, backgroundColor: THEME.colors.card, borderRadius: THEME.radius.lg, padding: 18,
-    borderWidth: 1.5, borderColor: THEME.colors.accent,
+    marginTop: 24, backgroundColor: AME.colors.card, borderRadius: AME.radius.lg, padding: 18,
+    borderWidth: 1.5, borderColor: AME.colors.accent,
   },
-  askTitle: { fontSize: 17, fontWeight: '800', color: THEME.colors.text, textAlign: 'center' },
-  askHint: { fontSize: 13.5, color: THEME.colors.textSecondary, textAlign: 'center', marginTop: 8, lineHeight: 19 },
+  askTitle: { fontSize: 17, fontWeight: '800', color: AME.colors.text, textAlign: 'center' },
+  askHint: { fontSize: 13.5, color: AME.colors.textSecondary, textAlign: 'center', marginTop: 8, lineHeight: 19 },
   askRow: { flexDirection: 'row', gap: 12, marginTop: 18 },
   noBtn: {
-    flex: 1, padding: 16, borderRadius: 14, borderWidth: 1.5, borderColor: THEME.colors.border,
-    alignItems: 'center', backgroundColor: THEME.colors.bg,
+    flex: 1, padding: 16, borderRadius: 14, borderWidth: 1.5, borderColor: AME.colors.border,
+    alignItems: 'center', backgroundColor: AME.colors.bg,
   },
-  noText: { fontWeight: '800', color: THEME.colors.textSecondary, fontSize: 16 },
+  noText: { fontWeight: '800', color: AME.colors.textSecondary, fontSize: 16 },
   yesBtn: {
     flex: 1.4, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8,
-    padding: 16, borderRadius: 14, backgroundColor: THEME.colors.primary,
+    padding: 16, borderRadius: 14, backgroundColor: AME.colors.primary,
   },
   yesText: { color: '#fff', fontWeight: '800', fontSize: 16 },
   successCard: { flex: 1, alignItems: 'center', justifyContent: 'center', padding: 32 },
   successIcon: {
-    width: 72, height: 72, borderRadius: 36, backgroundColor: THEME.colors.accentSoft,
+    width: 72, height: 72, borderRadius: 36, backgroundColor: AME.colors.accentSoft,
     alignItems: 'center', justifyContent: 'center', marginBottom: 16,
   },
-  successTitle: { fontSize: 28, fontWeight: '900', color: THEME.colors.text },
-  successText: { fontSize: 16, color: THEME.colors.textSecondary, textAlign: 'center', marginTop: 10, lineHeight: 24 },
+  successTitle: { fontSize: 28, fontWeight: '900', color: AME.colors.text },
+  successText: { fontSize: 16, color: AME.colors.textSecondary, textAlign: 'center', marginTop: 10, lineHeight: 24 },
   primaryBtn: {
     flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8,
-    backgroundColor: THEME.colors.primary, borderRadius: 14, padding: 16, marginTop: 28, alignSelf: 'stretch',
+    backgroundColor: AME.colors.primary, borderRadius: 14, padding: 16, marginTop: 28, alignSelf: 'stretch',
   },
   primaryText: { color: '#fff', fontWeight: '800', fontSize: 16 },
   secondaryBtn: { marginTop: 14, padding: 12 },
-  secondaryText: { color: THEME.colors.accent, fontWeight: '700', fontSize: 15 },
+  secondaryText: { color: AME.colors.accent, fontWeight: '700', fontSize: 15 },
 });

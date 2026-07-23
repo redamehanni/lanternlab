@@ -4,7 +4,7 @@ import { useFocusEffect } from '@react-navigation/native';
 import { Ionicons } from '@expo/vector-icons';
 import { getEventDiscovery } from '../../api';
 import EventListItem from '../../components/deuxiemeAme/EventListItem';
-import { THEME } from '../../theme';
+import { AME } from '../../theme';
 
 /**
  * Porte « Les Lanternes » — vue composée sur listDiscoverable(capability isLantern).
@@ -29,7 +29,7 @@ export default function LanternsScreen({ navigation }) {
 
   useFocusEffect(useCallback(() => { load(); }, [load]));
 
-  if (loading) return <ActivityIndicator style={styles.center} color={THEME.colors.accent} />;
+  if (loading) return <ActivityIndicator style={styles.center} color={AME.colors.accent} />;
 
   return (
     <FlatList
@@ -41,7 +41,7 @@ export default function LanternsScreen({ navigation }) {
       ListHeaderComponent={
         <View>
           <Text style={styles.intro}>Des trésors cachés à révéler en scannant leur lanterne, quelque part dans le quartier.</Text>
-          <TouchableOpacity style={[styles.scanBtn, THEME.shadow.md]} onPress={() => navigation.navigate('LanternScan')} activeOpacity={0.9}>
+          <TouchableOpacity style={[styles.scanBtn, AME.shadow.md]} onPress={() => navigation.navigate('LanternScan')} activeOpacity={0.9}>
             <Ionicons name="scan-outline" size={20} color="#fff" />
             <Text style={styles.scanText}>Scanner une lanterne</Text>
           </TouchableOpacity>
@@ -50,7 +50,7 @@ export default function LanternsScreen({ navigation }) {
       }
       ListEmptyComponent={
         <View style={styles.empty}>
-          <Ionicons name="sparkles-outline" size={40} color={THEME.colors.textMuted} />
+          <Ionicons name="sparkles-outline" size={40} color={AME.colors.textMuted} />
           <Text style={styles.emptyText}>Aucune lanterne active</Text>
           <Text style={styles.emptyHint}>Ouvrez l'œil : elles apparaissent au fil des saisons du quartier.</Text>
         </View>
@@ -63,17 +63,17 @@ export default function LanternsScreen({ navigation }) {
 }
 
 const styles = StyleSheet.create({
-  bg: { flex: 1, backgroundColor: THEME.colors.bg },
+  bg: { flex: 1, backgroundColor: AME.colors.bg },
   center: { flex: 1 },
-  list: { padding: THEME.spacing.md, paddingBottom: 40, flexGrow: 1 },
-  intro: { color: THEME.colors.textSecondary, fontSize: 14, lineHeight: 20, marginBottom: 14 },
+  list: { padding: AME.spacing.md, paddingBottom: 40, flexGrow: 1 },
+  intro: { color: AME.colors.textSecondary, fontSize: 14, lineHeight: 20, marginBottom: 14 },
   scanBtn: {
     flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 10,
-    backgroundColor: '#7C3AED', borderRadius: THEME.radius.md, padding: 16, marginBottom: 20,
+    backgroundColor: '#7C3AED', borderRadius: AME.radius.md, padding: 16, marginBottom: 20,
   },
   scanText: { color: '#fff', fontWeight: '800', fontSize: 16 },
-  listTitle: { ...THEME.typography.subtitle, color: THEME.colors.text, marginBottom: 12 },
+  listTitle: { ...AME.typography.subtitle, color: AME.colors.text, marginBottom: 12 },
   empty: { alignItems: 'center', paddingTop: 40, paddingHorizontal: 24 },
-  emptyText: { color: THEME.colors.text, fontWeight: '700', marginTop: 12, fontSize: 16 },
-  emptyHint: { color: THEME.colors.textSecondary, marginTop: 6, textAlign: 'center', lineHeight: 20 },
+  emptyText: { color: AME.colors.text, fontWeight: '700', marginTop: 12, fontSize: 16 },
+  emptyHint: { color: AME.colors.textSecondary, marginTop: 6, textAlign: 'center', lineHeight: 20 },
 });

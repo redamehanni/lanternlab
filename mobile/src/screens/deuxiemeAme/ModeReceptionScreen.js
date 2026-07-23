@@ -4,7 +4,7 @@ import { useFocusEffect } from '@react-navigation/native';
 import { Ionicons } from '@expo/vector-icons';
 import { getEventChannels, getModeReception, setModeReception } from '../../api';
 import { useToast } from '../../components/ui/Toast';
-import { THEME } from '../../theme';
+import { AME } from '../../theme';
 
 /**
  * Mode Réception — l'habitant construit ses canaux d'écoute. La surface lit les
@@ -54,7 +54,7 @@ export default function ModeReceptionScreen({ navigation }) {
     }
   }
 
-  if (loading) return <ActivityIndicator style={styles.center} color={THEME.colors.accent} />;
+  if (loading) return <ActivityIndicator style={styles.center} color={AME.colors.accent} />;
 
   return (
     <View style={styles.bg}>
@@ -88,24 +88,24 @@ export default function ModeReceptionScreen({ navigation }) {
 }
 
 const styles = StyleSheet.create({
-  bg: { flex: 1, backgroundColor: THEME.colors.bg },
+  bg: { flex: 1, backgroundColor: AME.colors.bg },
   center: { flex: 1 },
-  content: { padding: THEME.spacing.md, paddingBottom: 20 },
-  intro: { color: THEME.colors.textSecondary, fontSize: 14, lineHeight: 21, marginBottom: 18 },
+  content: { padding: AME.spacing.md, paddingBottom: 20 },
+  intro: { color: AME.colors.textSecondary, fontSize: 14, lineHeight: 21, marginBottom: 18 },
   row: {
     flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between',
-    backgroundColor: THEME.colors.card, borderRadius: THEME.radius.md, padding: 16, marginBottom: 10,
-    borderWidth: 1.5, borderColor: THEME.colors.borderLight,
+    backgroundColor: AME.colors.card, borderRadius: AME.radius.md, padding: 16, marginBottom: 10,
+    borderWidth: 1.5, borderColor: AME.colors.borderLight,
   },
-  rowOn: { borderColor: THEME.colors.accent, backgroundColor: THEME.colors.accentSoft },
-  rowLabel: { fontSize: 15, fontWeight: '600', color: THEME.colors.text },
-  rowLabelOn: { color: THEME.colors.accent, fontWeight: '800' },
+  rowOn: { borderColor: AME.colors.accent, backgroundColor: AME.colors.accentSoft },
+  rowLabel: { fontSize: 15, fontWeight: '600', color: AME.colors.text },
+  rowLabelOn: { color: AME.colors.accent, fontWeight: '800' },
   check: {
-    width: 26, height: 26, borderRadius: 13, borderWidth: 2, borderColor: THEME.colors.border,
+    width: 26, height: 26, borderRadius: 13, borderWidth: 2, borderColor: AME.colors.border,
     alignItems: 'center', justifyContent: 'center',
   },
-  checkOn: { backgroundColor: THEME.colors.accent, borderColor: THEME.colors.accent },
-  footer: { padding: THEME.spacing.md, borderTopWidth: 1, borderTopColor: THEME.colors.borderLight, backgroundColor: THEME.colors.card },
-  saveBtn: { backgroundColor: THEME.colors.primary, borderRadius: THEME.radius.md, padding: 16, alignItems: 'center' },
+  checkOn: { backgroundColor: AME.colors.accent, borderColor: AME.colors.accent },
+  footer: { padding: AME.spacing.md, borderTopWidth: 1, borderTopColor: AME.colors.borderLight, backgroundColor: AME.colors.card },
+  saveBtn: { backgroundColor: AME.colors.primary, borderRadius: AME.radius.md, padding: 16, alignItems: 'center' },
   saveText: { color: '#fff', fontWeight: '800', fontSize: 16 },
 });

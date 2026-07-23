@@ -12,14 +12,12 @@ import WeatherHero from '../../components/deuxiemeAme/WeatherHero';
 import AiIntentBar from '../../components/deuxiemeAme/AiIntentBar';
 import PorteCard from '../../components/deuxiemeAme/PorteCard';
 import MurmurCard from '../../components/deuxiemeAme/MurmurCard';
+import FadeIn from '../../components/ui/FadeIn';
 import { PORTES } from '../../data/deuxiemeAme';
-import { THEME } from '../../theme';
+import { AME, MOTION } from '../../theme';
 
-// Canaux activés par le toggle rapide du Mode Réception (réglage fin via l'écran).
 const DEFAULT_RECEPTION_CHANNELS = ['vie_de_quartier', 'culture', 'gastronomie', 'lanternes', 'opportunites_rares'];
 
-// Ambiance locale — point de branchement d'un futur organe météo/ambiance.
-// Neutre et non bloquante : la page vit même sans donnée météo réelle.
 function getLocalContext(user) {
   return {
     location: user?.city || user?.zone || 'Mon quartier',
@@ -100,15 +98,26 @@ export default function DeuxiemeAmeHomeScreen({ navigation }) {
       <ScrollView
         contentContainerStyle={styles.content}
         showsVerticalScrollIndicator={false}
-        refreshControl={<RefreshControl refreshing={refreshing} onRefresh={() => { setRefreshing(true); load(); }} />}
+        refreshControl={
+          <RefreshControl
+            refreshing={refreshing}
+            tintColor={AME.colors.accent}
+            onRefresh={() => { setRefreshing(true); load(); }}
+          />
+        }
       >
-        <View style={styles.section}>
+        <FadeIn delay={40} style={styles.section}>
           <WeatherHero location={local.location} ambiance={local.ambiance} stats={stats} loading={loading} />
-        </View>
+        </FadeIn>
 
-        <View style={styles.section}>
+        <FadeIn delay={120} style={styles.section}>
           <AiIntentBar onSuggestion={onSuggestion} onAssist={() => toast('L\u2019assistant du quartier arrive bientôt')} />
-        </View>
+        </FadeIn>
+
+        <FadeIn delay={180} style={styles.portesHead}>
+          <Text style={styles.portesTitle}>Les portes d{"\u2019"}entrée</Text>
+          <Text style={styles.portesSub}>Six façons d{"\u2019"}entrer dans la vie du quartier</Text>
+        </FadeIn>
 
         <View style={styles.grid}>
           {PORTES.map((porte, i) => (
@@ -118,21 +127,23 @@ export default function DeuxiemeAmeHomeScreen({ navigation }) {
 
         <View style={styles.murmurHead}>
           <Text style={styles.murmurTitle}>Les murmures du quartier</Text>
-          <TouchableOpacity onPress={() => navigation.navigate('Murmurs')}>
-            <Text style={styles.seeAll}>Voir tout</Text>
+          <TouchableOpacity onPress={() => navigation.navigate('Murmurs')} activeOpacity={0.8}>
+            <Text style={styles.seeAll}>Voir tout →</Text>
           </TouchableOpacity>
         </View>
         {murmurs.length === 0 ? (
-          <Text style={styles.empty}>Le quartier est calme pour l'instant. Revenez bientôt.</Text>
+          <Text style={styles.empty}>Le quartier est calme pour l{"\u2019"}instant. Revenez bientôt.</Text>
         ) : (
           <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.murmurRow}>
-            {murmurs.map((m) => (
-              <MurmurCard key={m.id} murmur={m} onPress={() => navigation.navigate('EventDetail', { eventId: m.id })} />
+            {murmurs.map((m, i) => (
+              <FadeIn key={m.id} delay={i * MOTION.delay.stagger}>
+                <MurmurCard murmur={m} onPress={() => navigation.navigate('EventDetail', { eventId: m.id })} />
+              </FadeIn>
             ))}
           </ScrollView>
         )}
 
-        <View style={{ height: 40 }} />
+        <View style={{ height: 48 }} />
       </ScrollView>
 
       <ModeReceptionPopover
@@ -150,19 +161,58 @@ export default function DeuxiemeAmeHomeScreen({ navigation }) {
 }
 
 const styles = StyleSheet.create({
-  bg: { flex: 1, backgroundColor: THEME.colors.bg },
-  content: { paddingBottom: 20 },
-  section: { paddingHorizontal: THEME.spacing.md, marginTop: 12 },
+  bg: { flex: 1, backgroundColor: AME.colors.bg },
+  content: { paddingBottom: 24 },
+  section: { paddingHorizontal: AME.spacing.md, marginTop: 14 },
+  portesHead: {
+    paddingHorizontal: AME.spacing.md,
+    marginTop: AME.spacing.section,
+    marginBottom: 4,
+  },
+  portesTitle: {
+    fontFamily: AME.fonts.display,
+    fontSize: 24,
+    color: AME.colors.text,
+    letterSpacing: -0.3,
+  },
+  portesSub: {
+    fontFamily: AME.fonts.ui,
+    fontSize: 13.5,
+    color: AME.colors.textSecondary,
+    marginTop: 4,
+  },
   grid: {
-    flexDirection: 'row', flexWrap: 'wrap', justifyContent: 'space-between',
-    paddingHorizontal: THEME.spacing.md, marginTop: 20, gap: 12,
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    justifyContent: 'space-between',
+    paddingHorizontal: AME.spacing.md,
+    marginTop: 16,
+    rowGap: 14,
   },
   murmurHead: {
-    flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between',
-    paddingHorizontal: THEME.spacing.md, marginTop: 26, marginBottom: 12,
+    flexDirection: 'row',
+    alignItems: 'baseline',
+    justifyContent: 'space-between',
+    paddingHorizontal: AME.spacing.md,
+    marginTop: 32,
+    marginBottom: 14,
   },
-  murmurTitle: { ...THEME.typography.title, color: THEME.colors.text },
-  seeAll: { ...THEME.typography.caption, color: THEME.colors.accent, fontWeight: '700' },
-  murmurRow: { paddingHorizontal: THEME.spacing.md, gap: 12, paddingBottom: 4 },
-  empty: { paddingHorizontal: THEME.spacing.md, color: THEME.colors.textSecondary, fontSize: 14 },
+  murmurTitle: {
+    fontFamily: AME.fonts.display,
+    fontSize: 22,
+    color: AME.colors.text,
+  },
+  seeAll: {
+    fontFamily: AME.fonts.uiSemiBold,
+    fontSize: 13.5,
+    color: AME.colors.accentDeep,
+  },
+  murmurRow: { paddingHorizontal: AME.spacing.md, gap: 12, paddingBottom: 4 },
+  empty: {
+    paddingHorizontal: AME.spacing.md,
+    color: AME.colors.textSecondary,
+    fontFamily: AME.fonts.ui,
+    fontSize: 14.5,
+    lineHeight: 21,
+  },
 });

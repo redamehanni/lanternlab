@@ -6,8 +6,8 @@
  * une intention de découverte + une destination. Ajouter/renommer une porte se
  * fait ici, sans toucher à l'organe.
  *
- * `route` cible un écran du DeuxiemeAmeHomeStack. `open` (optionnel) est un mode
- * d'ouverture particulier (ex. scanner). L'ordre du tableau = l'ordre d'affichage.
+ * `illustrationKey` pointe vers le registry d'illustrations (jamais d'asset en dur).
+ * `route` cible un écran du DeuxiemeAmeHomeStack. L'ordre du tableau = l'ordre d'affichage.
  */
 export const PORTES = [
   {
@@ -15,7 +15,10 @@ export const PORTES = [
     label: 'Les Lanternes',
     description: 'Partez à la recherche de trésors cachés dans le quartier.',
     icon: 'sparkles-outline',
-    color: '#7C3AED',
+    iconKey: 'lantern',
+    illustrationKey: 'portes.lanternes',
+    color: '#8B6FAE',
+    soft: '#F0EAF6',
     route: 'Lanterns',
   },
   {
@@ -23,7 +26,10 @@ export const PORTES = [
     label: 'Les Événements',
     description: 'Découvrez tout ce qui se passe aujourd\u2019hui autour de vous.',
     icon: 'calendar-outline',
-    color: '#EA580C',
+    iconKey: 'calendar',
+    illustrationKey: 'portes.evenements',
+    color: '#C4785A',
+    soft: '#F8EBE4',
     route: 'Events',
   },
   {
@@ -31,7 +37,10 @@ export const PORTES = [
     label: 'Participer',
     description: 'Contribuez à la vie du quartier, créez ou rejoignez des initiatives locales.',
     icon: 'people-outline',
-    color: '#059669',
+    iconKey: 'people',
+    illustrationKey: 'portes.participer',
+    color: '#5F8F78',
+    soft: '#E8F2EC',
     route: 'Participer',
   },
   {
@@ -39,7 +48,10 @@ export const PORTES = [
     label: 'Découvrir mon quartier',
     description: 'Explorez les lieux, artisans, cafés, patrimoine et coins inspirants près de chez vous.',
     icon: 'compass-outline',
-    color: '#0891B2',
+    iconKey: 'compass',
+    illustrationKey: 'portes.quartier',
+    color: '#6A92A8',
+    soft: '#E8F0F4',
     route: 'DecouvrirQuartier',
   },
   {
@@ -47,7 +59,10 @@ export const PORTES = [
     label: 'Mes adresses',
     description: 'Vos lieux préférés, leurs actualités, offres et recommandations sur mesure.',
     icon: 'heart-outline',
-    color: '#DC2626',
+    iconKey: 'heart',
+    illustrationKey: 'portes.adresses',
+    color: '#B86B6B',
+    soft: '#F6EAEA',
     route: 'MesAdresses',
   },
   {
@@ -55,7 +70,10 @@ export const PORTES = [
     label: 'Se laisser surprendre',
     description: 'Laissez Ma Zone vous proposer une expérience unique, rien que pour vous.',
     icon: 'color-wand-outline',
-    color: '#2563EB',
+    iconKey: 'wand',
+    illustrationKey: 'portes.surprise',
+    color: '#7A7FB8',
+    soft: '#EEEDF6',
     route: 'Surprise',
   },
 ];
@@ -75,7 +93,7 @@ export const PARTICIPATION_MODES = [
     label: 'Créer une initiative',
     description: 'Faites naître un moment de vie locale : balade, rencontre, collecte…',
     icon: 'add-circle-outline',
-    color: '#059669',
+    color: '#5F8F78',
     route: 'CreateEvent',
     enabled: true,
   },
@@ -84,7 +102,7 @@ export const PARTICIPATION_MODES = [
     label: 'Rejoindre une initiative',
     description: 'Participez à ce que d\u2019autres habitants ont lancé près de chez vous.',
     icon: 'hand-left-outline',
-    color: '#2563EB',
+    color: '#6A92A8',
     comingSoon: true,
   },
   {
@@ -92,7 +110,7 @@ export const PARTICIPATION_MODES = [
     label: 'Aider un commerçant',
     description: 'Donnez un coup de main ou répondez à un besoin d\u2019un commerce du quartier.',
     icon: 'storefront-outline',
-    color: '#EA580C',
+    color: '#C4785A',
     comingSoon: true,
   },
   {
@@ -100,7 +118,7 @@ export const PARTICIPATION_MODES = [
     label: 'Participer à une association',
     description: 'Rejoignez les associations locales et leurs actions.',
     icon: 'people-circle-outline',
-    color: '#7C3AED',
+    color: '#8B6FAE',
     comingSoon: true,
   },
   {
@@ -108,7 +126,7 @@ export const PARTICIPATION_MODES = [
     label: 'Répondre à un besoin',
     description: 'Le quartier a besoin d\u2019un coup de main ? Proposez le vôtre.',
     icon: 'megaphone-outline',
-    color: '#D97706',
+    color: '#C4893A',
     comingSoon: true,
   },
   {
@@ -116,7 +134,7 @@ export const PARTICIPATION_MODES = [
     label: 'Prendre part à une mission',
     description: 'Des missions ponctuelles pour faire vivre le quartier.',
     icon: 'flag-outline',
-    color: '#0891B2',
+    color: '#6A92A8',
     comingSoon: true,
   },
 ];

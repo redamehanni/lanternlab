@@ -3,7 +3,7 @@ import 'react-native-reanimated';
 import React from 'react';
 import { NavigationContainer } from '@react-navigation/native';
 import { StatusBar } from 'expo-status-bar';
-import { View, ActivityIndicator } from 'react-native';
+import { View, ActivityIndicator, Text, StyleSheet } from 'react-native';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 
@@ -16,28 +16,45 @@ import { ToastProvider } from './src/components/ui/Toast';
 import { DriverProvider } from './src/context/DriverContext';
 import AppNavigator from './src/navigation';
 import { navigationRef } from './src/navigation/navigationRef';
-import { COLORS } from './src/config';
+import { useAmeFonts } from './src/theme/fonts';
+import { AME } from './src/theme';
 
 function Root() {
-  const { loading } = useApp();
+  const { loading, activeSoul, user } = useApp();
 
   if (loading) {
     return (
-      <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center', backgroundColor: COLORS.primary }}>
-        <ActivityIndicator size="large" color="#fff" />
+      <View style={styles.boot}>
+        <Text style={styles.bootBrand}>Ma Zone</Text>
+        <ActivityIndicator size="small" color={AME.colors.accent} style={{ marginTop: 18 }} />
       </View>
     );
   }
 
+  const barStyle = user?.role === 'client' && activeSoul === 'second' ? 'dark' : 'light';
+
   return (
     <NavigationContainer ref={navigationRef}>
-      <StatusBar style="light" />
+      <StatusBar style={barStyle} />
       <AppNavigator />
     </NavigationContainer>
   );
 }
 
 export default function App() {
+  const [fontsLoaded, fontError] = useAmeFonts();
+
+  // Ne jamais bloquer l'app sur les fonts : si elles échouent (Expo Go / mismatch),
+  // on continue avec les polices système — mieux qu'un écran blanc.
+  if (!fontsLoaded && !fontError) {
+    return (
+      <View style={styles.boot}>
+        <Text style={styles.bootBrandFallback}>Ma Zone</Text>
+        <ActivityIndicator size="small" color={AME.colors.accent} style={{ marginTop: 18 }} />
+      </View>
+    );
+  }
+
   return (
     <GestureHandlerRootView style={{ flex: 1 }}>
       <SafeAreaProvider>
@@ -60,3 +77,24 @@ export default function App() {
     </GestureHandlerRootView>
   );
 }
+
+const styles = StyleSheet.create({
+  boot: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    backgroundColor: AME.colors.bg,
+  },
+  bootBrand: {
+    fontFamily: AME.fonts.display,
+    fontSize: 34,
+    color: AME.colors.text,
+    letterSpacing: -0.5,
+  },
+  bootBrandFallback: {
+    fontSize: 34,
+    fontWeight: '600',
+    color: AME.colors.text,
+    letterSpacing: -0.5,
+  },
+});
