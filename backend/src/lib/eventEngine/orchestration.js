@@ -115,6 +115,69 @@ function issueTicket(event, ownerId, io) {
   return { object };
 }
 
+/**
+ * Matérialise l'ACCEPTATION d'une Opportunité Volante dans le Wallet.
+ *
+ * Distinct de `issueTicket` (réservation billetterie) :
+ *  - si l'initiative exige une réservation → même chemin que issueTicket (jauge) ;
+ *  - si ouverte à tous mais canTicket → billet d'accès gratuit (preuve d'intérêt) ;
+ *  - sinon (ex. promo) → badge souvenir « Opportunité acceptée ».
+ *
+ * Le Wallet reste le support des opportunités acceptées.
+ */
+function claimAcceptedOpportunity(event, ownerId, io) {
+  if (!event) throw httpError(404, 'Initiative introuvable');
+  if (event.status !== 'published' && event.status !== 'live'
+      && event.status !== 'active' && event.status !== 'discovered') {
+    throw httpError(409, 'Cette opportunité n\'est plus disponible');
+  }
+
+  if (registry.hasCapability(event.type, 'canTicket')) {
+    const resv = reservationOf(event);
+    if (resv.required) {
+      return issueTicket(event, ownerId, io);
+    }
+    // Ouvert à tous : billet d'accès gratuit (pas de jauge obligatoire).
+    const object = wallet.issueObject(
+      {
+        ownerId,
+        kind: 'event_ticket',
+        payload: { eventId: event.id, type: event.type, price: 0, currency: 'EUR', source: 'opportunity_accept' },
+        display: {
+          title: event.title,
+          subtitle: event.display?.subtitle || event.summary || 'Accès confirmé',
+          primaryDate: event.startsAt || null,
+          category: 'culture',
+          price: 'Gratuit',
+        },
+        sourceEngine: SOURCE_ENGINE,
+        sourceRef: event.id,
+        zoneId: event.zoneId || null,
+      },
+      io
+    );
+    return { object };
+  }
+
+  const object = wallet.issueObject(
+    {
+      ownerId,
+      kind: 'badge',
+      payload: { eventId: event.id, type: event.type, source: 'opportunity_accept' },
+      display: {
+        title: event.title,
+        subtitle: 'Opportunité acceptée',
+        category: event.display?.category || 'quartier',
+      },
+      sourceEngine: SOURCE_ENGINE,
+      sourceRef: event.id,
+      zoneId: event.zoneId || null,
+    },
+    io
+  );
+  return { object };
+}
+
 /** Un citoyen a-t-il déjà découvert cette Lanterne (anti double-récompense) ? */
 function alreadyDiscovered(lanternId, userId) {
   return !!db
@@ -165,6 +228,7 @@ function discoverLantern(event, discovererUserId, io) {
 
 module.exports = {
   issueTicket,
+  claimAcceptedOpportunity,
   discoverLantern,
   ticketsIssued,
   reservationOf,

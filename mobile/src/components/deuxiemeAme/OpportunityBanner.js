@@ -40,7 +40,7 @@ export default function OpportunityBanner({ onOpen }) {
       <TouchableOpacity
         style={[styles.card, THEME.shadow.lg]}
         activeOpacity={0.92}
-        onPress={() => { onOpen?.(ev); hide(); }}
+        onPress={() => { onOpen?.(current); hide(); }}
       >
         <View style={styles.iconWrap}>
           <Ionicons name="flash" size={18} color="#fff" />

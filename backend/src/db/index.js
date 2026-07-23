@@ -517,6 +517,29 @@ db.exec(`
   CREATE UNIQUE INDEX IF NOT EXISTS idx_event_diffusions_idempotency
     ON event_diffusions(idempotency_key)
     WHERE idempotency_key IS NOT NULL;
+
+  -- Boîte aux lettres : reçus PAR HABITANT d'une Opportunité Volante.
+  -- Distinct de event_diffusions (agrégat de campagne). Métadonnées opaques
+  -- (meta) : réserve d'extensibilité pour une future rareté / Ticket d'Or,
+  -- sans toucher au schéma ni au cœur de cycle de vie.
+  CREATE TABLE IF NOT EXISTS event_opportunity_inbox (
+    id TEXT PRIMARY KEY,
+    user_id TEXT NOT NULL REFERENCES users(id),
+    event_id TEXT NOT NULL REFERENCES events(id),
+    diffusion_id TEXT REFERENCES event_diffusions(id),
+    channels TEXT,
+    distance_km REAL,
+    status TEXT NOT NULL DEFAULT 'received',
+    meta TEXT,
+    ticket_object_id TEXT,
+    created_at TEXT NOT NULL DEFAULT (datetime('now')),
+    updated_at TEXT NOT NULL DEFAULT (datetime('now'))
+  );
+
+  CREATE INDEX IF NOT EXISTS idx_event_opp_inbox_user ON event_opportunity_inbox(user_id, created_at DESC);
+  CREATE INDEX IF NOT EXISTS idx_event_opp_inbox_event ON event_opportunity_inbox(event_id);
+  CREATE UNIQUE INDEX IF NOT EXISTS idx_event_opp_inbox_unique
+    ON event_opportunity_inbox(user_id, event_id, diffusion_id);
 `);
 
 // ── Bac à Sable : administration interne + World Factory ──────────────────────

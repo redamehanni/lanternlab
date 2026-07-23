@@ -321,7 +321,12 @@ function diffuseEvent(eventId, policy = {}, io, opts = {}) {
       fromStatus: event.status,
       toStatus: event.status,
       actor: policy.actor || null,
-      payload: { channels: policy.channels || event.channels, reached: result.reached },
+      payload: {
+        channels: policy.channels || event.channels,
+        reached: result.reached,
+        radiusKm: policy.radiusKm ?? null,
+        quota: policy.quota ?? null,
+      },
       idempotencyKey: opts.idempotencyKey || null,
     });
   }
@@ -332,6 +337,56 @@ function diffuseEvent(eventId, policy = {}, io, opts = {}) {
 function getEventDiffusions(eventId) {
   getEventById(eventId); // 404 si inconnue
   return diffusion.getDiffusions(eventId);
+}
+
+/** Boîte aux lettres de l'habitant : opportunités reçues (triables). */
+function listOpportunityInbox(userId, opts = {}) {
+  return diffusion.listInbox(userId, opts);
+}
+
+function countOpportunityInbox(userId, opts = {}) {
+  return diffusion.countInbox(userId, opts);
+}
+
+/**
+ * Accepte une opportunité de la boîte aux lettres :
+ *  1. matérialise un objet Wallet (billet ou badge) via orchestration ;
+ *  2. marque le reçu comme accepté.
+ * Idempotent si déjà acceptée.
+ */
+function acceptOpportunity(inboxId, userId, io) {
+  const row = diffusion.getInboxItem(inboxId, userId);
+  if (row.status === diffusion.INBOX_STATUS.ACCEPTED) {
+    return {
+      replayed: true,
+      inbox: diffusion.listInbox(userId).find((i) => i.id === inboxId) || null,
+      ticket: row.ticket_object_id ? { id: row.ticket_object_id } : null,
+    };
+  }
+
+  const event = getEventById(row.event_id);
+  const { object } = orchestration.claimAcceptedOpportunity(event, userId, io);
+
+  // Journal billet uniquement si c'est un event_ticket (cohérent avec billetterie).
+  if (object.kind === 'event_ticket') {
+    journal(event.id, {
+      type: JOURNAL_EVENT_TYPE.TICKET_ISSUED,
+      fromStatus: event.status,
+      toStatus: event.status,
+      actor: userId,
+      payload: { objectId: object.id, source: 'opportunity_accept' },
+    });
+    bus.emit(bus.DOMAIN_EVENT.TICKET_ISSUED, { event, ownerId: userId, objectId: object.id });
+  }
+
+  diffusion.markInboxAccepted(inboxId, userId, { ticketObjectId: object.id });
+  const inbox = diffusion.listInbox(userId).find((i) => i.id === inboxId) || null;
+  return { replayed: false, inbox, ticket: object };
+}
+
+function dismissOpportunity(inboxId, userId) {
+  diffusion.markInboxDismissed(inboxId, userId);
+  return { ok: true };
 }
 
 // ── Orchestration des organes (Wallet, Identity) ──────────────────────────────
@@ -503,6 +558,10 @@ module.exports = {
   setModeReception,
   diffuseEvent,
   getEventDiffusions,
+  listOpportunityInbox,
+  countOpportunityInbox,
+  acceptOpportunity,
+  dismissOpportunity,
   // Orchestration des organes
   issueTicket,
   discoverLantern,

@@ -150,6 +150,16 @@ export const setModeReception = (subscriptions) => api.put('/api/events/receptio
 // Opportunité Volante (le producteur diffuse activement son initiative).
 export const diffuseEvent     = (id, policy = {}) => api.post(`/api/events/${id}/diffuse`, policy);
 export const getEventDiffusions = (id) => api.get(`/api/events/${id}/diffusions`);
+// Boîte aux lettres (reçus d'Opportunités Volantes).
+export const getOpportunityInbox = (params = {}) => {
+  const q = Object.entries(params)
+    .filter(([, v]) => v != null && v !== '')
+    .map(([k, v]) => `${encodeURIComponent(k)}=${encodeURIComponent(v)}`)
+    .join('&');
+  return api.get(`/api/events/inbox${q ? `?${q}` : ''}`);
+};
+export const acceptOpportunity = (inboxId) => api.post(`/api/events/inbox/${inboxId}/accept`);
+export const dismissOpportunity = (inboxId) => api.post(`/api/events/inbox/${inboxId}/dismiss`);
 export const getPublicEvents  = (params = {}) => {
   const q = Object.entries(params)
     .filter(([, v]) => v != null && v !== '')

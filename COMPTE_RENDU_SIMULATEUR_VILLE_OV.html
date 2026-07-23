@@ -1,0 +1,333 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Compte rendu — Simulateur de ville & Opportunités Volantes spatiales</title>
+<style>
+  @page { margin: 16mm 14mm; }
+  body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Helvetica, Arial, sans-serif; font-size: 10.5pt; line-height: 1.45; color: #1a1a1a; max-width: 100%; }
+  h1 { font-size: 20pt; border-bottom: 2px solid #0f2d5c; padding-bottom: 8px; color: #0f2d5c; page-break-after: avoid; }
+  h2 { font-size: 14pt; margin-top: 22px; color: #0f2d5c; border-bottom: 1px solid #e5e7eb; padding-bottom: 4px; page-break-after: avoid; }
+  h3 { font-size: 11.5pt; margin-top: 14px; color: #1a4a8a; page-break-after: avoid; }
+  table { border-collapse: collapse; width: 100%; margin: 10px 0; font-size: 9pt; page-break-inside: avoid; }
+  th, td { border: 1px solid #d1d5db; padding: 5px 7px; text-align: left; vertical-align: top; }
+  th { background: #f3f4f6; font-weight: 600; }
+  code { background: #f3f4f6; padding: 1px 4px; border-radius: 3px; font-size: 8.5pt; }
+  pre { background: #f8fafc; border: 1px solid #e5e7eb; border-radius: 6px; padding: 10px; overflow-x: auto; font-size: 8pt; line-height: 1.35; white-space: pre-wrap; word-break: break-word; page-break-inside: avoid; }
+  pre code { background: none; padding: 0; }
+  blockquote { border-left: 4px solid #0f2d5c; margin: 10px 0; padding: 6px 14px; background: #f0f4f8; color: #1e3a5f; }
+  hr { border: none; border-top: 1px solid #e5e7eb; margin: 18px 0; }
+  ul, ol { padding-left: 22px; }
+  li { margin-bottom: 3px; }
+  p { margin: 8px 0; }
+  .pdf-note { display: none; }
+  @media screen {
+    .pdf-note { display: block; background: #eff6ff; border: 1px solid #bfdbfe; border-radius: 8px; padding: 12px 16px; margin-bottom: 24px; color: #1e3a8a; }
+  }
+</style>
+</head>
+<body>
+<div class="pdf-note">
+  <strong>Lecture dans Cursor / navigateur :</strong> ce fichier HTML est la version lisible du plan.
+  Pour le PDF, ouvrez <code>COMPTE_RENDU_SIMULATEUR_VILLE_OV.pdf</code> depuis le Finder (clic droit → Ouvrir avec Aperçu)
+  ou double-cliquez le fichier <code>Ouvrir_*_PDF.command</code> correspondant à la racine du projet.
+</div>
+<h1>Compte rendu — Simulateur de ville &amp; Opportunités Volantes spatiales</h1>
+<p><strong>Date :</strong> 22 juillet 2026<br />
+<strong>Objet :</strong> Enrichir le monde simulé de Ma Zone (géographie parisienne, diffusion spatiale, boîte aux lettres, parcours d'acceptation)<br />
+<strong>Contrainte respectée :</strong> aucune logique de campagne ajoutée au <em>cœur</em> de cycle de vie de l'Event Engine — tout vit dans la couche <strong>diffusion</strong> + World Factory + surfaces.</p>
+<hr />
+<h2>Philosophie appliquée</h2>
+<p>Nous ne testons plus seulement des données : le Laboratoire génère désormais un <strong>monde spatial</strong>. Chaque acteur et chaque initiative portent une adresse réelle à Paris et des coordonnées. Les Opportunités Volantes ciblent par <strong>distance</strong>, pas seulement par canal.</p>
+<p>Les points 7 (rareté) et 8 (Ticket d'Or) n'ont <strong>pas</strong> été développés. L'architecture les laisse ouverts via des champs opaques extensibles (<code>policy</code>, <code>meta</code>).</p>
+<hr />
+<h2>1. Laboratoire → simulateur de ville</h2>
+<h3>Ajout</h3>
+<ul>
+<li>Catalogue <code>backend/src/lib/worldFactory/parisAddresses.js</code> : <strong>~45 adresses parisiennes réelles</strong> (plusieurs arrondissements) avec <code>address</code>, <code>lat</code>, <code>lng</code>.</li>
+<li>Primitive <code>pickParisAddress(exclude)</code> : tirage aléatoire avec anti-doublon dans un batch.</li>
+</ul>
+<h3>Recettes mises à jour</h3>
+<table>
+<thead>
+<tr>
+<th>Recette</th>
+<th>Changements</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>quartier_anime</code></td>
+<td>Habitants, commerçants, boutiques, livreurs, initiatives + Lanternes géolocalisés</td>
+</tr>
+<tr>
+<td><code>monde_evenementiel</code></td>
+<td>Idem, pour peupler rapidement un monde événementiel crédible</td>
+</tr>
+</tbody>
+</table>
+<p>Chaque boutique et chaque initiative héritent de la même position (le lieu de l'initiative = le commerce).</p>
+<h3>Création commerçante (Épée)</h3>
+<p><code>POST /api/events</code> hérite automatiquement de <code>lat</code> / <code>lng</code> / <code>address</code> de la boutique si non fournis → les initiatives produites hors Lab sont aussi spatiales.</p>
+<hr />
+<h2>2. Calculs sur de vraies positions</h2>
+<h3>Diffusion spatiale (<code>diffusion.js</code>)</h3>
+<p><code>matchSubscribers</code> enrichit désormais chaque abonné avec sa position et <code>distanceKm</code> (via <code>geo.distanceKm</code>, Haversine déjà existant — <strong>réutilisé</strong>, non dupliqué).</p>
+<p>Filtres :</p>
+<ol>
+<li>Canaux (Mode Réception) — inchangé  </li>
+<li><strong>Périmètre de campagne</strong> <code>radiusKm</code> (prioritaire)  </li>
+<li>Sinon rayon d'écoute individuel <code>radius_km</code> de l'abonnement  </li>
+<li>Tri <strong>plus proches d'abord</strong> avant application du quota  </li>
+</ol>
+<p>Épicentre d'une initiative : ses propres coords, sinon celles de sa boutique (<code>resolveOrigin</code>).</p>
+<h3>Livreurs</h3>
+<p>Les recettes assignent désormais une <strong>vraie adresse + lat/lng</strong> aux livreurs. Le dispatch existant (<code>dispatch.js</code>) lit déjà <code>u.lat</code> / <code>u.lng</code> : il bénéficie automatiquement de cette géographie sans refonte.</p>
+<hr />
+<h2>3. Campagnes d'Opportunités Volantes enrichies</h2>
+<h3>Politique de diffusion (couche diffusion, pas le cœur)</h3>
+<pre><code>{ channels, note, radiusKm, quota, windowStart?, windowEnd?, actor? }
+</code></pre>
+<table>
+<thead>
+<tr>
+<th>Paramètre</th>
+<th>Rôle</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>quota</code></td>
+<td>Nombre max d'habitants à atteindre</td>
+</tr>
+<tr>
+<td><code>radiusKm</code></td>
+<td>Périmètre (km) autour de l'épicentre</td>
+</tr>
+</tbody>
+</table>
+<p>Sélection <strong>entièrement automatisée</strong> : abonnés au canal ∩ dans le périmètre ∩ les <code>quota</code> plus proches.</p>
+<h3>UI Épée</h3>
+<p><code>DiffuseOpportunityScreen</code> : champs « Nombre à diffuser » + « Périmètre (km) ».</p>
+<h3>Lab</h3>
+<p>Action <code>diffuse_event</code> : paramètres <code>radiusKm</code> + <code>quota</code> ajoutés.</p>
+<h3>Persistance</h3>
+<p>La politique complète est stockée en JSON dans <code>event_diffusions.policy</code> (opaque → extensible).</p>
+<hr />
+<h2>4–6. Boîte aux lettres personnelle</h2>
+<h3>Persistence</h3>
+<p>Nouvelle table <code>event_opportunity_inbox</code> :</p>
+<table>
+<thead>
+<tr>
+<th>Champ</th>
+<th>Rôle</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>user_id</code>, <code>event_id</code>, <code>diffusion_id</code></td>
+<td>Lien habitant ↔ initiative ↔ campagne</td>
+</tr>
+<tr>
+<td><code>distance_km</code></td>
+<td>Distance au moment de la diffusion</td>
+</tr>
+<tr>
+<td><code>channels</code></td>
+<td>Canaux de la campagne</td>
+</tr>
+<tr>
+<td><code>status</code></td>
+<td><code>received</code> / <code>accepted</code> / <code>dismissed</code></td>
+</tr>
+<tr>
+<td><code>meta</code></td>
+<td>JSON opaque (réserve rareté / Ticket d'Or)</td>
+</tr>
+<tr>
+<td><code>ticket_object_id</code></td>
+<td>Objet Wallet créé à l'acceptation</td>
+</tr>
+</tbody>
+</table>
+<h3>API</h3>
+<table>
+<thead>
+<tr>
+<th>Méthode</th>
+<th>Route</th>
+<th>Rôle</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>GET</code></td>
+<td><code>/api/events/inbox?sort=&amp;status=</code></td>
+<td>Liste triable</td>
+</tr>
+<tr>
+<td><code>POST</code></td>
+<td><code>/api/events/inbox/:id/accept</code></td>
+<td>Accepte → Wallet</td>
+</tr>
+<tr>
+<td><code>POST</code></td>
+<td><code>/api/events/inbox/:id/dismiss</code></td>
+<td>Met de côté</td>
+</tr>
+</tbody>
+</table>
+<h3>Tris supportés</h3>
+<ul>
+<li><strong>date</strong> (défaut)  </li>
+<li><strong>distance</strong>  </li>
+<li><strong>interest</strong> / centres d'intérêt (premier canal)  </li>
+<li><strong>seats</strong> (places restantes si billetterie)</li>
+</ul>
+<h3>UI</h3>
+<ul>
+<li>Popover Mode Réception : entrée <strong>« Voir toutes les opportunités contenues dans ma boîte aux lettres »</strong></li>
+<li>Badge non-lus sur l'icône boîte aux lettres</li>
+<li>Écran <code>MailboxScreen</code> avec chips de tri</li>
+<li>Bannière temps réel → ouvre le parcours d'intérêt (plus seulement le détail)</li>
+</ul>
+<hr />
+<h2>5. Parcours complet d'acceptation</h2>
+<pre><code>Affichage opportunité
+        ↓
+« Cette opportunité vous intéresse ? »
+        ↓ Oui
+Message : « Super ! Retrouvez votre ticket… dans votre Wallet. »
+        ↓
+Création automatique d'un objet Wallet
+</code></pre>
+<h3>Orchestration (<code>claimAcceptedOpportunity</code>)</h3>
+<p>Sans dupliquer la billetterie :</p>
+<table>
+<thead>
+<tr>
+<th>Cas</th>
+<th>Objet Wallet</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Initiative à réservation</td>
+<td><code>event_ticket</code> (même chemin que <code>issueTicket</code>, jauge respectée)</td>
+</tr>
+<tr>
+<td>Initiative ouverte + <code>canTicket</code></td>
+<td><code>event_ticket</code> gratuit (preuve d'accès)</td>
+</tr>
+<tr>
+<td>Autre (ex. promo)</td>
+<td><code>badge</code> « Opportunité acceptée »</td>
+</tr>
+</tbody>
+</table>
+<p>Le Wallet devient le support des opportunités acceptées.</p>
+<hr />
+<h2>7–8. Compatibilité future (non développé)</h2>
+<h3>Rareté (Commun → Mythique)</h3>
+<ul>
+<li>Non implémentée.</li>
+<li>Place prévue : <code>meta.rarity</code> sur chaque reçu d'inbox + éventuel <code>policy.rarity</code> / payload d'initiative.</li>
+<li>Aucune hypothèse « toutes les opportunités sont égales » n'est codée en dur dans les tris (le tri rareté pourra s'ajouter).</li>
+</ul>
+<h3>Ticket d'Or</h3>
+<ul>
+<li>Non implémenté.</li>
+<li>Place prévue : <code>policy.campaignKind = 'golden_ticket'</code> (mécanique <strong>distincte</strong> d'un niveau de rareté).</li>
+<li>La diffusion reste une <strong>stratégie</strong> attachée à une initiative, pas un type d'événement → compatible avec une campagne exceptionnelle « un seul ticket demain à 18h ».</li>
+</ul>
+<hr />
+<h2>Choix techniques &amp; architecture</h2>
+<ol>
+<li><strong>Séparation des couches</strong> : cycle de vie (<code>index.js</code>) inchangé dans son rôle ; campagne / géo / inbox = <code>diffusion.js</code>.</li>
+<li><strong>Réutilisation de <code>geo.distanceKm</code></strong> : un seul calcul Haversine pour Marketplace, dispatch et OV.</li>
+<li><strong>Reçus par habitant</strong> distincts des agrégats <code>event_diffusions</code> (transparence campagne vs boîte personnelle).</li>
+<li><strong>JSON opaque</strong> (<code>policy</code>, <code>meta</code>) pour évoluer sans migration douloureuse.</li>
+<li><strong>Idempotence</strong> de diffusion enrichie (clé = event + canaux + quota + rayon).</li>
+<li><strong>Reset Lab</strong> : <code>demoWorld.purgeUsers</code> nettoie aussi <code>event_opportunity_inbox</code>.</li>
+</ol>
+<hr />
+<h2>Tests effectués</h2>
+<table>
+<thead>
+<tr>
+<th>Test</th>
+<th>Résultat</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Recette <code>monde_evenementiel</code> : 100 % des acteurs / stores / events avec coords Paris</td>
+<td>OK</td>
+</tr>
+<tr>
+<td>Diffusion <code>radiusKm: 3</code>, <code>quota: 5</code> → sélection des plus proches (ex. 3 atteints, dist 1,66 km)</td>
+<td>OK</td>
+</tr>
+<tr>
+<td>Inbox + accept → <code>event_ticket</code> dans Wallet, status <code>accepted</code></td>
+<td>OK</td>
+</tr>
+<tr>
+<td>Reset batch propre (inbox + events)</td>
+<td>OK</td>
+</tr>
+<tr>
+<td>Non-régression <code>test-sandbox-events.js</code></td>
+<td><strong>7 / 7</strong></td>
+</tr>
+<tr>
+<td>Compilation Babel des écrans / contextes mobiles</td>
+<td>OK</td>
+</tr>
+</tbody>
+</table>
+<hr />
+<h2>Points à enrichir aux prochaines itérations</h2>
+<ol>
+<li><strong>Ordonnanceur</strong> pour <code>windowStart</code> / <code>windowEnd</code> (campagnes programmées, dont un futur Ticket d'Or à heure fixe).</li>
+<li><strong>Push hors-ligne</strong> (la boîte est persistante, mais le flash socket ne touche que les connectés).</li>
+<li><strong>Carte</strong> dans la boîte aux lettres / détail (visualiser le périmètre).</li>
+<li><strong>Rareté</strong> comme propriété d'opportunité + filtre / tri dédié.</li>
+<li><strong>Ticket d'Or</strong> comme <code>campaignKind</code> avec quota forcé à 1 et fenêtre temporelle.</li>
+<li><strong>Paiement</strong> pour les billets payants acceptés depuis la boîte.</li>
+<li><strong>Watcher backend</strong> (<code>nodemon</code>) pour éviter les process périmés lors des tests Lab.</li>
+</ol>
+<hr />
+<h2>Fichiers principaux</h2>
+<h3>Backend</h3>
+<ul>
+<li><code>backend/src/lib/worldFactory/parisAddresses.js</code> <em>(nouveau)</em></li>
+<li><code>backend/src/lib/worldFactory/recipes/quartierAnime.js</code></li>
+<li><code>backend/src/lib/worldFactory/recipes/mondeEvenementiel.js</code></li>
+<li><code>backend/src/lib/worldFactory/demoWorld.js</code></li>
+<li><code>backend/src/lib/eventEngine/diffusion.js</code> <em>(refonte spatiale + inbox)</em></li>
+<li><code>backend/src/lib/eventEngine/orchestration.js</code> (<code>claimAcceptedOpportunity</code>)</li>
+<li><code>backend/src/lib/eventEngine/index.js</code></li>
+<li><code>backend/src/routes/events.js</code></li>
+<li><code>backend/src/db/index.js</code> (<code>event_opportunity_inbox</code>)</li>
+<li><code>backend/src/lib/lab/actions/events.js</code></li>
+</ul>
+<h3>Mobile</h3>
+<ul>
+<li><code>mobile/src/screens/merchant/DiffuseOpportunityScreen.js</code></li>
+<li><code>mobile/src/screens/deuxiemeAme/MailboxScreen.js</code> <em>(nouveau)</em></li>
+<li><code>mobile/src/screens/deuxiemeAme/OpportunityInterestScreen.js</code> <em>(nouveau)</em></li>
+<li><code>mobile/src/components/deuxiemeAme/ModeReceptionPopover.js</code></li>
+<li><code>mobile/src/components/deuxiemeAme/AmeHeader.js</code></li>
+<li><code>mobile/src/components/deuxiemeAme/OpportunityBanner.js</code></li>
+<li><code>mobile/src/context/OpportunityContext.js</code></li>
+<li><code>mobile/src/screens/deuxiemeAme/DeuxiemeAmeHomeScreen.js</code></li>
+<li><code>mobile/src/navigation/index.js</code></li>
+<li><code>mobile/src/api/index.js</code></li>
+</ul>
+<hr />
+<p><em>Fin du compte rendu — Ma Zone · Simulateur de ville &amp; OV spatiales · 22/07/2026</em></p>
+</body>
+</html>

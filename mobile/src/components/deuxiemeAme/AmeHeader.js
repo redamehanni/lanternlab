@@ -17,7 +17,7 @@ import { THEME } from '../../theme';
  * changement d'Âme se fait via le bouton flottant partagé (SoulSwitchFab), pour
  * un mécanisme unique et symétrique sur les deux faces.
  */
-export default function AmeHeader({ user, onReception, onProfile, receptionActive }) {
+export default function AmeHeader({ user, onReception, onProfile, receptionActive, unread = 0 }) {
   return (
     <View style={styles.wrap}>
       <View style={styles.brandRow}>
@@ -44,7 +44,10 @@ export default function AmeHeader({ user, onReception, onProfile, receptionActiv
             size={22}
             color={receptionActive ? THEME.colors.accent : THEME.colors.textSecondary}
           />
-          {receptionActive ? <View style={styles.flag} /> : null}
+          {receptionActive && unread <= 0 ? <View style={styles.flag} /> : null}
+          {unread > 0 ? (
+            <View style={styles.badge}><Text style={styles.badgeText}>{unread > 9 ? '9+' : unread}</Text></View>
+          ) : null}
         </TouchableOpacity>
 
         <TouchableOpacity onPress={onProfile} activeOpacity={0.85} accessibilityLabel="Mon profil">
@@ -72,4 +75,9 @@ const styles = StyleSheet.create({
   iconBtnActive: { borderColor: THEME.colors.accent, backgroundColor: THEME.colors.accentSoft },
   // Petit fanion rouge levé, renforce la lisibilité de l'état « activé ».
   flag: { position: 'absolute', top: 7, right: 8, width: 6, height: 6, borderRadius: 2, backgroundColor: THEME.colors.error },
+  badge: {
+    position: 'absolute', top: 2, right: 2, backgroundColor: THEME.colors.error, borderRadius: 9,
+    minWidth: 16, height: 16, alignItems: 'center', justifyContent: 'center', paddingHorizontal: 3,
+  },
+  badgeText: { color: '#fff', fontSize: 9, fontWeight: '800' },
 });

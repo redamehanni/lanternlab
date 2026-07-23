@@ -22,6 +22,8 @@ export default function DiffuseOpportunityScreen() {
   const [selectedEvent, setSelectedEvent] = useState(null);
   const [selectedChannels, setSelectedChannels] = useState([]);
   const [note, setNote] = useState('');
+  const [quota, setQuota] = useState('20');
+  const [radiusKm, setRadiusKm] = useState('2');
   const [loading, setLoading] = useState(true);
   const [sending, setSending] = useState(false);
 
@@ -54,17 +56,25 @@ export default function DiffuseOpportunityScreen() {
   async function diffuse() {
     if (!selectedEvent) return;
     if (!selectedChannels.length) return Alert.alert('Canaux requis', 'Choisissez au moins un canal de diffusion.');
+    const q = Math.floor(Number(String(quota).replace(',', '.')));
+    const r = Number(String(radiusKm).replace(',', '.'));
+    if (!Number.isFinite(q) || q < 1) return Alert.alert('Quota', 'Indiquez un nombre d\'opportunités ≥ 1.');
+    if (!Number.isFinite(r) || r <= 0) return Alert.alert('Périmètre', 'Indiquez un rayon en km > 0.');
     setSending(true);
     try {
-      // Clé d'idempotence déterministe : rejouer la même diffusion ne double pas.
-      const idempotencyKey = `${selectedEvent.id}:${[...selectedChannels].sort().join(',')}`;
+      // Clé d'idempotence : campagne = event + canaux + quota + rayon.
+      const idempotencyKey = `${selectedEvent.id}:${[...selectedChannels].sort().join(',')}:q${q}:r${r}`;
       const res = await diffuseEvent(selectedEvent.id, {
         channels: selectedChannels,
         note: note.trim() || undefined,
+        quota: q,
+        radiusKm: r,
         idempotencyKey,
       });
       const reached = res.data?.reached;
-      toast(res.data?.replayed ? 'Opportunité déjà diffusée' : `Opportunité envoyée${reached != null ? ` à ${reached} habitant${reached > 1 ? 's' : ''}` : ''}`);
+      toast(res.data?.replayed
+        ? 'Opportunité déjà diffusée'
+        : `Opportunité envoyée${reached != null ? ` à ${reached} habitant${reached > 1 ? 's' : ''}` : ''}`);
       setSelectedEvent(null);
       setNote('');
     } catch (err) {
@@ -120,6 +130,33 @@ export default function DiffuseOpportunityScreen() {
             ))}
           </View>
 
+          <Text style={styles.label}>Campagne</Text>
+          <Text style={styles.hint}>Le moteur sélectionne automatiquement les habitants abonnés dans le périmètre, les plus proches d'abord.</Text>
+          <View style={styles.row2}>
+            <View style={{ flex: 1 }}>
+              <Text style={styles.subLabel}>Nombre à diffuser</Text>
+              <TextInput
+                style={styles.input}
+                value={quota}
+                onChangeText={setQuota}
+                keyboardType="number-pad"
+                placeholder="ex : 20"
+                placeholderTextColor={THEME.colors.textMuted}
+              />
+            </View>
+            <View style={{ flex: 1 }}>
+              <Text style={styles.subLabel}>Périmètre (km)</Text>
+              <TextInput
+                style={styles.input}
+                value={radiusKm}
+                onChangeText={setRadiusKm}
+                keyboardType="decimal-pad"
+                placeholder="ex : 2"
+                placeholderTextColor={THEME.colors.textMuted}
+              />
+            </View>
+          </View>
+
           <Text style={styles.label}>Note (optionnel)</Text>
           <TextInput
             style={[styles.input, styles.multiline]}
@@ -172,6 +209,9 @@ const styles = StyleSheet.create({
   chipActive: { borderColor: THEME.colors.primary, backgroundColor: THEME.colors.primary },
   chipText: { fontWeight: '700', color: THEME.colors.text, fontSize: 13 },
   chipTextActive: { color: '#fff' },
+  hint: { fontSize: 13, color: THEME.colors.textSecondary, marginTop: -4, marginBottom: 10, lineHeight: 18 },
+  subLabel: { fontSize: 12, fontWeight: '700', color: THEME.colors.textMuted, marginBottom: 6 },
+  row2: { flexDirection: 'row', gap: 10 },
   input: { backgroundColor: THEME.colors.card, borderRadius: 12, borderWidth: 1, borderColor: THEME.colors.border, padding: 14, fontSize: 15, color: THEME.colors.text },
   multiline: { minHeight: 80, textAlignVertical: 'top' },
   diffuseBtn: {

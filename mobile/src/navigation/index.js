@@ -57,6 +57,8 @@ import MesAdressesScreen from '../screens/deuxiemeAme/MesAdressesScreen';
 import SurpriseScreen from '../screens/deuxiemeAme/SurpriseScreen';
 import MurmursScreen from '../screens/deuxiemeAme/MurmursScreen';
 import ModeReceptionScreen from '../screens/deuxiemeAme/ModeReceptionScreen';
+import MailboxScreen from '../screens/deuxiemeAme/MailboxScreen';
+import OpportunityInterestScreen from '../screens/deuxiemeAme/OpportunityInterestScreen';
 import OpportunityBanner from '../components/deuxiemeAme/OpportunityBanner';
 import SoulErrorBoundary from '../components/deuxiemeAme/SoulErrorBoundary';
 import SoulSwitchFab from '../components/common/SoulSwitchFab';
@@ -372,6 +374,8 @@ function DeuxiemeAmeHomeStack() {
       <Stack.Screen name="Surprise" component={SurpriseScreen} options={{ title: 'Se laisser surprendre' }} />
       <Stack.Screen name="Murmurs" component={MurmursScreen} options={{ title: 'Les murmures du quartier' }} />
       <Stack.Screen name="ModeReception" component={ModeReceptionScreen} options={{ title: 'Mode Réception' }} />
+      <Stack.Screen name="Mailbox" component={MailboxScreen} options={{ title: 'Ma boîte aux lettres' }} />
+      <Stack.Screen name="OpportunityInterest" component={OpportunityInterestScreen} options={{ title: 'Opportunité' }} />
       <Stack.Screen name="StoreDetail" component={StoreDetailScreen} options={{ title: 'Lieu' }} />
       <Stack.Screen name="ProductDetail" component={ProductDetailScreen} options={{ title: 'Produit' }} />
       <Stack.Screen name="ClientProfileHub" component={ClientProfileHubScreen} options={{ title: 'Mon profil' }} />
@@ -436,7 +440,25 @@ function SecondSoulScreen() {
         </View>
         <SoulSwitchFab />
         <OpportunityBanner
-          onOpen={(ev) => navigate('AccueilTab', { screen: 'EventDetail', params: { eventId: ev.id } })}
+          onOpen={(payload) => {
+            if (payload?.inboxId) {
+              navigate('AccueilTab', {
+                screen: 'OpportunityInterest',
+                params: {
+                  inboxId: payload.inboxId,
+                  preview: {
+                    id: payload.inboxId,
+                    distanceKm: payload.distanceKm,
+                    channels: payload.channels,
+                    status: 'received',
+                    event: payload.event,
+                  },
+                },
+              });
+            } else if (payload?.event?.id) {
+              navigate('AccueilTab', { screen: 'EventDetail', params: { eventId: payload.event.id } });
+            }
+          }}
         />
       </View>
     </SoulErrorBoundary>

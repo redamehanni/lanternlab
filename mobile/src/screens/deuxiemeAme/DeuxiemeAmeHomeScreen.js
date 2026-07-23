@@ -3,6 +3,7 @@ import { View, Text, ScrollView, StyleSheet, RefreshControl, TouchableOpacity } 
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useFocusEffect } from '@react-navigation/native';
 import { useApp } from '../../context/AppContext';
+import { useOpportunity } from '../../context/OpportunityContext';
 import { getEventDiscovery, getEventMurmurs, getModeReception, setModeReception } from '../../api';
 import { useToast } from '../../components/ui/Toast';
 import AmeHeader from '../../components/deuxiemeAme/AmeHeader';
@@ -28,6 +29,7 @@ function getLocalContext(user) {
 
 export default function DeuxiemeAmeHomeScreen({ navigation }) {
   const { user } = useApp();
+  const { unread, refreshUnread } = useOpportunity();
   const toast = useToast();
   const insets = useSafeAreaInsets();
 
@@ -60,7 +62,7 @@ export default function DeuxiemeAmeHomeScreen({ navigation }) {
     }
   }, []);
 
-  useFocusEffect(useCallback(() => { load(); }, [load]));
+  useFocusEffect(useCallback(() => { load(); refreshUnread(); }, [load, refreshUnread]));
 
   function openPorte(porte) {
     navigation.navigate(porte.route);
@@ -90,6 +92,7 @@ export default function DeuxiemeAmeHomeScreen({ navigation }) {
       <AmeHeader
         user={user}
         receptionActive={receptionActive}
+        unread={unread}
         onReception={() => setPopover((v) => !v)}
         onProfile={() => navigation.navigate('ClientProfileHub')}
       />
@@ -136,9 +139,11 @@ export default function DeuxiemeAmeHomeScreen({ navigation }) {
         visible={popover}
         active={receptionActive}
         loading={receptionBusy}
+        unread={unread}
         onToggle={toggleReception}
         onClose={() => setPopover(false)}
         onManage={() => { setPopover(false); navigation.navigate('ModeReception'); }}
+        onOpenMailbox={() => { setPopover(false); navigation.navigate('Mailbox'); }}
       />
     </View>
   );

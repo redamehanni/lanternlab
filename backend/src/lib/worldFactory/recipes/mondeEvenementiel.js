@@ -15,6 +15,7 @@
  */
 
 const { defineRecipe } = require('../recipeRegistry');
+const { pickParisAddress } = require('../parisAddresses');
 
 const DEFAULTS = { citizens: 4, merchants: 3 };
 
@@ -92,10 +93,10 @@ defineRecipe({
   id: 'monde_evenementiel',
   label: 'Monde événementiel',
   description:
-    'Peuple le quartier d\'une grande variété d\'initiatives (ateliers ouverts, ' +
-    'gratuits et payants sur réservation, dégustations, promotions, Lanternes) ' +
+    'Peuple le quartier parisien (vraies adresses) d\'une grande variété d\'initiatives ' +
+    '(ateliers ouverts, gratuits et payants sur réservation, dégustations, promotions, Lanternes) ' +
     'pour tester toute la Deuxième Âme : portes, Murmures, billetterie, QR Codes, ' +
-    'Opportunités Volantes. Habitants abonnés au Mode Réception.',
+    'Opportunités Volantes géolocalisées. Habitants abonnés au Mode Réception.',
   params: {
     citizens: { type: 'number', default: DEFAULTS.citizens, min: 1, max: 30 },
     merchants: { type: 'number', default: DEFAULTS.merchants, min: 1, max: STORE_TEMPLATES.length },
@@ -104,18 +105,20 @@ defineRecipe({
     const citizensN = clamp(params.citizens ?? DEFAULTS.citizens, 1, 30);
     const merchantsN = clamp(params.merchants ?? DEFAULTS.merchants, 1, STORE_TEMPLATES.length);
     const stamp = Date.now().toString(36);
+    const used = new Set();
 
     // ── Habitants abonnés (audience des Opportunités Volantes) ────────────────
     const citizens = [];
     for (let i = 0; i < citizensN; i++) {
       const first = FIRST_NAMES[i % FIRST_NAMES.length];
       const last = LAST_NAMES[i % LAST_NAMES.length];
+      const place = pickParisAddress(used);
       const c = ctx.createCitizen({
         name: `${first} ${last}`,
         email: `demo.evt.${first.toLowerCase()}.${i}.${stamp}@mazone.demo`,
-        address: `${10 + i} rue des Habitants`,
-        lat: 48.8566 + i * 0.001,
-        lng: 2.3522 + i * 0.001,
+        address: place.address,
+        lat: place.lat,
+        lng: place.lng,
       });
       // Large écoute pour capter toutes les diffusions de test.
       ctx.setModeReception(c.id, [
@@ -131,14 +134,21 @@ defineRecipe({
       citizens.push(c);
     }
 
-    // ── Commerçants + boutiques + variété d'initiatives ───────────────────────
+    // ── Commerçants + boutiques + variété d'initiatives (géolocalisés) ────────
     const shops = [];
     let initiatives = 0;
     for (let i = 0; i < merchantsN; i++) {
       const tpl = STORE_TEMPLATES[i];
+      const place = pickParisAddress(used);
       const { store } = ctx.createMerchantWithStore(
-        { name: tpl.merchant.name, email: `demo.${tpl.merchant.emailPrefix}.${stamp}@mazone.demo`, address: tpl.store.address },
-        tpl.store
+        {
+          name: tpl.merchant.name,
+          email: `demo.${tpl.merchant.emailPrefix}.${stamp}@mazone.demo`,
+          address: place.address,
+          lat: place.lat,
+          lng: place.lng,
+        },
+        { ...tpl.store, address: place.address, lat: place.lat, lng: place.lng }
       );
       shops.push(store);
 
@@ -155,6 +165,8 @@ defineRecipe({
             startsAt: sc.startsAt || null,
             endsAt: sc.endsAt || null,
             address: store.address,
+            lat: store.lat,
+            lng: store.lng,
             capacity: sc.capacity ?? null,
             payload: sc.reservation ? { reservation: sc.reservation } : null,
           },
@@ -166,11 +178,15 @@ defineRecipe({
 
     // ── Lanternes curées : créées cachées puis activées (découvrables) ────────
     for (const l of LANTERNE_SCENARIOS) {
+      const place = pickParisAddress(used);
       const lantern = ctx.createEventInitiative({
         type: 'lanterne',
         sourceKind: 'admin',
         title: l.title,
         summary: l.summary,
+        address: place.address,
+        lat: place.lat,
+        lng: place.lng,
         geoPrecision: 'approx',
       });
       ctx.transitionEventInitiative(lantern.id, 'active');

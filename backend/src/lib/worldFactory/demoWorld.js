@@ -111,12 +111,14 @@ function purgeUsers(userIds) {
       del(`DELETE FROM digital_object_events WHERE object_id IN (${objIn})`, objs);
       del(`DELETE FROM digital_objects WHERE id IN (${objIn})`, objs);
     }
-    // Event Engine : initiatives (+ diffusions + journal) et abonnements Mode Réception.
+    // Event Engine : initiatives (+ diffusions + inbox + journal) et abonnements Mode Réception.
     if (evts.length) {
+      del(`DELETE FROM event_opportunity_inbox WHERE event_id IN (${evtIn})`, evts);
       del(`DELETE FROM event_diffusions WHERE event_id IN (${evtIn})`, evts);
       del(`DELETE FROM event_journal WHERE event_id IN (${evtIn})`, evts);
       del(`DELETE FROM events WHERE id IN (${evtIn})`, evts);
     }
+    del(`DELETE FROM event_opportunity_inbox WHERE user_id IN (${uIn})`, users);
     del(`DELETE FROM event_subscriptions WHERE user_id IN (${uIn})`, users);
     // Identity
     if (pres.length) del(`DELETE FROM identity_events WHERE presentation_id IN (${presIn})`, pres);

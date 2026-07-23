@@ -86,6 +86,33 @@ router.put('/reception', verifyToken, (req, res) => {
   });
 });
 
+// ── Boîte aux lettres (reçus d'Opportunités Volantes) ─────────────────────────
+// Routes déclarées AVANT `/:id` pour éviter d'être capturées comme identifiant.
+
+router.get('/inbox', verifyToken, (req, res) => {
+  handle(res, () => {
+    const sort = req.query.sort || 'date';
+    const status = req.query.status || null;
+    res.json({
+      items: events.listOpportunityInbox(req.user.id, { sort, status }),
+      unread: events.countOpportunityInbox(req.user.id, { status: 'received' }),
+    });
+  });
+});
+
+router.post('/inbox/:inboxId/accept', verifyToken, (req, res) => {
+  handle(res, () => {
+    const result = events.acceptOpportunity(req.params.inboxId, req.user.id, req.app.get('io'));
+    res.status(result.replayed ? 200 : 201).json(result);
+  });
+});
+
+router.post('/inbox/:inboxId/dismiss', verifyToken, (req, res) => {
+  handle(res, () => {
+    res.json(events.dismissOpportunity(req.params.inboxId, req.user.id));
+  });
+});
+
 // ── Production (créer / éditer / publier / annuler ses initiatives) ────────────
 
 router.post('/', verifyToken, (req, res) => {
@@ -95,6 +122,9 @@ router.post('/', verifyToken, (req, res) => {
 
     let sourceId = null;
     let storeId = null;
+    let inheritedLat = body.lat ?? null;
+    let inheritedLng = body.lng ?? null;
+    let inheritedAddress = body.address ?? null;
     if (ctx.sourceKind === events.SOURCE_KIND.MERCHANT) {
       // Un commerçant produit au nom d'une de ses boutiques.
       storeId = body.storeId || ctx.storeIds[0] || null;
@@ -102,12 +132,29 @@ router.post('/', verifyToken, (req, res) => {
         return res.status(403).json({ error: 'Aucune boutique valide pour produire cette initiative' });
       }
       sourceId = storeId;
+      // Hérite de la géographie de la boutique si non fournie (monde spatial).
+      if (inheritedLat == null || inheritedLng == null || !inheritedAddress) {
+        const store = db.prepare('SELECT lat, lng, address FROM stores WHERE id = ?').get(storeId);
+        if (store) {
+          if (inheritedLat == null) inheritedLat = store.lat;
+          if (inheritedLng == null) inheritedLng = store.lng;
+          if (!inheritedAddress) inheritedAddress = store.address;
+        }
+      }
     } else {
       sourceId = req.user.id;
     }
 
     const created = events.createEvent(
-      { ...body, sourceKind: ctx.sourceKind, sourceId, storeId },
+      {
+        ...body,
+        sourceKind: ctx.sourceKind,
+        sourceId,
+        storeId,
+        lat: inheritedLat,
+        lng: inheritedLng,
+        address: inheritedAddress,
+      },
       req.app.get('io')
     );
     res.status(201).json({ event: created });
@@ -168,10 +215,10 @@ router.post('/:id/diffuse', verifyToken, (req, res) => {
   handle(res, () => {
     const event = events.getEventById(req.params.id);
     assertCanManage(req.user, event);
-    const { channels, windowStart, windowEnd, note, idempotencyKey } = req.body || {};
+    const { channels, windowStart, windowEnd, note, idempotencyKey, radiusKm, quota } = req.body || {};
     const result = events.diffuseEvent(
       req.params.id,
-      { channels, windowStart, windowEnd, note, actor: req.user.id },
+      { channels, windowStart, windowEnd, note, radiusKm, quota, actor: req.user.id },
       req.app.get('io'),
       { idempotencyKey: idempotencyKey || null }
     );

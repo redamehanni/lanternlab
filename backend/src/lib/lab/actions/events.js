@@ -134,17 +134,25 @@ defineAction({
 defineAction({
   id: 'diffuse_event',
   label: 'Diffuser (Opportunité Volante)',
-  description: "Demande à l'Event Engine de porter activement une initiative vers les habitants abonnés.",
+  description: "Demande à l'Event Engine de porter activement une initiative vers les habitants abonnés dans un périmètre, jusqu'à un quota.",
   organ: 'events',
   params: {
     eventId: { type: 'text', label: "Identifiant de l'initiative", required: true },
     channels: { type: 'multi', label: 'Canaux ciblés', options: channelOptions, required: false },
+    radiusKm: { type: 'number', label: 'Périmètre (km)', required: false },
+    quota: { type: 'number', label: "Nombre d'opportunités à diffuser", required: false },
     note: { type: 'text', label: 'Note de diffusion', required: false },
   },
   run({ params = {}, targetUserId, io }) {
     return events.diffuseEvent(
       params.eventId,
-      { channels: params.channels || null, note: params.note || null, actor: targetUserId },
+      {
+        channels: params.channels || null,
+        radiusKm: params.radiusKm !== '' && params.radiusKm != null ? Number(params.radiusKm) : null,
+        quota: params.quota !== '' && params.quota != null ? Number(params.quota) : null,
+        note: params.note || null,
+        actor: targetUserId,
+      },
       io
     );
   },
