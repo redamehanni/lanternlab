@@ -9,10 +9,11 @@ Le dossier `FICHE_DISCUSSION/` est le canal de **vision et philosophie** partag�
 
 ## Réflexe obligatoire
 
-1. **Avant** un chantier, une feature ou une phase : lire `FICHE_DISCUSSION/INDEX.md` et les fiches au statut **validé** pertinentes.
-2. **Quand on demande** un résumé de vision, concept ou phase : proposer un brouillon Markdown depuis `FICHE_DISCUSSION/_TEMPLATE.md` (nom `FD-XXX-titre.md`), statut **brouillon**, **sans commit** tant que l'humain n'a pas validé.
-3. **Après validation** : commit + mise à jour de `FICHE_DISCUSSION/INDEX.md`.
-4. **PDF déposés manuellement** dans `FICHE_DISCUSSION/` : les lire et les intégrer ; proposer une version Markdown structurée si utile.
+1. **Cursor Adam (AdamY76) — première session ou doute projet :** lire **`FICHE_DISCUSSION/FD-004-contexte-complet-projet-adam.md`** en entier (référence obligatoire : vision, historique, code, anti-patterns).
+2. **Avant** un chantier, une feature ou une phase : lire `FICHE_DISCUSSION/INDEX.md` et les fiches au statut **validé** pertinentes.
+3. **Quand on demande** un résumé de vision, concept ou phase : proposer un brouillon Markdown depuis `FICHE_DISCUSSION/_TEMPLATE.md` (nom `FD-XXX-titre.md`), statut **brouillon**, **sans commit** tant que l'humain n'a pas validé.
+4. **Après validation** : commit + mise à jour de `FICHE_DISCUSSION/INDEX.md`.
+5. **PDF déposés manuellement** dans `FICHE_DISCUSSION/` : les lire et les intégrer ; proposer une version Markdown structurée si utile.
 
 ## Rituel « Sync FICHE_DISCUSSION »
 

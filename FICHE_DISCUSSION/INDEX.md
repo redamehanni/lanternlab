@@ -8,6 +8,7 @@ Registre central. **Mettre à jour à chaque nouvelle fiche validée.**
 | FD-001 | Guide Cursor Adam — onboarding FICHE_DISCUSSION | validé | 2026-07-24 | Reda (pour AdamY76) | [FD-001-guide-cursor-adam.md](./FD-001-guide-cursor-adam.md) |
 | FD-002 | Diagnostic prod & stocks commerçants | validé | 2026-07-24 | Adam (AdamY76) + Reda | [FD-002-diagnostic-prod-et-stocks-commercants.md](./FD-002-diagnostic-prod-et-stocks-commercants.md) |
 | FD-003 | Décisions prioritaires objectif déployable | brouillon | 2026-07-24 | Adam (AdamY76) — à croiser avec Reda | [FD-003-decisions-prioritaires-objectif-deployable.md](./FD-003-decisions-prioritaires-objectif-deployable.md) |
+| FD-004 | Contexte complet du projet — mise à niveau Cursor Adam | **validé** | 2026-07-24 | Reda (pour AdamY76) — **LECTURE OBLIGATOIRE** | [FD-004-contexte-complet-projet-adam.md](./FD-004-contexte-complet-projet-adam.md) |
 
 ---
 

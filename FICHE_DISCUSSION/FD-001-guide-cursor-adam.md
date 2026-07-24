@@ -11,7 +11,9 @@
 ---
 
 > **À l'attention du Cursor d'Adam (AdamY76)**  
-> Cette fiche te met au même niveau que le Cursor de Reda sur le fonctionnement des fiches de discussion. Lis-la en entier au premier `git pull`, puis consulte `INDEX.md` avant chaque chantier.
+> **1.** Lis **[FD-004](./FD-004-contexte-complet-projet-adam.md)** en entier au premier `git pull` — c'est la mise à niveau totale du projet (vision, code, historique).  
+> **2.** Puis cette fiche (FD-001) pour le processus FICHE_DISCUSSION.  
+> **3.** Consulte `INDEX.md` avant chaque chantier.
 
 ---
 

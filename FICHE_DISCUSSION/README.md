@@ -55,10 +55,11 @@ PDF manuels : `FD-XXX-titre.pdf` (même numérotation).
 
 ## Avant toute nouvelle feature ou chantier
 
-1. Consulter `INDEX.md`.
-2. Lire les fiches **validées** pertinentes.
-3. Vérifier qu'aucune décision actée ne contredit la demande.
-4. Si la vision change : **nouvelle fiche** (ou mise à jour validée) — pas de dérive silencieuse.
+1. **Cursor Adam :** lire **[FD-004](./FD-004-contexte-complet-projet-adam.md)** si pas fait ou si doute sur le projet.
+2. Consulter `INDEX.md`.
+3. Lire les fiches **validées** pertinentes.
+4. Vérifier qu'aucune décision actée ne contredit la demande.
+5. Si la vision change : **nouvelle fiche** (ou mise à jour validée) — pas de dérive silencieuse.
 
 ## Rituel « Sync FICHE_DISCUSSION » (Reda + Adam)
 
