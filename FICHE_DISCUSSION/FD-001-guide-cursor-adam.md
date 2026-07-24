@@ -174,7 +174,7 @@ Pour l'architecture détaillée : `CURRENT_ARCHITECTURE.md`.
 
 - Reda et Adam peuvent chacun pousser des fiches **après validation** de l'autre si le sujet le mérite — en pratique, valider chez soi suffit pour une fiche de vision.
 - En cas de doute sur une décision de l'autre équipe : lire la fiche validée correspondante avant de contester ou refactorer.
-- Prochaine fiche métier attendue : **FD-002** (premier chantier documenté après onboarding).
+- Prochaine fiche métier attendue : **FD-003+** (après FD-002 diagnostic prod & stocks).
 
 ---
 
