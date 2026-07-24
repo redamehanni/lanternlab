@@ -14,6 +14,21 @@ Le dossier `FICHE_DISCUSSION/` est le canal de **vision et philosophie** partag�
 3. **Après validation** : commit + mise à jour de `FICHE_DISCUSSION/INDEX.md`.
 4. **PDF déposés manuellement** dans `FICHE_DISCUSSION/` : les lire et les intégrer ; proposer une version Markdown structurée si utile.
 
+## Rituel « Sync FICHE_DISCUSSION »
+
+Déclencheurs (Reda ou Adam) :
+- *« Mets-toi à jour sur le dossier fiche de discussion et dis-moi ce que tu as appris de nouveau »*
+- *« Sync FICHE_DISCUSSION »* / *« Quoi de neuf dans les fiches ? »*
+
+Processus identique pour les deux Cursor :
+
+1. `git pull origin main`
+2. Lire `FICHE_DISCUSSION/INDEX.md` — détecter fiches nouvelles ou modifiées
+3. Lire chaque fiche inconnue ou mise à jour (MD + PDF)
+4. Répondre :
+   - **Aucune nouvelle fiche** → le dire clairement
+   - **Sinon** → fiches lues, apprentissages, impact, questions ouvertes
+
 ## Ce que les fiches couvrent
 
 Vision, philosophie, concepts, décisions, phases — **pas** l'architecture détaillée (voir `CURRENT_ARCHITECTURE.md`, plans techniques, doc API).

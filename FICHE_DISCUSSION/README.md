@@ -60,6 +60,28 @@ PDF manuels : `FD-XXX-titre.pdf` (même numérotation).
 3. Vérifier qu'aucune décision actée ne contredit la demande.
 4. Si la vision change : **nouvelle fiche** (ou mise à jour validée) — pas de dérive silencieuse.
 
+## Rituel « Sync FICHE_DISCUSSION » (Reda + Adam)
+
+Quand Reda ou Adam dit (ou équivalent) :
+
+> **« Mets-toi à jour sur le dossier fiche de discussion et dis-moi ce que tu as appris de nouveau »**  
+> Variantes : *« Sync FICHE_DISCUSSION »*, *« Quoi de neuf dans les fiches ? »*
+
+**Les deux Cursor exécutent exactement le même processus :**
+
+1. **`git pull origin main`** — récupérer les fiches poussées par l'autre.
+2. Lire **`INDEX.md`** — repérer les entrées absentes ou modifiées depuis la dernière sync connue dans la session.
+3. **Lire intégralement** chaque fiche nouvelle ou mise à jour (Markdown **et** PDF si présent).
+4. **Répondre à l'humain** avec :
+   - **Si rien de nouveau :** le dire explicitement (*« Aucune nouvelle fiche depuis la dernière sync »*).
+   - **Sinon :**
+     - **Fiches lues** (FD-XXX + titre + statut)
+     - **Ce que j'ai appris** (vision, décisions, périmètre, changements)
+     - **Impact pour la suite** (ce que ça change si on code)
+     - **Questions ouvertes** restantes dans les fiches
+
+Ce rituel **ne remplace pas** la lecture avant un chantier : c'est la sync régulière entre les deux postes.
+
 ## Fichiers de ce dossier
 
 | Fichier | Rôle |
