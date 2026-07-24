@@ -1,19 +1,31 @@
-# FD-004 — Contexte complet du projet Ma Zone (mise à niveau Cursor Adam)
+# FD-000 — Mise à niveau GLOBAL du Cursor Adam sur le projet Ma Zone
 
 | | |
 |---|---|
 | **Statut** | **validé** |
-| **Date** | 2026-07-24 |
-| **Auteur(s)** | Reda Mehanni (synthèse pour Adam / AdamY76) |
-| **Phase / chantier** | Onboarding total — zéro zone d'ombre |
-| **Références** | Toutes les fiches FD-000→003, `PORTRAIT_MAZONE_INVENTAIRE_ROADMAP.md`, `CURRENT_ARCHITECTURE.md`, tags Git v0.8.9 → v0.9.5.2 |
+| **Date** | 2026-07-24 (reset dossier) |
+| **Auteur(s)** | Reda Mehanni (pour Adam / AdamY76) |
+| **Phase / chantier** | Source de vérité unique — onboarding total |
+| **Références** | `PORTRAIT_MAZONE_INVENTAIRE_ROADMAP.md`, `CURRENT_ARCHITECTURE.md`, tags Git v0.8.9 → v0.9.5.2 |
 
 ---
 
-> **Lecture OBLIGATOIRE pour le Cursor d'Adam (AdamY76)**  
-> Cette fiche te met au même niveau que le Cursor de Reda **comme si tu avais travaillé sur Ma Zone depuis le début**.  
-> **Avant toute proposition de code, feature, refactor ou architecture :** lire cette fiche en entier + `FICHE_DISCUSSION/INDEX.md`.  
-> Si une idée contredit un point de cette fiche → **ne pas implémenter** ; proposer une fiche de discussion ou demander validation à Adam/Reda.
+> ## ⚠️ AVIS DE RESET — LIRE EN PREMIER
+>
+> **Les anciennes fiches FD-001 à FD-004 (et l'ancienne FD-000 système) sont ANNULÉES et supprimées du repo.**  
+> Elles ont été rédigées avant que le Cursor d'Adam ait le contexte global — elles créaient des **contradictions** (notamment sur la Deuxième Âme et les décisions deploy).
+>
+> **À partir du 24/07/2026 :**
+> - **Seule référence valide dans `FICHE_DISCUSSION/` : cette fiche FD-000** (+ futures fiches validées listées dans `INDEX.md`).
+> - **Oublier** tout ce que tu as lu ou mémorisé des anciennes fiches — elles n'existent plus.
+> - **Ne pas** t'appuyer sur des conversations passées qui contrediraient cette fiche.
+>
+> **Lecture OBLIGATOIRE pour le Cursor d'Adam (AdamY76)** — et recommandée pour le Cursor de Reda en cas de doute.
+
+---
+
+> **Avant toute proposition de code, feature, refactor ou architecture :** lire cette fiche **en entier** + `FICHE_DISCUSSION/INDEX.md`.  
+> Si une idée contredit un point de cette fiche → **ne pas implémenter** ; demander validation à Adam/Reda ou proposer une **nouvelle fiche** (FD-001+) après validation humaine.
 
 ---
 
@@ -182,7 +194,7 @@ Obligatoire pour : diffusion OV, scan Lanterne, sync POS (futur), actions labo.
 | 23/07/26 | `ma-zone-v0.9.4-simulateur-ville-paris-ov` | Géo Paris, OV spatiales, boîte aux lettres |
 | 23/07/26 | `ma-zone-v0.9.5-premiere-da` | Design System Deuxième Âme V1 |
 | 24/07/26 | `ma-zone-v0.9.5.2-labo-simulateur-xcode` | Impersonation iOS/Xcode, fixes auth/lab |
-| 24/07/26 | FICHE_DISCUSSION | FD-000→004, collaboration Reda + Adam |
+| 24/07/26 | **Reset FICHE_DISCUSSION** | Anciennes fiches supprimées ; **FD-000** = seule source de vérité vision |
 
 **Adam rejoint officiellement le 24/07/2026** — cette fiche comble tout l'historique antérieur.
 
@@ -200,7 +212,7 @@ Obligatoire pour : diffusion OV, scan Lanterne, sync POS (futur), actions labo.
 
 Persistance : **SQLite** `backend/data/mazone.db` (WAL, migrations au boot).
 
-### 6.2 Legacy (NE PAS ENRICHIR sans décision FD)
+### 6.2 Legacy (NE PAS ENRICHIR sans décision actée dans une future fiche validée)
 
 | Brique | Stack | Statut |
 |--------|-------|--------|
@@ -208,9 +220,9 @@ Persistance : **SQLite** `backend/data/mazone.db` (WAL, migrations au boot).
 | `MaZone/` | SwiftUI | Squelette — non branché |
 | Racine `package.json` | Next.js | README historique — à aligner (Phase 0) |
 
-**Double stack :** Next/Supabase et mobile/Node **ne partagent ni base ni logique**. Wallet, Identity, Event, World Factory n'existent **que** côté Node.
+**Double stack :** Next/Supabase et mobile/Node **ne partagent ni base ni logique**. Wallet, Identity, Event Engine, World Factory n'existent **que** côté Node.
 
-**Proposition actée dans FD-002 §10.1 (non encore implémentée) :** archiver UI Next.js ; **garder** schéma Supabase comme ref future Postgres.
+**Décision ouverte (non actée) :** archiver UI Next.js `src/` ; garder schéma Supabase comme ref future Postgres — voir §23.2.
 
 ---
 
@@ -572,7 +584,7 @@ Briefing adaptatif (`briefing.js` + adapters) — max 4 cartes par section.
 ### 17.5 Production
 
 **INTERDIT en prod :** impersonation, World Factory run, lab actions.  
-Verrouillage via `SANDBOX_MODE` + durcissement Phase 0 (FD-002).
+Verrouillage via `SANDBOX_MODE` + durcissement Phase 0 sécurité (voir §20–§21).
 
 ---
 
@@ -616,9 +628,10 @@ Doc : `DESIGN_SYSTEM_DEUXIEME_AME.md`, `COMPTE_RENDU_DA_DESIGN_SYSTEM_V1.md`.
 - OV spatiales : radiusKm, quota, tri distance
 - Boîte aux lettres + parcours acceptation
 
-### 19.3 FICHE_DISCUSSION (24/07)
+### 19.3 Reset FICHE_DISCUSSION (24/07)
 
-- FD-000 système, FD-001 onboarding Adam, FD-002 diagnostic prod/stocks, FD-003 décisions (brouillon Adam), **FD-004 cette fiche**
+- Suppression des fiches FD-001 à FD-004 et de l'ancienne FD-000 (contradictions pré-contexte Adam).
+- **Cette FD-000** repart sur une base saine — contexte global unique pour les deux Cursor.
 
 ---
 
@@ -648,7 +661,7 @@ Doc : `DESIGN_SYSTEM_DEUXIEME_AME.md`, `COMPTE_RENDU_DA_DESIGN_SYSTEM_V1.md`.
 
 ## 21. Horizon déployable
 
-Deux horizons — **ne pas mélanger** (FD-002).
+Deux horizons — **ne pas mélanger**.
 
 ### Horizon A — MVP Première Âme déployable (PRIORITÉ)
 
@@ -665,10 +678,10 @@ Fidélité organe, Collaboration, push, analytics…
 
 ### Horizon C — Deuxième Âme profonde (enrichissement, pas construction from scratch)
 
-Quêtes, météo humaine, métriques vie réelle — **après** stabilisation prod et architecture conceptuelle.  
-**Note :** la Deuxième Âme **v1 est déjà codée** (FD-004 §10) ; Horizon C = approfondissement, pas démarrage.
+Quêtes, météo humaine, métriques vie réelle — **après** stabilisation prod.  
+**Note :** la Deuxième Âme **v1 est déjà codée** (§10) ; Horizon C = approfondissement, pas démarrage from scratch.
 
-**FD-003 (brouillon amendé)** liste 16 décisions D1–D16 — à croiser/valider avant implémentation. **Complémentaire de cette fiche :** FD-004 = état réel ; FD-003 = choix deploy restants (dont périmètre prod v1 pour 2e Âme déjà codée).
+**Décisions deploy ouvertes :** voir §23.2 (PSP, hébergeur, périmètre prod v1, etc.) — à trancher Reda + Adam via **futures fiches validées** (FD-001+), pas par intuition du Cursor.
 
 ---
 
@@ -688,9 +701,9 @@ Sans nouvelle fiche **validée**, le Cursor d'Adam ne doit **pas** :
 | Impersonation en prod | Sandbox/staging only |
 | Fusionner mobile et Supabase | Migration Postgres backend unifié (futur) |
 | Deuxième Âme sans respecter Première Âme | Bascule additive, panier partagé |
-| Ignorer FICHE_DISCUSSION | Lire INDEX + fiches validées |
-| Coder FD-003 tant que brouillon | Attendre validation Reda+Adam |
-| Réintroduire popup OUI/NON livreur | Flux MissionDrawer actuel (sauf fiche) |
+| Ignorer FICHE_DISCUSSION | Lire **FD-000** + `INDEX.md` |
+| S'inspirer d'anciennes fiches supprimées | **Interdit** — reset 24/07 |
+| Réintroduire popup OUI/NON livreur | Flux MissionDrawer actuel (sauf nouvelle fiche validée) |
 | SQLite réservation sans design | ADR inventaire catalogue/inventory/movements |
 
 ---
@@ -710,12 +723,13 @@ Sans nouvelle fiche **validée**, le Cursor d'Adam ne doit **pas** :
 | Épée | Surface commerçant, registre modules |
 | Bac à Sable | World Factory + Lab + impersonation démo |
 | DA Deuxième Âme | Tokens AME séparés de THEME |
-| Collaboration | FICHE_DISCUSSION/ canal officiel vision |
-| Adam onboarding | FD-001 + **FD-004 lecture obligatoire** |
+| Collaboration | FICHE_DISCUSSION/ — **FD-000** = référence unique à ce jour |
+| Adam onboarding | **FD-000 lecture obligatoire** — reset 24/07 |
 | Lab iOS | impersonate-ios + deep link labToken |
 
-### 23.2 Proposées non actées (FD-002 §10, FD-003)
+### 23.2 Ouvertes (à trancher Reda + Adam — futures fiches FD-001+)
 
+- **Périmètre prod v1** : Première Âme seule vs inclusion Deuxième Âme v1 (déjà codée)
 - Archiver Next.js `src/`
 - Postgres cible (schéma Supabase)
 - Stripe PSP
@@ -811,24 +825,35 @@ Création admin : `node backend/scripts/create-admin.js`.
 | Épée Shell | `CHANTIER_EPEE_SHELL_V1.md` |
 | World Factory | `CHANTIER_WORLD_FACTORY_V1.md` |
 | Laboratoire | `CHANTIER_LABORATOIRE_V1.md` |
-| Diagnostic prod | `FICHE_DISCUSSION/FD-002-…md` |
-| Décisions deploy | `FICHE_DISCUSSION/FD-003-…md` (brouillon) |
+| **Vision / contexte global** | **`FICHE_DISCUSSION/FD-000`** (cette fiche) |
 | Démarrage | `GUIDE-DEBUTANT.md` |
 
 ---
 
 ## 27. Notes finales pour le Cursor d'Adam
 
-1. **Tu as maintenant le contexte complet** — de la vision à la ligne de code critique.
-2. **Avant chaque tâche Adam :** INDEX → fiches validées → cette FD-004 si doute.
-3. **Produit = mobile + Node.** Legacy web = archive future, pas terrain de jeu.
-4. **Respecte les organes.** Si tu ne trouves pas l'API, cherche dans `backend/src/lib/` avant d'inventer.
-5. **Deuxième Âme existe** — ne propose pas de « commencer » la Deuxième Âme from scratch.
-6. **Prod pas prête** — Phase 0 et stabilisation dispatch avant features shiny.
-7. **FD-003 est brouillon** — amender avec Reda, pas implémenter D1–D16 aveuglément.
-8. **Nouvelle vision** → fiche brouillon FD-XXX, pas code direct.
-9. **Conflit avec Reda** → la fiche validée prime ; discuter via fiche amendée.
-10. **Objectif duo :** deux Cursor qui avancent **dans la même direction**, sans zone d'ombre.
+1. **Reset 24/07 :** oublie les anciennes fiches — **FD-000 seule** fait foi dans `FICHE_DISCUSSION/` jusqu'à nouvelles fiches validées.
+2. **Tu as le contexte complet** — vision, philosophie, code, historique — comme si tu avais travaillé depuis le début.
+3. **Avant chaque tâche :** `git pull` → lire `INDEX.md` → relire les sections pertinentes de **cette FD-000**.
+4. **Produit = mobile + Node.** Legacy web = ne pas développer sans décision actée.
+5. **Respecte les organes.** Cherche dans `backend/src/lib/` avant d'inventer.
+6. **Deuxième Âme v1 existe** (§10) — ne propose pas de la « commencer from scratch ».
+7. **Prod pas prête** — Phase 0 sécurité + stabilisation dispatch (§20) avant features shiny.
+8. **Nouvelle vision ou décision deploy** → proposer fiche FD-001+ (brouillon) → validation Adam/Reda → commit — **pas de code direct**.
+9. **Conflit avec Reda** → FD-000 et fiches validées dans INDEX priment.
+10. **Objectif :** même direction, zéro zone d'ombre entre les deux Cursor.
+
+---
+
+## 28. Futures fiches (FD-001, FD-002…)
+
+Quand une **nouvelle** décision ou phase doit être documentée :
+
+1. Copier `_TEMPLATE.md` → `FD-XXX-titre.md`
+2. Statut **brouillon** → validation Adam et/ou Reda
+3. Commit + ligne dans `INDEX.md`
+
+**Règle :** aucune fiche ne contredit **FD-000** sans mise à jour validée de FD-000 ou fiche plus récente au statut **validé**.
 
 ---
 
@@ -836,10 +861,11 @@ Création admin : `node backend/scripts/create-admin.js`.
 
 | Date | Décision | Par |
 |------|----------|-----|
-| 2026-07-24 | FD-004 = **référence obligatoire** Cursor Adam avant tout chantier | Reda |
+| 2026-07-24 | **FD-000** = référence **unique** obligatoire Cursor Adam | Reda |
+| 2026-07-24 | Reset : anciennes fiches FD-001→004 **annulées** | Reda + Adam |
 | 2026-07-24 | Mise à niveau historique complet juin–juillet 2026 | Reda |
-| 2026-07-24 | PORTRAIT §4.6 « Deuxième Âme vision seule » **obsolète** — corriger mentalement via cette fiche | Reda |
+| 2026-07-24 | Deuxième Âme v1 **implémentée** — PORTRAIT §4.6 obsolète | Reda |
 
 ---
 
-*Fiche de mise à niveau totale — générée pour AdamY76 le 24/07/2026. Toute évolution majeure du projet doit mettre à jour cette fiche ou en créer une FD-XXX fille validée.*
+*FD-000 — mise à niveau GLOBAL du Cursor Adam sur Ma Zone. Reset dossier 24/07/2026.*

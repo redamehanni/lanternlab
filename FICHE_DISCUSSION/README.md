@@ -1,97 +1,47 @@
 # FICHE_DISCUSSION — Vision partagée Ma Zone
 
-Ce dossier est le **fil rouge philosophique et produit** du projet Ma Zone.  
-Il interconnecte les deux équipes Cursor (Reda + Adam) via GitHub : même vision, même direction, même langage.
+Canal de **vision et philosophie** entre Reda et Adam (deux Cursor, un repo GitHub).
 
-## Rôle
+## Reset 24/07/2026
 
-| FICHE_DISCUSSION | Documentation technique (`CURRENT_ARCHITECTURE.md`, plans, API…) |
-|------------------|------------------------------------------------------------------|
-| Vision, philosophie, concepts, décisions, phases | Architecture, schémas, contrats, implémentation |
-| **Pourquoi** et **dans quelle direction** | **Comment** c'est construit |
+Les premières fiches (FD-001 à FD-004) ont été **supprimées** : elles avaient été produites avant la mise à niveau globale du Cursor d'Adam et créaient des contradictions.
 
-Les fiches **complètent** la doc technique — elles ne la remplacent pas.
+**Source de vérité actuelle : une seule fiche.**
 
-## Qui écrit quoi
+👉 **[FD-000 — Mise à niveau GLOBAL du Cursor Adam](./FD-000-mise-a-niveau-global-cursor-adam-ma-zone.md)**
 
-### Réflexe par défaut (référence)
+## Rôle du dossier
 
-Quand on vous demande de **résumer une action, un concept ou une phase en cours** :
+| FICHE_DISCUSSION | Doc technique (`CURRENT_ARCHITECTURE.md`, plans…) |
+|------------------|--------------------------------------------------|
+| **Pourquoi**, vision, décisions, phases | **Comment** — architecture, code |
 
-1. Lire `INDEX.md` et les fiches **validées** liées au sujet.
-2. Proposer un **brouillon** Markdown à partir de `_TEMPLATE.md`.
-3. **Attendre validation** humaine (Reda ou Adam) avant commit.
-4. Après validation : commit + mise à jour de `INDEX.md`.
+## Avant tout chantier
 
-### Exceptions (occasionnelles)
+1. `git pull origin main`
+2. Lire **[FD-000](./FD-000-mise-a-niveau-global-cursor-adam-ma-zone.md)** (Adam : en entier ; Reda : sections pertinentes)
+3. Consulter **[INDEX.md](./INDEX.md)**
+4. Vérifier qu'aucune décision actée ne contredit la demande
 
-Reda ou Adam peut pousser **manuellement** une fiche (Markdown ou PDF) dans ce dossier.  
-Dans ce cas, l'assistant doit :
+## Nouvelles fiches (FD-001+)
 
-- la **lire** (PDF inclus),
-- l'**intégrer** à sa compréhension du projet,
-- proposer si besoin une **version Markdown structurée** pour homogénéiser le dossier.
+1. Copier `_TEMPLATE.md` → `FD-XXX-titre.md`
+2. Statut **brouillon** → validation humaine → commit + MAJ `INDEX.md`
+3. Aucune fiche ne contredit **FD-000** sans mise à jour validée
 
-## Nommage
+## Rituel Sync
 
-```
-FD-XXX-titre-court.md
-```
+> *« Mets-toi à jour sur le dossier fiche de discussion et dis-moi ce que tu as appris de nouveau »*
 
-- `XXX` = numéro séquentiel sur 3 chiffres (`001`, `002`…)
-- `titre-court` = kebab-case, en français sans accents dans le nom de fichier
+1. `git pull origin main`
+2. Lire `INDEX.md`
+3. Lire toute fiche nouvelle ou modifiée
+4. Résumer — ou dire « aucune nouvelle fiche »
 
-Exemple : `FD-003-mode-reception-ov.md`
+## Prompt reset Cursor Adam
 
-PDF manuels : `FD-XXX-titre.pdf` (même numérotation).
-
-## Statuts
-
-| Statut | Signification |
-|--------|---------------|
-| `brouillon` | Proposé par l'IA, en attente de validation |
-| `validé` | Acté par Reda ou Adam — **référence de vision** |
-| `archivé` | Phase terminée ou remplacée par une fiche plus récente |
-
-## Avant toute nouvelle feature ou chantier
-
-1. **Cursor Adam :** lire **[FD-004](./FD-004-contexte-complet-projet-adam.md)** si pas fait ou si doute sur le projet.
-2. Consulter `INDEX.md`.
-3. Lire les fiches **validées** pertinentes.
-4. Vérifier qu'aucune décision actée ne contredit la demande.
-5. Si la vision change : **nouvelle fiche** (ou mise à jour validée) — pas de dérive silencieuse.
-
-## Rituel « Sync FICHE_DISCUSSION » (Reda + Adam)
-
-Quand Reda ou Adam dit (ou équivalent) :
-
-> **« Mets-toi à jour sur le dossier fiche de discussion et dis-moi ce que tu as appris de nouveau »**  
-> Variantes : *« Sync FICHE_DISCUSSION »*, *« Quoi de neuf dans les fiches ? »*
-
-**Les deux Cursor exécutent exactement le même processus :**
-
-1. **`git pull origin main`** — récupérer les fiches poussées par l'autre.
-2. Lire **`INDEX.md`** — repérer les entrées absentes ou modifiées depuis la dernière sync connue dans la session.
-3. **Lire intégralement** chaque fiche nouvelle ou mise à jour (Markdown **et** PDF si présent).
-4. **Répondre à l'humain** avec :
-   - **Si rien de nouveau :** le dire explicitement (*« Aucune nouvelle fiche depuis la dernière sync »*).
-   - **Sinon :**
-     - **Fiches lues** (FD-XXX + titre + statut)
-     - **Ce que j'ai appris** (vision, décisions, périmètre, changements)
-     - **Impact pour la suite** (ce que ça change si on code)
-     - **Questions ouvertes** restantes dans les fiches
-
-Ce rituel **ne remplace pas** la lecture avant un chantier : c'est la sync régulière entre les deux postes.
-
-## Fichiers de ce dossier
-
-| Fichier | Rôle |
-|---------|------|
-| `README.md` | Ce guide |
-| `INDEX.md` | Registre de toutes les fiches |
-| `_TEMPLATE.md` | Modèle vierge à copier |
-| `FD-000-…` | Fiche fondatrice du système |
+Voir **[PROMPT-RESET-CURSOR-ADAM.md](./PROMPT-RESET-CURSOR-ADAM.md)** — à envoyer une fois sur le poste d'Adam.
 
 ## Langue
 
-Toutes les fiches sont rédigées en **français**.
+Français. Nommage : `FD-XXX-titre-court.md`.

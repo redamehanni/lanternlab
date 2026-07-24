@@ -2,33 +2,39 @@
 
 Registre central. **Mettre à jour à chaque nouvelle fiche validée.**
 
+> **Reset 24/07/2026 :** les anciennes fiches (FD-001 à FD-004 et ancienne FD-000) ont été **supprimées**.  
+> **Seule fiche de référence actuelle : FD-000.**
+
 | ID | Titre | Statut | Date | Auteur(s) | Fichier |
 |----|-------|--------|------|-----------|---------|
-| FD-000 | Système de fiches de discussion | validé | 2026-07-24 | Reda + Adam (cadre) | [FD-000-systeme-fiches-discussion.md](./FD-000-systeme-fiches-discussion.md) |
-| FD-001 | Guide Cursor Adam — onboarding FICHE_DISCUSSION | validé | 2026-07-24 | Reda (pour AdamY76) | [FD-001-guide-cursor-adam.md](./FD-001-guide-cursor-adam.md) |
-| FD-002 | Diagnostic prod & stocks commerçants | validé | 2026-07-24 | Adam (AdamY76) + Reda | [FD-002-diagnostic-prod-et-stocks-commercants.md](./FD-002-diagnostic-prod-et-stocks-commercants.md) |
-| FD-003 | Décisions prioritaires objectif déployable | brouillon (amendé 24/07) | 2026-07-24 | Adam + croisement Reda / FD-004 | [FD-003-decisions-prioritaires-objectif-deployable.md](./FD-003-decisions-prioritaires-objectif-deployable.md) |
-| FD-004 | Contexte complet du projet — mise à niveau Cursor Adam | **validé** | 2026-07-24 | Reda (pour AdamY76) — **LECTURE OBLIGATOIRE** | [FD-004-contexte-complet-projet-adam.md](./FD-004-contexte-complet-projet-adam.md) |
+| FD-000 | Mise à niveau GLOBAL du Cursor Adam sur le projet Ma Zone | **validé** | 2026-07-24 | Reda (pour AdamY76) — **LECTURE OBLIGATOIRE** | [FD-000-mise-a-niveau-global-cursor-adam-ma-zone.md](./FD-000-mise-a-niveau-global-cursor-adam-ma-zone.md) |
 
 ---
 
+## Ordre de lecture
+
+1. **`FD-000`** en entier (Cursor Adam : obligatoire ; Cursor Reda : en cas de doute)
+2. Ce **`INDEX.md`** avant chaque chantier
+3. Futures fiches **validées** (FD-001+) quand elles existeront
+
+## Hiérarchie en cas de conflit
+
+1. Fiches **validées** dans `FICHE_DISCUSSION/` (FD-000 en premier)
+2. Docs techniques récentes (`COMPTE_RENDU_*`, `CHANTIER_*`…)
+3. Docs techniques datées (`CURRENT_ARCHITECTURE.md`, `PORTRAIT_*` — voir bandeaux d'alerte)
+4. Le code
+5. Intuition du Cursor ← **jamais suffisante seule**
+
 ## Comment ajouter une entrée
 
-1. Prendre le prochain numéro disponible (`FD-003`, `FD-004`…).
-2. Créer le fichier `FD-XXX-titre.md` depuis `_TEMPLATE.md`.
+1. Prendre le prochain numéro (`FD-001`, `FD-002`…).
+2. Créer le fichier depuis `_TEMPLATE.md`.
 3. Ajouter une ligne dans le tableau ci-dessus.
-4. Commit après validation humaine.
-
-## Fiches PDF (upload manuel)
-
-Si une fiche arrive en PDF, l'ajouter ici avec la même numérotation :
-
-| ID | Titre | Statut | Date | Fichier |
-|----|-------|--------|------|---------|
-| — | — | — | — | — |
+4. Commit **après validation humaine** (Reda et/ou Adam).
 
 ## Historique migrations
 
-| Ancien emplacement | Nouveau | Commit migration |
-|--------------------|---------|------------------|
-| `fiche_de_discussion_diagnostic_prod_et_stocks.md` (racine) | FD-002 | 2026-07-24 |
+| Ancien emplacement | Nouveau | Commit |
+|--------------------|---------|--------|
+| `fiche_de_discussion_diagnostic_prod_et_stocks.md` (racine) | ~~FD-002~~ → **annulé** (reset 24/07) | — |
+| FD-001 à FD-004 (24/07 matin) | **Supprimées** — remplacées par FD-000 unique | 2026-07-24 |
