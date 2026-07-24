@@ -6,7 +6,9 @@
 | **Date** | AAAA-MM-JJ |
 | **Auteur(s)** | Reda Mehanni / Adam (AdamY76) / Cursor |
 | **Phase / chantier** | Nom court de la phase concernée |
-| **Références** | Liens vers docs techniques (`CURRENT_ARCHITECTURE.md`, plans, commits, tags…) |
+| **Références** | [FD-000](./FD-000-mise-a-niveau-global-cursor-adam-ma-zone.md), docs techniques, commits, tags… |
+
+> **Ne pas contredire FD-000** sans mise à jour validée de FD-000 ou fiche plus récente.
 
 ---
 
