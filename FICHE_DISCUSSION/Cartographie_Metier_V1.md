@@ -9,7 +9,7 @@
 | **Statut** | Brouillon de recherche — en attente de validation Adam / Reda |
 | **Phase** | Fondation Ma Zone |
 | **Posture** | Architecte-chercheur : mettre à l'épreuve, ne pas confirmer |
-| **Suite prévue** | Après validation → GO pour FD-001 → puis plan d'implémentation → puis FD-002 |
+| **Suite prévue** | Après validation → Plan_Conception → FD-001 (mémoire) → code A/B/C/E → amendement FD-001 (pas de fiche architecture séparée) |
 | **Périmètre doc** | Document **unique consolidé** (verticaux inclus au §11, pas d'annexe) |
 
 > **Piège évité :** ce document n'est pas un catalogue de logiciels.  
@@ -107,7 +107,7 @@ Ce document répond à une seule question :
 
 > **Comment fonctionne réellement un commerce moderne ?**
 
-Il ne répond pas à : « Comment Ma Zone doit-elle s'architecturer ? » (réservé à FD-002, après FD-001 validée).
+Il ne répond pas à : « Comment Ma Zone doit-elle s'architecturer ? » (réservé au [`Plan_Conception_API_Compatible_Logiciels_Commerciaux_V1`](./Plan_Conception_API_Compatible_Logiciels_Commerciaux_V1.md) + mémoire [FD-001](./FD-001-chantier-fondation-api-logiciels-commerciaux.md)).
 
 ## 1.2 Posture critique
 
@@ -936,7 +936,7 @@ Sources croisées : Creatuity · humCommerce · Uphance · OneStock · Shopify i
 | Commerce platform-centric | Shopify/Square comme hub | ERP-centric | TPE vs mid-market |
 | Fidélité | Dans la caisse | Moteur séparé | Portabilité et multi-canal |
 
-`[DEDUCTION]` FD-002 ne devra pas « choisir une religion » sans regarder le vertical et la taille du commerçant.
+`[DEDUCTION]` Le plan de conception / FD-001 ne devra pas « choisir une religion » sans regarder le vertical et la taille du commerçant.
 
 ---
 
@@ -997,9 +997,8 @@ Sources : nventory · Kensium · Uphance · Beanstalk inventory sync · §11 ver
 
 ## 16.3 Ce que ce document n'est pas
 
-- Pas une FD-001.  
-- Pas un plan d'implémentation.  
-- Pas une FD-002.  
+- Pas une FD (ni FD-000 ni FD-001).  
+- Pas un plan d'implémentation / conception API (voir `Plan_Conception_API_Compatible_Logiciels_Commerciaux_V1`).  
 - Pas un choix Shopify vs Odoo vs autre.
 
 ---

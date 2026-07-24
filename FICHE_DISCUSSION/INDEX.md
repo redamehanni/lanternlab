@@ -8,7 +8,7 @@ Registre central. **Mettre à jour à chaque nouvelle fiche validée.**
 | ID | Titre | Statut | Date | Auteur(s) | Fichier |
 |----|-------|--------|------|-----------|---------|
 | FD-000 | Mise à niveau GLOBAL du Cursor Adam sur le projet Ma Zone | **validé** | 2026-07-24 | Reda (pour AdamY76) — **LECTURE OBLIGATOIRE** | [FD-000-mise-a-niveau-global-cursor-adam-ma-zone.md](./FD-000-mise-a-niveau-global-cursor-adam-ma-zone.md) |
-| FD-001 | Chantier Fondation API compatible avec les logiciels commerciaux | **brouillon** | 2026-07-24 | Adam (AdamY76) — pour Cursor Reda | [FD-001-chantier-fondation-api-logiciels-commerciaux.md](./FD-001-chantier-fondation-api-logiciels-commerciaux.md) |
+| FD-001 | Chantier Fondation API compatible avec les logiciels commerciaux | **brouillon** (amendé Reda 24/07 soir) | 2026-07-24 | Adam + amendements Reda — validation Adam avant GO | [FD-001-chantier-fondation-api-logiciels-commerciaux.md](./FD-001-chantier-fondation-api-logiciels-commerciaux.md) |
 
 ---
 
@@ -19,7 +19,11 @@ Registre central. **Mettre à jour à chaque nouvelle fiche validée.**
 3. **`FD-001`** si chantier Fondation API / interop / stock / connecteurs
 4. Docs techniques liées (non-FD) :
    - [`Cartographie_Metier_V1.md`](./Cartographie_Metier_V1.md)
-   - [`Plan_Conception_API_Compatible_Logiciels_Commerciaux_V1.md`](./Plan_Conception_API_Compatible_Logiciels_Commerciaux_V1.md)
+   - [`Plan_Conception_API_Compatible_Logiciels_Commerciaux_V1.md`](./Plan_Conception_API_Compatible_Logiciels_Commerciaux_V1.md) — **amendé Reda 24/07 soir** (MD = source ; PDF éventuellement stale)
+
+## Notes
+
+- **2026-07-24 soir :** plan Fondation API aligné FD-000 (séquençage A–E, modes `mazone`/`pos`, Phase 0 avant D). Voir FD-001 §9.
 
 ## Hiérarchie en cas de conflit
 

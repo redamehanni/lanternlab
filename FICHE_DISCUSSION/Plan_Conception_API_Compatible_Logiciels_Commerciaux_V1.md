@@ -6,15 +6,18 @@
 |---|---|
 | **Nature** | Plan de conception / implémentation (PAS une fiche FD, PAS du code) |
 | **Date** | 2026-07-24 |
-| **Statut** | Brouillon — en attente de validation Adam / Reda avant code |
+| **Amendement** | 2026-07-24 soir — Cursor Reda (alignement FD-000 / Ma Zone v0.9.5.2) |
+| **Statut** | **Brouillon amendé** — validation Adam requise avant code |
 | **Chapitre** | Fondation API compatible avec les logiciels commerciaux |
-| **Sources** | [`Cartographie_Metier_V1.md`](./Cartographie_Metier_V1.md) · FD-000 · code `backend/` / `mobile/` |
+| **Sources** | [`Cartographie_Metier_V1.md`](./Cartographie_Metier_V1.md) · [FD-000](./FD-000-mise-a-niveau-global-cursor-adam-ma-zone.md) · code `backend/` / `mobile/` |
 | **Suite** | Voir [FD-001](./FD-001-chantier-fondation-api-logiciels-commerciaux.md) · code selon plan de codage (pas encore exécuté) |
 | **Ancien nom** | `Plan_Conception_API_Compatible_V1` (renommé 2026-07-24) |
+| **Source de vérité** | **Ce Markdown** — les PDF (racine / FICHE_DISCUSSION) peuvent être stale jusqu’à régénération |
 
 > Ce document traduit la cartographie métier en conception technique.  
 > Chaque choix ci-dessous doit pouvoir se justifier par une conclusion de `Cartographie_Metier_V1`.  
-> Les logiciels externes sont des **adapters jetables** ; le métier Ma Zone reste dans les organes.
+> Les logiciels externes sont des **adapters jetables** ; le métier Ma Zone reste dans les organes.  
+> **Amendement Reda :** séquençage Horizon A, 1er build A+B+C+E, modes inventaire `mazone`/`pos`, migration `quantity` normative — sans changer la philosophie ACL / triple état.
 
 ---
 
@@ -28,36 +31,74 @@ Modifier l’API Ma Zone pour qu’elle puisse coller à l’ensemble des logici
 - dépendre d’un éditeur externe dans le cœur ;
 - imposer au commerçant d’abandonner sa caisse le jour 1.
 
-**Critère de fin de chapitre (minimum) :**
+**Critère de fin de chapitre (minimum) = tranches A + B + C + E :**
 
-1. Contrats API métier versionnés (`/v1`) alignés CDM.
-2. Inventory Engine (triple état) branché sur le flux commande.
-3. Integration Engine + au moins un chemin connecteur opérationnel (natif et/ou unified).
-4. Sync fiable (Inbox/Outbox, idempotence, réconciliation).
+1. Contrats API métier versionnés (`/api/v1`) alignés CDM (façade / stub OK si contrats publiés).
+2. Inventory Engine (triple état) branché sur le flux commande — anti-survente Horizon A.
+3. Integration Engine + connecteur **`manual` / CSV** opérationnel (pas Shopify natif dans le 1er build).
+4. Sync fiable (Inbox/Outbox préparés, idempotence, réconciliation, contraintes SQLite) — **sans** connecteur natif obligatoire.
+
+**Hors critère de bouclage V1 :** tranches D/F (Shopify, Zettle, Chift, push POS) — GO Reda+Adam explicite après A–E.
 
 **Mémoire officielle du chapitre :** [FD-001](./FD-001-chantier-fondation-api-logiciels-commerciaux.md) (récit jusqu’au plan de codage ; à mettre à jour après le code).
 
-## 1.2 Gouvernance FD
+## 1.2 Conformité FD-000 (normative)
+
+Ce plan **ne contredit pas** [FD-000](./FD-000-mise-a-niveau-global-cursor-adam-ma-zone.md) :
+
+| Règle FD-000 | Application ici |
+|--------------|-----------------|
+| Surface compose, organe décide | Inventory / Integration = organes ; routes & adapters = transport |
+| Produit = `mobile/` + `backend/` Node | Aucun chantier Next.js / Supabase |
+| Deuxième Âme v1 **déjà implémentée** | Ce plan ne la reconstruit pas ; Event/OV peuvent lire `available` |
+| OV = diffusion, pas type d’événement | Inchangé |
+| Wallet ≠ PSP | `PaymentIntent` hors Wallet ; Wallet inchangé |
+| Sandbox / labo interdit en prod | Webhooks natifs (D) seulement après Phase 0 min |
+| Anti-patterns §22 | Voir §10 et §12 |
+
+Inventory Engine = **chantier Horizon A** (fiabiliser stock / anti-survente), pas un enrichissement « shiny » post-deploy.
+
+## 1.3 Gouvernance FD
 
 | Moment | Livrable | FD ? |
 |--------|----------|------|
 | Fait | Cartographie_Metier_V1 | Non |
-| Fait | Ce plan de conception (doc technique) | Non |
-| Fait | [FD-001](./FD-001-chantier-fondation-api-logiciels-commerciaux.md) — récit pour Reda / Adam | **Oui** |
-| Après validation | Modification code (tranches A–C–E) | Non (mettre à jour FD-001) |
-| Fin de chapitre | Amendement FD-001 (résultats) — **pas** de FD-002 architecture séparée | Mise à jour |
+| Fait | Ce plan de conception (doc technique) — **amendé Reda 24/07 soir** | Non |
+| Fait | [FD-001](./FD-001-chantier-fondation-api-logiciels-commerciaux.md) — récit pour Reda / Adam | **Oui** (brouillon) |
+| Après validation Adam+Reda | Modification code (**tranches A, B, C, E**) | Non (mettre à jour FD-001) |
+| Fin de chapitre V1 | Amendement FD-001 (résultats) — **pas** de fiche « architecture » séparée | Mise à jour |
 
-L’ancien plan d’architecture d’interopérabilité est **absorbé** ici.
+L’ancien plan d’architecture d’interopérabilité est **absorbé** ici. Ne pas créer une future fiche pour redécrire cette architecture.
 
-## 1.3 Posture
+## 1.4 Posture
 
 Architecte-chercheur : le plan ne confirme pas Ma Zone, il impose les contraintes métier découvertes (propriété par attribut, miroir naïf dangereux, séparation on_hand / ATP, ISCA, etc.).
 
-## 1.4 Chaîne du chapitre
+## 1.5 Chaîne du chapitre
 
 ```
-Cartographie_Metier_V1 → Plan_Conception (ce doc) → FD-001 (récit) → Code → amendement FD-001
+Cartographie_Metier_V1 → Plan_Conception (ce doc) → FD-001 (récit) → Code A/B/C/E → amendement FD-001
 ```
+
+## 1.6 Séquençage Ma Zone (normatif)
+
+```
+FD-000
+  ├──► Tranches A + B + C + E (Inventory / manual / sync)     ← GO possible
+  ├──► Dispatch P1–P3 (stabilisation livreur)                 ← parallèle autorisé
+  └──► (après A–E done)
+         └──► Phase 0 min (secrets hors code, sandbox verrouillable)
+                └──► Tranche D (Shopify…) puis F               ← GO explicite
+```
+
+| Règle | Détail |
+|-------|--------|
+| A/B/C/E | GO possible **sans** attendre Postgres, hébergeur, PSP, stores |
+| Dispatch P1–P3 | **Non bloqué** par ce chapitre — parallèle autorisé |
+| Tranche D | **Interdite** tant que A–E pas done **et** Phase 0 secrets/sandbox minimum non en place |
+| Tranche F | Hors 1er build ; push POS optionnel |
+| Mobile | Reste sur `/api/*` pendant A–E ; bascule `/api/v1` **après** A–E, hors critère de bouclage minimal |
+| Critère « chapitre bouclé » | **A–E done uniquement** — F n’est **pas** une condition de bouclage V1 |
 
 ---
 
@@ -254,8 +295,8 @@ available = on_hand - reserved - safety_buffer
 
 | Champ | Sens | Qui écrit |
 |-------|------|-----------|
-| `on_hand` | Stock physique magasin/entrepôt | Miroir POS / inventaire / réception |
-| `reserved` | Quantité engagée (commandes MZ / paniers validés) | Inventory Engine |
+| `on_hand` | Stock physique magasin/entrepôt | Selon `inventory_owner` (§6.3) — POS miroir **ou** Inventory (mode mazone) |
+| `reserved` | Quantité engagée (commandes MZ / paniers validés) | Inventory Engine **uniquement** |
 | `safety_buffer` | Coussin politique (optionnel, défaut 0) | Config magasin |
 | `available` | Vendable / diffusé aux canaux | **Calculé** — jamais stocké comme vérité écrasable (projection cache OK si invalidée) |
 
@@ -272,20 +313,34 @@ Types de mouvement (V1) :
 
 Chaque ligne : `product_id`, `store_id`, `type`, `delta_on_hand`, `delta_reserved`, `reason`, `idempotency_key`, `source`, `created_at`.
 
-## 6.3 API organe (interne)
+## 6.3 Modes magasin `inventory_owner` (normatif)
+
+Chaque `store` déclare un mode (config / binding) :
+
+| Mode | Qui écrit `on_hand` | Comportement `commit` (livraison MZ) | Défaut V1 |
+|------|---------------------|--------------------------------------|-----------|
+| `inventory_owner = mazone` | Inventory Engine (saisie Épée, CSV, adjust) | `commit` baisse **`on_hand` + `reserved`** | **Oui** — sans connecteur POS |
+| `inventory_owner = pos` | Adapter miroir POS uniquement | `commit` baisse **seulement `reserved`** ; `on_hand` suit le POS | Après binding POS (tranche D+) |
+
+**Interdit :** en mode `pos`, baisser `on_hand` à la livraison MZ **et** laisser le POS le baisser aussi (double décrément).  
+**Push vente MZ → POS** = tranche F optionnelle (`capabilities.push`), jamais implicite en B.
+
+Sans connecteur : défaut **`mazone`**.
+
+## 6.4 API organe (interne)
 
 ```
-syncOnHand(productId, value|delta, meta)   // miroir POS
+syncOnHand(productId, value|delta, meta)   // miroir POS — mode pos seulement
 reserve(orderId, lines[])                  // idempotent
-release(orderId)                           // annulation
-commit(orderId)                            // livraison : on_hand et reserved baissent
+release(orderId)                           // annulation → libère reserved
+commit(orderId)                            // selon inventory_owner (§6.3)
 getSellableQty(productId) -> available
 recomputeAvailable(productId)
 ```
 
-## 6.4 Flux nominaux
+## 6.5 Flux nominaux
 
-**A. Vente en caisse physique**
+**A. Vente en caisse physique** (mode `pos`)
 
 1. Webhook / pull POS → `syncOnHand`  
 2. Recalcul `available`  
@@ -295,29 +350,33 @@ recomputeAvailable(productId)
 
 1. `reserve` si `available >= qty`  
 2. Création order + dispatch (existant)  
-3. Livraison → `commit` ; annulation → `release`
+3. Annulation → `release`  
+4. Livraison → `commit` :
+   - mode `mazone` : baisse `on_hand` + `reserved`
+   - mode `pos` : baisse `reserved` uniquement
 
 **C. Lien Lanternes / OV / marketplace**
 
 - La **diffusion** et l’affichage marketplace lisent `available` (ou un seuil `available > 0`).
 - Une OV / promo ne doit pas promettre un stock que `available` ne couvre pas (règle organe, pas UI).
+- Deuxième Âme v1 **déjà codée** (FD-000) — ce plan n’ajoute pas d’écrans ; il fournit `available` aux organes/surfaces existants.
 
-## 6.5 Migration depuis `products.quantity`
+## 6.6 Migration depuis `products.quantity` (normative T0–T3)
 
 État actuel ([`backend/src/routes/orders.js`](../backend/src/routes/orders.js)) : décrément direct `products.quantity` à la commande.
 
-Chemin de transition (conception) :
+| Phase | Comportement | Règle Cursor |
+|-------|----------------|--------------|
+| **T0** | Tables `stock_levels` (+ movements) ; backfill `on_hand = quantity`, `reserved = 0` ; `products.quantity` = **projection lecture** de `available` (miroir Inventory) | Pas de double vérité métier : `quantity` n’est plus source d’écriture |
+| **T1** | Tout flux commande via `reserve` / `release` / `commit` | **Aucun** `UPDATE products SET quantity` hors module miroir Inventory |
+| **T2** | Connecteurs (D+) touchent `on_hand` **uniquement** via `syncOnHand` | Modes `pos` / `mazone` respectés |
+| **T3** | Dépréciation documentée des UPDATE directs ; purge code legacy | Revue : grep `SET quantity` = 0 hors miroir |
 
-| Phase | Comportement |
-|-------|----------------|
-| T0 | Ajouter colonnes / table `stock_levels` ; backfill `on_hand = quantity`, `reserved = 0` |
-| T1 | Lectures sellable via Inventory ; écritures commande via `reserve`+`commit` |
-| T2 | Connecteurs mettent à jour `on_hand` ; `quantity` devient vue dérivée ou deprecated |
-| T3 | Supprimer les UPDATE quantity directs hors organe |
+**Anti-pattern interdit :** laisser le mobile écrire ou interpréter `quantity` comme vérité métier long terme. Pendant A–E, le mobile continue de **lire** `quantity` (miroir de `available`) sans changer d’API.
 
 Pas de schéma SQL final figé ici — uniquement le chemin.
 
-## 6.6 Verticaux
+## 6.7 Verticaux
 
 | Vertical | Application V1 |
 |----------|----------------|
@@ -474,21 +533,34 @@ Job périodique par connector : pull inventaire / commandes non terminales ; con
 
 **Interdit V1 :** plusieurs instances backend qui consomment Outbox/Inbox en parallèle sans élection de leader.
 
+## 9.6 Prérequis avant tranche D (Phase 0 minimum)
+
+A–E peuvent démarrer **sans** Postgres / hébergeur / PSP.  
+**Avant toute tranche D** (OAuth Shopify, webhooks publics) :
+
+| Prérequis | Détail |
+|-----------|--------|
+| Secrets | `JWT_SECRET` / `ADMIN_JWT_SECRET` **obligatoires** hors fallback hardcodé (crash au boot si absents) — FD-000 Phase 0 |
+| Sandbox | `SANDBOX_MODE` / `requireSandbox` pour routes lab ; impersonation **jamais** en prod |
+| A–E done | Inventory + manual + sync fiabilisés avant miroir POS live |
+| SQLite | `busy_timeout` + single workers en place ; seuil `SQLITE_BUSY` = **signal** Postgres, pas blocker A–E |
+
 ---
 
 # 10. Alignement avec le code actuel Ma Zone
 
 | Existant | Devenir |
 |----------|---------|
-| `products.quantity` | Migrer vers StockLevel triple état |
-| `routes/orders.js` décrément direct | Appeler Inventory `reserve`/`commit` |
-| `product:stock_updated` socket | Émettre `available` (et on_hand aux merchants) |
-| Event Engine + registres | Inchangé philosophiquement ; lit `available` si besoin jauge |
+| `products.quantity` | Projection de `available` (T0–T3 §6.6) — jamais vérité métier côté mobile |
+| `routes/orders.js` décrément direct | Appeler Inventory `reserve`/`commit` (mode `mazone`/`pos`) |
+| `product:stock_updated` socket | Émettre `available` (et `on_hand` aux merchants) |
+| Event Engine + registres | Inchangé ; lit `available` si besoin jauge / OV |
+| Deuxième Âme v1 | **Déjà implémentée** (FD-000) — hors scope reconstruction |
 | Wallet / Identity / Communication | Hors connecteurs POS ; inchangés |
-| Dispatch / missions | Après reserve réussie |
-| `mobile/src/api/index.js` | Pointer progressivement `/api/v1` |
-| World Factory / Lab | Générer stock_levels dans recettes démo |
-| FD-000 anti-patterns | Respectés (pas Next legacy, pas OV type, pas Wallet PSP) |
+| Dispatch / missions | Après `reserve` réussie ; P1–P3 en parallèle OK |
+| `mobile/src/api/index.js` | **Inchangé pendant A–E** ; bascule `/api/v1` après A–E |
+| World Factory / Lab | Générer `stock_levels` dans recettes démo |
+| FD-000 anti-patterns §22 | Respectés (pas Next legacy, pas OV type, pas Wallet PSP, pas 2e Âme from scratch) |
 
 Nouveaux organes prévus :
 
@@ -499,7 +571,8 @@ Nouveaux organes prévus :
 
 # 11. Roadmap d’implémentation par tranches
 
-Sans FD entre tranches. Chaque tranche = critère d’acceptation.
+Sans fiche FD entre tranches. Chaque tranche = critère d’acceptation.  
+**1er build = A + B + C + E uniquement.**
 
 ### Tranche A — Contrats & squelette
 
@@ -509,35 +582,41 @@ Sans FD entre tranches. Chaque tranche = critère d’acceptation.
 
 ### Tranche B — Inventory Engine
 
-- Triple état + movements + migration depuis `quantity`.  
-- `reserve` / `release` / `commit` branchés sur création/annulation/livraison commande.  
-**Done :** plus aucun UPDATE `quantity` hors organe ; test manuel oversell panier+commande.
+- Triple état + movements + migration T0–T1 depuis `quantity`.  
+- Modes `inventory_owner = mazone` (défaut) ; branchement `reserve` / `release` / `commit`.  
+**Done :** plus aucun UPDATE `quantity` hors miroir Inventory ; test manuel oversell panier+commande.
 
 ### Tranche C — Integration Engine + connecteur Manuel
 
 - `connectorRegistry` + connector `manual` / CSV.  
-- Merchant peut définir on_hand via Épée → même organe.  
+- Merchant peut définir `on_hand` via Épée → même organe (mode `mazone`).  
 **Done :** magasin sans POS synchronisé via saisie.
-
-### Tranche D — Premier connecteur natif lecture (Shopify)
-
-- OAuth, pull products + inventory, webhooks Inbox, miroir `on_hand`.  
-**Done :** vente Shopify/POS Shopify reflétée en `available` MZ < délai cible (ex. 1–2 min + webhook).
 
 ### Tranche E — Fiabilisation sync
 
-- Outbox pour événements sortants préparés ; réconciliation ; journal conflits ; busy_timeout + workers batch.  
-**Done :** scénario duplicate webhook sans double mouvement ; scénario conflit POS vs réserve documenté.
+- Outbox pour événements sortants préparés ; réconciliation ; journal conflits ; `busy_timeout` + workers batch.  
+**Done :** scénario duplicate webhook (même sans connector natif : inbox manuelle / rejeu) sans double mouvement ; scénario conflit réserve documenté.
 
-### Tranche F — Élargissement
+### Tranche D — Premier connecteur natif lecture (Shopify) — HORS 1er build
+
+- Prérequis : **A–E done** + Phase 0 min (§9.6).  
+- OAuth, pull products + inventory, webhooks Inbox, miroir `on_hand`, bascule magasin en `inventory_owner = pos`.  
+**Done :** vente POS/Shopify reflétée en `available` MZ < délai cible (ex. 1–2 min + webhook).  
+**GO :** Reda + Adam explicite.
+
+### Tranche F — Élargissement — HORS 1er build
 
 - Zettle et/ou Lightspeed et/ou Chift.  
 - Push vente MZ → POS **uniquement** si `capabilities.push` et décision magasin.  
-**Done :** 2+ connectors live en lecture ; push optionnel sur 1.
+**Done :** 2+ connectors live en lecture ; push optionnel sur 1.  
+**GO :** Reda + Adam explicite.
 
 ### Critère chapitre « bouclé » (pour amender FD-001)
 
-Tranches **A–E** faites ; F au moins démarrée ou explicitement scoped. API `/v1` utilisée par mobile pour stock sellable + commande. Puis **mise à jour** de [FD-001](./FD-001-chantier-fondation-api-logiciels-commerciaux.md) (résultats).
+Tranches **A + B + C + E** faites.  
+Mobile peut encore être sur `/api/*` (miroir `quantity`).  
+Puis **mise à jour** de [FD-001](./FD-001-chantier-fondation-api-logiciels-commerciaux.md) (résultats).  
+**D/F ne font pas partie** du critère de bouclage V1.
 
 ---
 
@@ -547,23 +626,29 @@ Tranches **A–E** faites ; F au moins démarrée ou explicitement scoped. API `
 |--------|------------|
 | Drift miroir | Triple état + réconciliation + conflits journalisés |
 | SQLITE_BUSY | WAL + busy_timeout + single worker + batch |
+| Double décrément MZ+POS | Modes `mazone`/`pos` (§6.3) — jamais les deux sur `on_hand` |
+| Double vérité `quantity` | T0–T3 normatifs ; grep UPDATE hors miroir = 0 |
 | Flou de rôle MZ | Roadmap : ATP/canal d’abord, pas « OS complet » day-1 |
-| CHR / services mal modélisés | Limites V1 explicites (§6.6) |
-| Dépendance Chift | Adapter interchangeable ; natifs en parallèle |
+| CHR / services mal modélisés | Limites V1 explicites (§6.7) |
+| Dépendance Chift | Adapter interchangeable ; natifs en parallèle (F) |
 | Contaminer organes avec SDK | ACL strict ; revue : aucun `require('shopify')` dans orders.js |
+| Webhooks avant durcissement | Phase 0 min avant D (§9.6) |
+| Mobile traite `quantity` comme vérité | Anti-pattern interdit (§6.6, FD-001) |
 | Double vérité client | Survivorship / golden record phase ultérieure |
 
 ---
 
 # 13. Checklist avant de toucher au code
 
-- [ ] Validation humaine de **ce** plan  
+- [ ] Validation Adam (+ Reda) de **ce** plan amendé  
 - [ ] Accord matrice conflits (§5)  
-- [ ] Accord triple état (§6)  
+- [ ] Accord triple état + modes `mazone`/`pos` (§6)  
+- [ ] Accord migration T0–T3 (§6.6)  
 - [ ] Accord contraintes SQLite (§9.5)  
-- [ ] Accord ordre connectors (§8.4)  
+- [ ] Accord séquençage A–E puis D (§1.6, §11)  
+- [ ] Accord ordre connectors (§8.4) — manual d’abord  
 - [ ] Relire FD-000 §22 anti-patterns  
-- [ ] Relire [FD-001](./FD-001-chantier-fondation-api-logiciels-commerciaux.md) (contexte Reda / Adam)  
+- [ ] Relire [FD-001](./FD-001-chantier-fondation-api-logiciels-commerciaux.md)  
 
 ---
 
@@ -571,12 +656,12 @@ Tranches **A–E** faites ; F au moins démarrée ou explicitement scoped. API `
 
 La mémoire du chapitre est dans [FD-001](./FD-001-chantier-fondation-api-logiciels-commerciaux.md) (récit jusqu’au plan de codage).
 
-Après le code, **amender FD-001** (pas créer FD-002) avec :
+Après le code A–E, **amender FD-001** (pas créer une fiche architecture séparée) avec :
 
-1. Ce qui a été implémenté (tranches A–…).  
+1. Ce qui a été implémenté (tranches A–E).  
 2. Écarts plan vs réel.  
 3. Limites connues (CHR, services, Postgres).  
-4. Suite éventuelle (push POS, plus de connectors).
+4. Suite éventuelle (D/F : push POS, plus de connectors).
 
 ---
 
@@ -586,9 +671,12 @@ Après le code, **amender FD-001** (pas créer FD-002) avec :
 - Remplacement forcé du POS commerçant.  
 - Postgres / hébergeur prod (seuil seulement).  
 - Kafka, GraphQL public, microservices.  
-- Implémentation code (étape suivante après GO).
+- Tranches D/F dans le 1er build.  
+- Modification mobile dans le 1er build.  
+- Implémentation code (étape suivante après GO Adam+Reda).
 
 ---
 
 *Plan_Conception_API_Compatible_Logiciels_Commerciaux_V1 — Chapitre Fondation API — 2026-07-24*  
-*Document de conception — pas une FD — pas du code.*
+*Amendé Cursor Reda 2026-07-24 soir — alignement FD-000 / Ma Zone — validation Adam requise.*  
+*Document de conception — pas une FD — pas du code. MD = source de vérité (PDF éventuellement stale).*
