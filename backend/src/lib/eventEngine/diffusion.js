@@ -83,7 +83,10 @@ function setSubscriptions(userId, entries = []) {
  * Filtre spatial :
  *  - si `radiusKm` (campagne) est fourni → distance ≤ radiusKm ;
  *  - sinon, si l'abonnement a un `radius_km` → distance ≤ ce rayon ;
- *  - les habitants sans coordonnées sont exclus dès qu'un filtre spatial s'applique ;
+ *  - un habitant SANS coordonnées reste éligible au canal (classé après les
+ *    géolocalisés) : exclure ces comptes cassait Mode Réception / OV sur les
+ *    profils réels sans lat/lng (cas courant hors seed demo) ;
+ *  - seul un habitant géolocalisé HORS rayon est écarté ;
  *  - `zoneId` reste un raffinement optionnel (compatibilité).
  *
  * @returns [{ userId, lat, lng, distanceKm }]
@@ -121,9 +124,8 @@ function matchSubscribers(channels = [], { zoneId = null, originLat = null, orig
       ? campaignRadius
       : (r.sub_radius != null ? Number(r.sub_radius) : null);
 
-    if (limit != null) {
-      if (dist == null || dist > limit) continue;
-    }
+    // Hors rayon uniquement si on CONNAÎT la distance. Pas de position ≠ hors zone.
+    if (limit != null && dist != null && dist > limit) continue;
 
     matched.push({
       userId: r.user_id,

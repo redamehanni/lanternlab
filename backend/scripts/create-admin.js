@@ -1,30 +1,36 @@
 /**
- * Outil de développement — Crée le premier administrateur Ma Zone.
- *
- * Nécessaire car aucun rôle admin n'existe dans l'écosystème citoyen : les
- * administrateurs vivent dans la table séparée `admin_users`.
+ * Outil de développement — Crée / met à jour l'administrateur Ma Zone.
  *
  * Usage :
  *   node scripts/create-admin.js [email] [motDePasse] [nom]
+ *   node scripts/create-admin.js --reset [email] [motDePasse] [nom]
  * Défauts (dev) : admin@mazone.local / admin1234 / "Admin Ma Zone"
- * Idempotent sur l'email.
  */
 
 const bcrypt = require('bcrypt');
 const db = require('../src/db');
 
 async function main() {
-  const email = process.argv[2] || 'admin@mazone.local';
-  const password = process.argv[3] || 'admin1234';
-  const name = process.argv[4] || 'Admin Ma Zone';
+  const args = process.argv.slice(2);
+  const reset = args[0] === '--reset';
+  if (reset) args.shift();
+
+  const email = args[0] || 'admin@mazone.local';
+  const password = args[1] || 'admin1234';
+  const name = args[2] || 'Admin Ma Zone';
+  const hash = await bcrypt.hash(password, 10);
 
   const existing = db.prepare('SELECT id FROM admin_users WHERE email = ?').get(email);
   if (existing) {
-    console.log(`Admin déjà existant : ${email}`);
+    if (!reset) {
+      console.log(`Admin déjà existant : ${email} (passe --reset pour forcer le mot de passe)`);
+      process.exit(0);
+    }
+    db.prepare('UPDATE admin_users SET password = ?, name = ? WHERE email = ?').run(hash, name, email);
+    console.log(`Admin mis à jour : ${email}  (mot de passe : ${password})`);
     process.exit(0);
   }
 
-  const hash = await bcrypt.hash(password, 10);
   const id = db.generateId();
   db.prepare(
     "INSERT INTO admin_users (id, email, password, name, level) VALUES (?, ?, ?, ?, 'superadmin')"

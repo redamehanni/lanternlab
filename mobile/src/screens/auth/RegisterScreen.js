@@ -49,7 +49,14 @@ export default function RegisterScreen({ route }) {
 
       await loginUser(res.data.user, res.data.token);
     } catch (err) {
-      Alert.alert('Erreur', err.response?.data?.error || "Inscription impossible. Vérifiez le serveur.");
+      const offline = !err.response;
+      Alert.alert(
+        'Erreur',
+        err.response?.data?.error
+          || (offline
+            ? 'Serveur injoignable. Vérifiez que le backend tourne (port 4000) puis relancez l’app.'
+            : 'Inscription impossible.'),
+      );
     } finally {
       setLoading(false);
     }

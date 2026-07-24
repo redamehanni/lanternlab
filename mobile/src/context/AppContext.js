@@ -1,30 +1,44 @@
-import React, { createContext, useContext, useState, useEffect, useCallback } from 'react';
-import { Platform } from 'react-native';
+import React, { createContext, useContext, useState, useEffect, useCallback, useRef } from 'react';
+import { Platform, Linking } from 'react-native';
 import { io } from 'socket.io-client';
 import { SOCKET_URL, API_URL } from '../config';
 import { appStorage } from '../utils/storage';
 import { navigateToSoul } from '../navigation/navigationRef';
+import { onUnauthorized } from '../api';
+import { extractLabTokenFromUrl, resolveLabSession } from '../utils/labToken';
 
 /**
- * Bac à Sable — passage de jeton d'imitation depuis le Laboratoire (web).
- * Le Back Office ouvre l'app avec `#labToken=<jeton>` : on résout l'acteur via
- * l'organe d'identité applicatif (/api/users/me) puis on ouvre sa session.
- * Aucune donnée n'est modifiée : entrer dans un acteur est une authentification.
+ * Bac à Sable — passage de jeton d'imitation depuis le Laboratoire.
+ *
+ * Web  : le Back Office ouvre `#labToken=<jeton>` dans le navigateur.
+ * iOS  : le Back Office demande au backend d'ouvrir Expo Go via
+ *        `exp://…/--/lab?labToken=<jeton>` (bouton « Devenir X sur Xcode »).
+ *
+ * Dans les deux cas : on résout l'acteur via /api/users/me puis on ouvre
+ * sa session. Aucune donnée n'est modifiée — c'est une authentification.
  */
-async function consumeLabToken() {
+async function consumeLabTokenFromWebHash() {
   if (Platform.OS !== 'web' || typeof window === 'undefined') return null;
-  const match = (window.location.hash || '').match(/labToken=([^&]+)/);
-  if (!match) return null;
-  const token = decodeURIComponent(match[1]);
+  const token = extractLabTokenFromUrl(window.location.hash || window.location.href);
+  if (!token) return null;
   try {
-    const res = await fetch(`${API_URL}/api/users/me`, {
-      headers: { Authorization: `Bearer ${token}` },
-    });
-    if (!res.ok) return null;
-    const data = await res.json();
-    // Retire le jeton de la barre d'adresse.
-    window.history.replaceState(null, '', window.location.pathname + window.location.search);
-    return { token, user: data.user };
+    const session = await resolveLabSession(token, API_URL);
+    if (session) {
+      window.history.replaceState(null, '', window.location.pathname + window.location.search);
+    }
+    return session;
+  } catch {
+    return null;
+  }
+}
+
+async function consumeLabTokenFromLinking() {
+  if (Platform.OS === 'web') return null;
+  try {
+    const initial = await Linking.getInitialURL();
+    const token = extractLabTokenFromUrl(initial);
+    if (!token) return null;
+    return resolveLabSession(token, API_URL);
   } catch {
     return null;
   }
@@ -53,6 +67,8 @@ export function AppProvider({ children }) {
     });
   }, []);
 
+  const logoutRef = useRef(null);
+
   const connectSocket = useCallback((authToken, userData) => {
     disconnectSocket();
 
@@ -67,19 +83,41 @@ export function AppProvider({ children }) {
       console.log(`[Socket] Connecté (${userData.role})`);
     });
 
-    s.on('connect_error', (err) => console.warn('[Socket] Erreur :', err.message));
+    s.on('connect_error', (err) => {
+      console.warn('[Socket] Erreur :', err.message);
+      // JWT mort en AsyncStorage → même symptôme que les 401 REST (Mode Réception, OV).
+      if (err.message === 'Token invalide' || err.message === 'Token manquant') {
+        s.io.opts.reconnection = false;
+        logoutRef.current?.();
+      }
+    });
     s.on('disconnect', (reason) => console.log('[Socket] Déconnecté :', reason));
 
     setSocket(s);
     return s;
   }, [disconnectSocket]);
 
+  async function logoutUser() {
+    disconnectSocket();
+    setUser(null);
+    setToken(null);
+    setActiveSoul('first');
+    await appStorage.clear();
+  }
+  logoutRef.current = logoutUser;
+
+  // Purge automatique si une API authentifiée renvoie 401 (session zombie).
+  useEffect(() => {
+    onUnauthorized(() => { logoutRef.current?.(); });
+    return () => onUnauthorized(null);
+  }, []);
+
   // Restaurer la session au démarrage (1 session par onglet sur le web)
   useEffect(() => {
     (async () => {
       try {
-        // Priorité au jeton d'imitation du Laboratoire (web) s'il est présent.
-        const lab = await consumeLabToken();
+        // Priorité au jeton d'imitation du Laboratoire (web hash OU deep link iOS).
+        const lab = (await consumeLabTokenFromWebHash()) || (await consumeLabTokenFromLinking());
         if (lab) {
           setToken(lab.token);
           setUser(lab.user);
@@ -92,15 +130,27 @@ export function AppProvider({ children }) {
         const savedToken = await appStorage.getItem('token');
         const savedUser  = await appStorage.getItem('user');
         if (savedToken && savedUser) {
-          const parsedUser = JSON.parse(savedUser);
+          // Valider le JWT auprès de l'organe avant d'ouvrir la session :
+          // sinon l'UI croit être connectée alors que Mode Réception / sockets échouent.
+          const meRes = await fetch(`${API_URL}/api/users/me`, {
+            headers: { Authorization: `Bearer ${savedToken}` },
+          });
+          if (!meRes.ok) {
+            await appStorage.clear();
+            return;
+          }
+          const meData = await meRes.json();
+          const freshUser = meData.user || JSON.parse(savedUser);
           setToken(savedToken);
-          setUser(parsedUser);
-          connectSocket(savedToken, parsedUser);
+          setUser(freshUser);
+          await appStorage.setItem('user', JSON.stringify(freshUser));
+          connectSocket(savedToken, freshUser);
         }
         const savedSoul = await appStorage.getItem('activeSoul');
         if (savedSoul === 'second' || savedSoul === 'first') setActiveSoul(savedSoul);
       } catch (e) {
         console.warn('Erreur restauration session', e);
+        await appStorage.clear().catch(() => {});
       } finally {
         setLoading(false);
       }
@@ -116,6 +166,34 @@ export function AppProvider({ children }) {
     await appStorage.setItem('user', JSON.stringify(userData));
     connectSocket(authToken, userData);
   }
+  const loginRef = useRef(loginUser);
+  loginRef.current = loginUser;
+
+  // Deep link « Devenir X sur Xcode » pendant que l'app est déjà ouverte.
+  useEffect(() => {
+    if (Platform.OS === 'web') return undefined;
+
+    const onUrl = ({ url }) => {
+      const labToken = extractLabTokenFromUrl(url);
+      if (!labToken) return;
+      (async () => {
+        try {
+          const session = await resolveLabSession(labToken, API_URL);
+          if (!session) {
+            console.warn('[Lab] Deep link : jeton invalide');
+            return;
+          }
+          await loginRef.current(session.user, session.token);
+          console.log(`[Lab] Session ouverte : ${session.user?.name} (${session.user?.role})`);
+        } catch (e) {
+          console.warn('[Lab] Deep link impossible', e);
+        }
+      })();
+    };
+
+    const sub = Linking.addEventListener('url', onUrl);
+    return () => sub.remove();
+  }, []);
 
   async function updateUser(patch) {
     setUser((prev) => {
@@ -123,14 +201,6 @@ export function AppProvider({ children }) {
       appStorage.setItem('user', JSON.stringify(merged));
       return merged;
     });
-  }
-
-  async function logoutUser() {
-    disconnectSocket();
-    setUser(null);
-    setToken(null);
-    setActiveSoul('first');
-    await appStorage.clear();
   }
 
   // Bascule entre les deux faces. Met à jour l'état persisté PUIS navigue vers

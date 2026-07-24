@@ -3,7 +3,7 @@ import { api, setToken } from '../api';
 
 export default function LoginPage({ onAuthed }) {
   const [email, setEmail] = useState('admin@mazone.local');
-  const [password, setPassword] = useState('');
+  const [password, setPassword] = useState('admin1234');
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
 
@@ -42,6 +42,10 @@ export default function LoginPage({ onAuthed }) {
         <button type="submit" disabled={loading} style={{ width: '100%', marginTop: 6 }}>
           {loading ? 'Connexion…' : 'Entrer'}
         </button>
+
+        <p className="muted" style={{ marginTop: 14, fontSize: 12, textAlign: 'center' }}>
+          Dev local : admin@mazone.local / admin1234
+        </p>
       </form>
     </div>
   );

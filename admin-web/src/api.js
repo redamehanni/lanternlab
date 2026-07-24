@@ -43,6 +43,7 @@ export const api = {
 
   // Laboratoire
   impersonate: (userId) => req('/impersonate', { method: 'POST', body: { userId } }),
+  impersonateIos: (userId) => req('/impersonate-ios', { method: 'POST', body: { userId } }),
   labActions: () => req('/lab/actions'),
   runLabAction: (actionId, targetUserId, params) =>
     req(`/lab/actions/${actionId}`, { method: 'POST', body: { targetUserId, params } }),

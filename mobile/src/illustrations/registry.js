@@ -7,6 +7,12 @@
  */
 
 const ILLUSTRATIONS = {
+  'background.papierOrange': {
+    source: require('../../assets/illustrations/backgrounds/papier-orange.png'),
+    alt: 'Papier aquarelle, feuillage très léger',
+    placeholder: false,
+  },
+
   'banner.quartier': {
     source: require('../../assets/illustrations/banner/quartier.jpg'),
     alt: 'Café des Batignolles au crépuscule',

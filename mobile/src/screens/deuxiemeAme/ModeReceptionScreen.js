@@ -47,8 +47,11 @@ export default function ModeReceptionScreen({ navigation }) {
       await setModeReception(subs);
       toast('Mode Réception enregistré');
       navigation.goBack();
-    } catch {
-      toast('Enregistrement impossible');
+    } catch (err) {
+      const status = err?.response?.status;
+      const msg = err?.response?.data?.error;
+      if (status === 401) toast('Session expirée — reconnectez-vous');
+      else toast(msg || 'Enregistrement impossible');
     } finally {
       setSaving(false);
     }

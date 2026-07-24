@@ -1,26 +1,56 @@
-import { Platform } from 'react-native';
+import { NativeModules, Platform } from 'react-native';
 
 const SERVER_PORT = '4000';
 
 /**
- * URL du backend en local — aucune IP à configurer.
+ * Hôte du backend en local — sans IP à hardcoder.
  *
- * - iOS Simulator / Web : localhost
- * - Android Emulator  : 10.0.2.2 (localhost de votre Mac vu depuis l'émulateur)
- *
- * Pour un téléphone physique plus tard, définissez EXPO_PUBLIC_API_URL dans mobile/.env
+ * Ordre de résolution :
+ *  1. EXPO_PUBLIC_API_URL (mobile/.env ou export shell)
+ *  2. Hôte de Metro (script bundle) → même machine que le packager, port 4000
+ *     Crucial sur iOS Simulator / Expo Go quand Metro est en LAN (iOS 26+)
+ *     et que `localhost` ne pointe plus vers le Mac.
+ *  3. Android emulator → 10.0.2.2
+ *  4. iOS / web → 127.0.0.1 (évite les soucis IPv6 de `localhost`)
  */
+function hostFromMetro() {
+  try {
+    const scriptURL = NativeModules?.SourceCode?.scriptURL;
+    if (!scriptURL || typeof scriptURL !== 'string') return null;
+    const match = scriptURL.match(/https?:\/\/([^/:]+)(?::\d+)?/);
+    const host = match?.[1];
+    if (!host) return null;
+    if (host === 'localhost' || host === '127.0.0.1') return null;
+    return host;
+  } catch {
+    return null;
+  }
+}
+
 function getServerHost() {
   if (process.env.EXPO_PUBLIC_API_URL) {
     return process.env.EXPO_PUBLIC_API_URL.replace(/\/$/, '');
   }
 
-  const host = Platform.OS === 'android' ? '10.0.2.2' : 'localhost';
-  return `http://${host}:${SERVER_PORT}`;
+  const metroHost = hostFromMetro();
+  if (metroHost) {
+    return `http://${metroHost}:${SERVER_PORT}`;
+  }
+
+  if (Platform.OS === 'android') {
+    return `http://10.0.2.2:${SERVER_PORT}`;
+  }
+
+  return `http://127.0.0.1:${SERVER_PORT}`;
 }
 
 export const API_URL = getServerHost();
 export const SOCKET_URL = getServerHost();
+
+if (__DEV__) {
+  // Visible dans la console Metro / Xcode : utile pour diagnostiquer login/register.
+  console.log(`[MaZone] API_URL = ${API_URL}`);
+}
 
 export const COLORS = {
   primary:      '#0f2d5c',

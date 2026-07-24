@@ -86,10 +86,11 @@ export default function ExplorerPage() {
 }
 
 function ActorDetail({ actor, onError }) {
-  const [busy, setBusy] = useState(false);
+  const [busy, setBusy] = useState(null); // 'web' | 'ios' | null
+  const firstName = actor.name?.split(' ')[0] || 'acteur';
 
   async function become() {
-    setBusy(true);
+    setBusy('web');
     onError('');
     try {
       const { token } = await api.impersonate(actor.id);
@@ -97,21 +98,45 @@ function ActorDetail({ actor, onError }) {
     } catch (err) {
       onError(err.message);
     } finally {
-      setBusy(false);
+      setBusy(null);
+    }
+  }
+
+  async function becomeOnXcode() {
+    setBusy('ios');
+    onError('');
+    try {
+      const res = await api.impersonateIos(actor.id);
+      // Succès silencieux côté UI : le simulateur prend le relais.
+      // Si Metro / Expo Go manque, le backend renvoie un message actionnable.
+      if (res?.deepLink) {
+        console.info('[Lab] Deep link Xcode :', res.deepLink);
+      }
+    } catch (err) {
+      onError(err.message);
+    } finally {
+      setBusy(null);
     }
   }
 
   return (
     <div className="grid" style={{ gap: 16 }}>
       <div className="card">
-        <div className="row">
+        <div className="row wrap" style={{ gap: 10 }}>
           <div className={`avatar role-${actor.role}`}>{(actor.name || '?')[0].toUpperCase()}</div>
           <div>
             <h3 style={{ margin: 0 }}>{actor.name}</h3>
             <div className="muted" style={{ fontSize: 13 }}>{actor.email} · {actor.role}</div>
           </div>
           <div className="spacer" />
-          <button disabled={busy} onClick={become}>Devenir {actor.name?.split(' ')[0]}</button>
+          <div className="row wrap" style={{ gap: 8 }}>
+            <button disabled={!!busy} onClick={become}>
+              {busy === 'web' ? 'Ouverture…' : `Devenir ${firstName}`}
+            </button>
+            <button className="ghost" disabled={!!busy} onClick={becomeOnXcode} title="Ouvre Expo Go sur le simulateur iOS">
+              {busy === 'ios' ? 'Ouverture Xcode…' : `Devenir ${firstName} sur Xcode`}
+            </button>
+          </div>
         </div>
       </div>
 

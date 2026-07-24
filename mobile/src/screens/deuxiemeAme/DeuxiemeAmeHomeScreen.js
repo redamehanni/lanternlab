@@ -1,5 +1,7 @@
 import React, { useCallback, useState } from 'react';
-import { View, Text, ScrollView, StyleSheet, RefreshControl, TouchableOpacity } from 'react-native';
+import {
+  View, Text, ScrollView, StyleSheet, RefreshControl, TouchableOpacity, ImageBackground,
+} from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useFocusEffect } from '@react-navigation/native';
 import { useApp } from '../../context/AppContext';
@@ -14,9 +16,11 @@ import PorteCard from '../../components/deuxiemeAme/PorteCard';
 import MurmurCard from '../../components/deuxiemeAme/MurmurCard';
 import FadeIn from '../../components/ui/FadeIn';
 import { PORTES } from '../../data/deuxiemeAme';
+import { getIllustration } from '../../illustrations/registry';
 import { AME, MOTION } from '../../theme';
 
 const DEFAULT_RECEPTION_CHANNELS = ['vie_de_quartier', 'culture', 'gastronomie', 'lanternes', 'opportunites_rares'];
+const PAGE_PAPER = getIllustration('background.papierOrange');
 
 function getLocalContext(user) {
   return {
@@ -78,15 +82,24 @@ export default function DeuxiemeAmeHomeScreen({ navigation }) {
       const res = await setModeReception(next);
       setSubscriptions(res.data.subscriptions || []);
       toast(receptionActive ? 'Mode Réception désactivé' : 'Mode Réception activé');
-    } catch {
-      toast('Action impossible pour le moment');
+    } catch (err) {
+      const status = err?.response?.status;
+      const msg = err?.response?.data?.error;
+      if (status === 401) toast('Session expirée — reconnectez-vous pour activer le Mode Réception');
+      else toast(msg || 'Action impossible pour le moment');
     } finally {
       setReceptionBusy(false);
     }
   }
 
   return (
-    <View style={[styles.bg, { paddingTop: insets.top }]}>
+    <ImageBackground
+      source={PAGE_PAPER.source}
+      style={styles.bg}
+      imageStyle={styles.bgImage}
+      accessibilityLabel={PAGE_PAPER.alt}
+    >
+      <View style={[styles.inner, { paddingTop: insets.top }]}>
       <AmeHeader
         user={user}
         receptionActive={receptionActive}
@@ -106,7 +119,7 @@ export default function DeuxiemeAmeHomeScreen({ navigation }) {
           />
         }
       >
-        <FadeIn delay={40} style={styles.section}>
+        <FadeIn delay={40} style={styles.heroSection}>
           <WeatherHero location={local.location} ambiance={local.ambiance} stats={stats} loading={loading} />
         </FadeIn>
 
@@ -156,14 +169,21 @@ export default function DeuxiemeAmeHomeScreen({ navigation }) {
         onManage={() => { setPopover(false); navigation.navigate('ModeReception'); }}
         onOpenMailbox={() => { setPopover(false); navigation.navigate('Mailbox'); }}
       />
-    </View>
+      </View>
+    </ImageBackground>
   );
 }
 
 const styles = StyleSheet.create({
   bg: { flex: 1, backgroundColor: AME.colors.bg },
+  bgImage: { resizeMode: 'cover' },
+  inner: { flex: 1 },
   content: { paddingBottom: 24 },
-  section: { paddingHorizontal: AME.spacing.md, marginTop: 14 },
+  heroSection: {
+    paddingHorizontal: 0,
+    marginTop: 6,
+  },
+  section: { paddingHorizontal: AME.spacing.md, marginTop: 18 },
   portesHead: {
     paddingHorizontal: AME.spacing.md,
     marginTop: AME.spacing.section,
@@ -186,8 +206,8 @@ const styles = StyleSheet.create({
     flexWrap: 'wrap',
     justifyContent: 'space-between',
     paddingHorizontal: AME.spacing.md,
-    marginTop: 16,
-    rowGap: 14,
+    marginTop: 12,
+    rowGap: 9,
   },
   murmurHead: {
     flexDirection: 'row',

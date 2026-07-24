@@ -11,7 +11,7 @@ export default function ModeReceptionPopover({
 }) {
   if (!visible) return null;
   return (
-    <View style={StyleSheet.absoluteFill} pointerEvents="box-none">
+    <View style={[StyleSheet.absoluteFill, styles.overlay]} pointerEvents="box-none">
       <Pressable style={StyleSheet.absoluteFill} onPress={onClose} />
       <View style={[styles.card, AME.shadow.lg]}>
         <View style={styles.headRow}>
@@ -66,6 +66,7 @@ export default function ModeReceptionPopover({
 }
 
 const styles = StyleSheet.create({
+  overlay: { zIndex: 100, elevation: 100 },
   card: {
     position: 'absolute',
     top: 4,
@@ -76,6 +77,8 @@ const styles = StyleSheet.create({
     padding: 16,
     borderWidth: 1,
     borderColor: AME.colors.borderLight,
+    zIndex: 101,
+    elevation: 101,
   },
   headRow: { flexDirection: 'row', alignItems: 'center', gap: 8 },
   title: {

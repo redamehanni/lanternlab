@@ -21,6 +21,7 @@ par la bibliothèque officielle aquarelle.
 
 ## Clés actuelles
 
+- `background.papierOrange`
 - `banner.quartier` / `banner.quartierSoft`
 - `portes.lanternes` · `evenements` · `participer` · `quartier` · `adresses` · `surprise`
 - `murmures.default`

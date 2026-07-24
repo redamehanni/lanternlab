@@ -4,11 +4,30 @@ import { API_URL } from '../config';
 
 const api = axios.create({ baseURL: API_URL, timeout: 15000 });
 
+/** Callback unique (AppContext) pour purger une session JWT morte. */
+let unauthorizedHandler = null;
+export function onUnauthorized(handler) {
+  unauthorizedHandler = typeof handler === 'function' ? handler : null;
+}
+
 api.interceptors.request.use(async (config) => {
   const token = await appStorage.getItem('token');
   if (token) config.headers.Authorization = `Bearer ${token}`;
   return config;
 });
+
+api.interceptors.response.use(
+  (res) => res,
+  (error) => {
+    // Ne pas déconnecter sur un échec de login / register (401 attendu).
+    const url = String(error.config?.url || '');
+    const isAuthAttempt = url.includes('/api/auth/login') || url.includes('/api/auth/register');
+    if (error.response?.status === 401 && !isAuthAttempt) {
+      unauthorizedHandler?.(error);
+    }
+    return Promise.reject(error);
+  }
+);
 
 const MULTIPART = { headers: { 'Content-Type': 'multipart/form-data' } };
 

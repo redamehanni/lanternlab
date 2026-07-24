@@ -28,7 +28,14 @@ export default function LoginScreen({ navigation, route }) {
       }
       await loginUser(res.data.user, res.data.token);
     } catch (err) {
-      Alert.alert('Erreur', err.response?.data?.error || 'Connexion impossible. Vérifiez l\'adresse IP du serveur.');
+      const offline = !err.response;
+      Alert.alert(
+        'Erreur',
+        err.response?.data?.error
+          || (offline
+            ? 'Serveur injoignable. Vérifiez que le backend tourne (port 4000) puis relancez l’app.'
+            : 'Connexion impossible.'),
+      );
     } finally {
       setLoading(false);
     }

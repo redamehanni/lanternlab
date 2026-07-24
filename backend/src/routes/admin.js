@@ -18,6 +18,7 @@ const { requireSandbox } = require('../lib/sandbox');
 const world = require('../lib/worldFactory');
 const explorer = require('../lib/worldFactory/explorer');
 const lab = require('../lib/lab');
+const { openLabOnSimulator } = require('../lib/lab/openSimulator');
 
 const router = express.Router();
 
@@ -134,6 +135,33 @@ router.post('/impersonate', verifyAdmin, requireSandbox, (req, res) => {
     );
     res.json({ token, user: u });
   });
+});
+
+/**
+ * « Devenir X sur Xcode » — même jeton citoyen, ouvert sur le simulateur iOS
+ * via simctl + deep link Expo Go (sandbox Mac uniquement).
+ */
+router.post('/impersonate-ios', verifyAdmin, requireSandbox, async (req, res) => {
+  try {
+    const { userId } = req.body || {};
+    if (!userId) return res.status(400).json({ error: 'userId requis' });
+    if (!explorer.isDemoUser(userId)) {
+      return res.status(403).json({ error: 'Impersonation réservée aux acteurs démo' });
+    }
+    const u = db.prepare('SELECT id, name, email, role FROM users WHERE id = ?').get(userId);
+    if (!u) return res.status(404).json({ error: 'Utilisateur introuvable' });
+
+    const token = jwt.sign(
+      { id: u.id, name: u.name, email: u.email, role: u.role },
+      JWT_SECRET,
+      { expiresIn: '12h' }
+    );
+
+    const opened = await openLabOnSimulator(token);
+    res.json({ token, user: u, ...opened });
+  } catch (e) {
+    res.status(e.status || 500).json({ error: e.message || 'Ouverture simulateur impossible' });
+  }
 });
 
 // ── Pouvoirs du labo — actions via organes (sandbox + cible démo) ──────────────
