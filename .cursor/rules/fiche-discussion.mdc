@@ -1,0 +1,32 @@
+---
+description: Processus FICHE_DISCUSSION — vision partagée Ma Zone (Reda + Adam)
+alwaysApply: true
+---
+
+# Fiches de discussion Ma Zone
+
+Le dossier `FICHE_DISCUSSION/` est le canal de **vision et philosophie** partagée entre Reda et Adam (deux Cursor, un repo GitHub).
+
+## Réflexe obligatoire
+
+1. **Avant** un chantier, une feature ou une phase : lire `FICHE_DISCUSSION/INDEX.md` et les fiches au statut **validé** pertinentes.
+2. **Quand on demande** un résumé de vision, concept ou phase : proposer un brouillon Markdown depuis `FICHE_DISCUSSION/_TEMPLATE.md` (nom `FD-XXX-titre.md`), statut **brouillon**, **sans commit** tant que l'humain n'a pas validé.
+3. **Après validation** : commit + mise à jour de `FICHE_DISCUSSION/INDEX.md`.
+4. **PDF déposés manuellement** dans `FICHE_DISCUSSION/` : les lire et les intégrer ; proposer une version Markdown structurée si utile.
+
+## Ce que les fiches couvrent
+
+Vision, philosophie, concepts, décisions, phases — **pas** l'architecture détaillée (voir `CURRENT_ARCHITECTURE.md`, plans techniques, doc API).
+
+## Principes Ma Zone (ne pas contredire sans nouvelle fiche validée)
+
+- Surface compose, organe décide
+- Première Âme (marketplace) / Deuxième Âme (vie de quartier)
+- Langue des fiches : **français**
+- Nommage : `FD-XXX-titre-court.md`
+
+## Anti-patterns
+
+- Implémenter une grosse évolution sans avoir consulté les fiches validées
+- Committer une fiche sans validation humaine
+- Mélanger doc technique et fiche de vision dans le même document sans raison
