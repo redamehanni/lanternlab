@@ -663,11 +663,12 @@ Deux horizons — **ne pas mélanger** (FD-002).
 
 Fidélité organe, Collaboration, push, analytics…
 
-### Horizon C — Deuxième Âme profonde
+### Horizon C — Deuxième Âme profonde (enrichissement, pas construction from scratch)
 
-Quêtes, météo humaine, métriques vie réelle — **après** architecture conceptuelle solide.
+Quêtes, météo humaine, métriques vie réelle — **après** stabilisation prod et architecture conceptuelle.  
+**Note :** la Deuxième Âme **v1 est déjà codée** (FD-004 §10) ; Horizon C = approfondissement, pas démarrage.
 
-**FD-003 (brouillon Adam)** liste 16 décisions D1–D16 — à croiser/valider avant implémentation.
+**FD-003 (brouillon amendé)** liste 16 décisions D1–D16 — à croiser/valider avant implémentation. **Complémentaire de cette fiche :** FD-004 = état réel ; FD-003 = choix deploy restants (dont périmètre prod v1 pour 2e Âme déjà codée).
 
 ---
 

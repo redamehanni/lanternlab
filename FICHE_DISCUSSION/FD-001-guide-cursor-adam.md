@@ -113,7 +113,7 @@ FD-XXX-titre-court.md
 Ces principes traversent tout le projet. Toute fiche ou implémentation doit rester cohérente :
 
 1. **Surface compose, organe décide** — l'UI orchestre ; la logique métier vit dans les organes (Event Engine, Wallet, Identity…).
-2. **Deux Âmes** — Première Âme (marketplace / commerce) et Deuxième Âme (vie de quartier / Accueil, Messages, Wallet, Panier).
+2. **Deux Âmes** — Première Âme (marketplace) et Deuxième Âme (vie de quartier — **v1 implémentée** v0.9.3+, voir FD-004 §10).
 3. **Event Engine** — occurrences de la ville ; Mode Réception + Opportunités Volantes = diffusion, pas un type d'événement.
 4. **Open/Closed** — nouveaux types/canaux via registres, pas de `if (type === …)` dans le cœur.
 5. **Sandbox / Laboratoire** — impersonation acteurs démo ; bac à sable séparé de la prod.

@@ -6,7 +6,7 @@
 | **Date** | 2026-07-24 |
 | **Auteur(s)** | Adam (AdamY76) + Reda Mehanni |
 | **Phase / chantier** | Trajectoire déployable + autonomie inventaire commerçants |
-| **Références** | [PORTRAIT_MAZONE_INVENTAIRE_ROADMAP.md](../PORTRAIT_MAZONE_INVENTAIRE_ROADMAP.md), [CURRENT_ARCHITECTURE.md](../CURRENT_ARCHITECTURE.md), tag `ma-zone-v0.9.5.2-labo-simulateur-xcode-24-07-26` |
+| **Références** | [FD-004](./FD-004-contexte-complet-projet-adam.md), [PORTRAIT_MAZONE_INVENTAIRE_ROADMAP.md](../PORTRAIT_MAZONE_INVENTAIRE_ROADMAP.md), [CURRENT_ARCHITECTURE.md](../CURRENT_ARCHITECTURE.md), tag `ma-zone-v0.9.5.2-labo-simulateur-xcode-24-07-26` |
 
 > **Origine :** fiche rédigée par Adam le 24/07/2026, migrée depuis `fiche_de_discussion_diagnostic_prod_et_stocks.md` vers le dossier `FICHE_DISCUSSION/` (format FD-XXX).
 
@@ -87,7 +87,20 @@ Mettre les **deux Cursor** (Reda + Adam) au même niveau sur :
 | `admin-web/` | Vite + React | petit | Labo interne |
 | `MaZone/` | SwiftUI | squelette | Non branché |
 
-**Double stack :** le web Next.js/Supabase et le mobile/Node **ne partagent ni base ni logique métier**. Wallet, Identity, Event, Communication, World Factory n'existent que côté Node.
+**Double stack :** le web Next.js/Supabase et le mobile/Node **ne partagent ni base ni logique métier**. Wallet, Identity, Event Engine, Communication, World Factory n'existent que côté Node.
+
+### 6.1 bis — Organes et faces livrés (post-v0.9.2)
+
+Au-delà du cœur marketplace, **déjà implémentés** (tags v0.9.3 → v0.9.5.2) :
+
+| Domaine | État | Référence |
+|---------|------|-----------|
+| **Event Engine** | Organe complet + routes + Épée | `COMPTE_RENDU_EVENT_ENGINE.md` |
+| **Deuxième Âme v1** | Face client (6 portes, Mode Réception, OV, Murmures) | [FD-004](./FD-004-contexte-complet-projet-adam.md) §10 |
+| **Design System AME** | Tokens + illustrations Deuxième Âme | v0.9.5 |
+| **Laboratoire iOS** | Impersonation Xcode + deep link `labToken` | v0.9.5.2 |
+
+> **Attention :** le [PORTRAIT](../PORTRAIT_MAZONE_INVENTAIRE_ROADMAP.md) §4.6 et §J indiquent encore « Deuxième Âme non réalisée » — **obsolète**. Source à jour : [FD-004](./FD-004-contexte-complet-projet-adam.md).
 
 ### 6.2 Points forts retenus
 
@@ -256,11 +269,13 @@ Mettre les **deux Cursor** (Reda + Adam) au même niveau sur :
 
 ## 14. Notes pour les deux Cursor
 
-Cette fiche résume la conversation du **24/07/2026** (diagnostic monorepo + trajectoire prod + stocks autonomes). **Rien n'a été codé** dans ce fil. Les décisions §10 restent ouvertes.
+Cette fiche résume la conversation du **24/07/2026** (diagnostic monorepo + trajectoire prod + stocks autonomes). **Rien n'a été codé** dans ce fil initial. Les décisions §10 restent ouvertes.
+
+**État code :** depuis v0.9.3, Deuxième Âme v1 et Event Engine sont **livrés** — voir §6.1 bis et [FD-004](./FD-004-contexte-complet-projet-adam.md). **Décisions deploy :** [FD-003](./FD-003-decisions-prioritaires-objectif-deployable.md) (brouillon amendé).
 
 **Avant inventaire ou déploiement :** se synchroniser sur §10.1 (sort du web Next.js) et **Phase 0 sécurité**.
 
-Reda : lire cette fiche avant tout chantier prod ou stock.  
+Reda : lire cette fiche + FD-004 + FD-003 avant tout chantier prod ou stock.  
 Adam : source originale conservée dans l'historique Git (`fiche_de_discussion_diagnostic_prod_et_stocks.md`, commit `7a1d4eb`).
 
 ---
