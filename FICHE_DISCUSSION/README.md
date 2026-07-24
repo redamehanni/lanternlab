@@ -6,9 +6,8 @@ Canal de **vision et philosophie** entre Reda et Adam (deux Cursor, un repo GitH
 
 Les premières fiches (FD-001 à FD-004) ont été **supprimées** : elles avaient été produites avant la mise à niveau globale du Cursor d'Adam et créaient des contradictions.
 
-**Source de vérité actuelle : une seule fiche.**
-
-👉 **[FD-000 — Mise à niveau GLOBAL du Cursor Adam](./FD-000-mise-a-niveau-global-cursor-adam-ma-zone.md)**
+**Source de vérité globale :** [FD-000](./FD-000-mise-a-niveau-global-cursor-adam-ma-zone.md).  
+**Chantier Fondation API :** [FD-001](./FD-001-chantier-fondation-api-logiciels-commerciaux.md) (brouillon — voir [INDEX](./INDEX.md)).
 
 ## Rôle du dossier
 
