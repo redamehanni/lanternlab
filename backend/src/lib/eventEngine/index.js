@@ -22,6 +22,7 @@ const lifecycle = require('./lifecycle');
 const bus = require('./bus');
 const diffusion = require('./diffusion');
 const orchestration = require('./orchestration');
+const wallet = require('../walletEngine');
 
 // Auto-déclaration des types (Open/Closed).
 require('./types');
@@ -349,10 +350,32 @@ function countOpportunityInbox(userId, opts = {}) {
 }
 
 /**
- * Accepte une opportunité de la boîte aux lettres :
- *  1. matérialise un objet Wallet (billet ou badge) via orchestration ;
- *  2. marque le reçu comme accepté.
- * Idempotent si déjà acceptée.
+ * Trace l'émission d'un billet dans la biographie de l'initiative.
+ *
+ * Extrait d'`acceptOpportunity` à l'étape 5 pour que l'adaptateur d'orchestration
+ * puisse l'appeler sans réécrire cette trace ailleurs. Le journal d'une initiative
+ * appartient à l'Event Engine, et il n'y a qu'une façon d'y écrire.
+ */
+function journalTicketIssued(event, ownerId, objectId, io) {
+  journal(event.id, {
+    type: JOURNAL_EVENT_TYPE.TICKET_ISSUED,
+    fromStatus: event.status,
+    toStatus: event.status,
+    actor: ownerId,
+    payload: { objectId, source: 'opportunity_accept' },
+  });
+  bus.emit(bus.DOMAIN_EVENT.TICKET_ISSUED, { event, ownerId, objectId });
+}
+
+/**
+ * Accepte une opportunité de la boîte aux lettres.
+ *
+ * Depuis l'étape 5, la séquence est l'intention `event.claim_opportunity` : émission
+ * de l'objet Wallet puis acceptation actée, avec révocation du billet si la seconde
+ * échoue. Avant, un échec après émission laissait un billet orphelin.
+ *
+ * Le rejeu est tranché ICI et non dans le plan : « déjà accepté » n'est pas une étape
+ * qui échoue, c'est une question à laquelle la boîte aux lettres répond seule.
  */
 function acceptOpportunity(inboxId, userId, io) {
   const row = diffusion.getInboxItem(inboxId, userId);
@@ -364,24 +387,15 @@ function acceptOpportunity(inboxId, userId, io) {
     };
   }
 
-  const event = getEventById(row.event_id);
-  const { object } = orchestration.claimAcceptedOpportunity(event, userId, io);
+  const run = require('../orchestration').run(
+    'event.claim_opportunity',
+    { inboxId, ownerId: userId },
+    { actor: userId, actorRole: 'client', io }
+  );
 
-  // Journal billet uniquement si c'est un event_ticket (cohérent avec billetterie).
-  if (object.kind === 'event_ticket') {
-    journal(event.id, {
-      type: JOURNAL_EVENT_TYPE.TICKET_ISSUED,
-      fromStatus: event.status,
-      toStatus: event.status,
-      actor: userId,
-      payload: { objectId: object.id, source: 'opportunity_accept' },
-    });
-    bus.emit(bus.DOMAIN_EVENT.TICKET_ISSUED, { event, ownerId: userId, objectId: object.id });
-  }
-
-  diffusion.markInboxAccepted(inboxId, userId, { ticketObjectId: object.id });
+  const objectId = run.results['wallet.claimOpportunity'].objectId;
   const inbox = diffusion.listInbox(userId).find((i) => i.id === inboxId) || null;
-  return { replayed: false, inbox, ticket: object };
+  return { replayed: false, inbox, ticket: wallet.getObjectById(objectId) };
 }
 
 function dismissOpportunity(inboxId, userId) {
@@ -561,6 +575,7 @@ module.exports = {
   listOpportunityInbox,
   countOpportunityInbox,
   acceptOpportunity,
+  journalTicketIssued,
   dismissOpportunity,
   // Orchestration des organes
   issueTicket,

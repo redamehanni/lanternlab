@@ -49,6 +49,10 @@ const MODULES = [
   // ── Piloter ──
   { id: 'store', familyId: 'piloter', label: 'Mon commerce',  icon: 'storefront-outline',  route: 'CreateStore',                        enabled: true },
   { id: 'stats', familyId: 'piloter', label: 'Statistiques',  icon: 'stats-chart-outline', route: 'MerchantStats', entitlement: 'store', enabled: true },
+  // « Mes logiciels » — un module comme un autre, et c'est voulu : brancher sa caisse ou
+  // coller un tableur est un geste de pilotage du commerce, pas un réglage technique caché.
+  // L'écran se dessine d'après ce que le backend décrit : aucun éditeur n'est nommé ici.
+  { id: 'integrations', familyId: 'piloter', label: 'Mes logiciels', icon: 'sync-outline', route: 'MesIntegrations', entitlement: 'store', enabled: true },
 ];
 
 /** Un module est-il déverrouillé pour ce commerçant (capacités satisfaites) ? */

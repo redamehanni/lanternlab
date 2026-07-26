@@ -1,8 +1,7 @@
 const db = require('../db');
-const { ORDER_STATUS, canClientCancel } = require('./orderStatus');
-const { getFullOrder } = require('./orders');
+const { ORDER_STATUS } = require('./orders/lifecycle');
+const { getFullOrder } = require('./orders/projection');
 const { getOrCreateConversation } = require('./conversations');
-const { archiveEphemeralForOrder } = require('./communicationEngine');
 const { OFFER_MODE } = require('../config/dispatch');
 
 const MISSION_ACTIVE = 'accepted';
@@ -126,7 +125,10 @@ function emitOrderUpdate(io, order) {
 
 /** Attribution immédiate au premier livreur en ligne disponible */
 function assignOrderToDriver(orderId, driverId, io) {
-  const result = db.transaction(() => {
+  const { txn } = require('./kernel');
+  const orderEngine = require('./orders/orderEngine');
+
+  const result = txn.run(() => {
     const order = db.prepare(`
       SELECT o.*, m.id as mission_id
       FROM orders o
@@ -152,21 +154,22 @@ function assignOrderToDriver(orderId, driverId, io) {
         )
     `).run(driverId, MISSION_ACTIVE, order.mission_id, driverId);
 
-    db.prepare(`
-      UPDATE orders SET status = ?, updated_at = datetime('now') WHERE id = ?
-    `).run(ORDER_STATUS.DRIVER_ASSIGNED, orderId);
+    // Le statut de la commande passe par le moteur : le dispatch décide QUI livre,
+    // l'organe Orders reste seul juge de ce qu'une commande peut devenir. Une
+    // transition impossible fait échouer l'affectation entière.
+    orderEngine.transitionOrder(orderId, ORDER_STATUS.DRIVER_ASSIGNED, { actor: driverId });
 
     const full = getFullMission(order.mission_id);
     getOrCreateConversation(orderId, 'client_driver', full.client_id, driverId);
     getOrCreateConversation(orderId, 'merchant_driver', full.merchant_id, driverId);
     return full;
-  })();
+  });
 
   if (!result) return null;
 
   if (io) {
-    const order = getFullOrder(orderId);
-    emitOrderUpdate(io, order);
+    // `order:status_updated` n'est plus émis ici : l'abonné au fait
+    // `order.transitioned` s'en charge, une seule fois, après commit.
     io.to(`user_${driverId}`).emit('mission:assigned', { mission: result });
     io.to(`order_${result.order_id}`).emit('mission:accepted', { mission: result });
     io.to(`merchant_${result.merchant_id}`).emit('mission:accepted', { mission: result });
@@ -197,90 +200,41 @@ function tryDispatchNewOrder(orderId, io, options = {}) {
   return assignOrderToDriver(orderId, driver.id, io);
 }
 
-function createOrderWithDispatch({
-  orderId, clientId, productId, storeId, quantity, totalPrice, deliveryAddress, estimatedMinutes,
-}) {
+/**
+ * Crée la mission de livraison d'une commande.
+ *
+ * Appelé par l'organe Orders DANS sa transaction de création. C'est ici et nulle
+ * part ailleurs que naît une ligne de `missions` : le dispatch est propriétaire de
+ * cette table (Loi 3), l'organe Orders la lui délègue.
+ *
+ * @returns {string} identifiant de la mission créée
+ */
+function createMissionForOrder(orderId) {
   const missionId = db.generateId();
-  db.transaction(() => {
-    db.prepare(`
-      INSERT INTO orders (id, client_id, product_id, store_id, quantity, total_price, status, delivery_address, estimated_minutes)
-      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
-    `).run(
-      orderId, clientId, productId, storeId, quantity, totalPrice,
-      ORDER_STATUS.PENDING_DRIVER, deliveryAddress, estimatedMinutes,
-    );
-    db.prepare(`INSERT INTO missions (id, order_id, status) VALUES (?, ?, 'available')`).run(missionId, orderId);
-  })();
-  return {
-    order: getFullOrder(orderId),
-    mission: db.prepare('SELECT * FROM missions WHERE id = ?').get(missionId),
-    missionId,
-  };
+  db.prepare("INSERT INTO missions (id, order_id, status) VALUES (?, ?, 'available')")
+    .run(missionId, orderId);
+  return missionId;
 }
 
-function cancelOrderByClient(orderId, clientId, io) {
-  const row = db.prepare(`
-    SELECT o.*, m.id as mission_id, m.driver_id, m.offered_to_driver_id,
-           m.status as mission_status, p.quantity as product_stock
-    FROM orders o
-    JOIN missions m ON m.order_id = o.id
-    JOIN products p ON o.product_id = p.id
-    WHERE o.id = ? AND o.client_id = ?
-  `).get(orderId, clientId);
-
-  if (!row) return { error: 'Commande introuvable', status: 404 };
-  if (!canClientCancel(row.status)) {
-    return { error: 'Cette commande ne peut plus être annulée.', status: 409 };
-  }
-
-  const driverId = row.driver_id;
-  const offeredDriverId = row.offered_to_driver_id;
-  const missionId = row.mission_id;
-
-  const { clearOfferTimeout } = require('./dispatchOffer');
-  clearOfferTimeout(missionId);
-
-  db.transaction(() => {
-    db.prepare(`UPDATE orders SET status = ?, updated_at = datetime('now') WHERE id = ?`)
-      .run(ORDER_STATUS.CANCELLED, orderId);
-    db.prepare(`
-      UPDATE missions
-      SET status = 'cancelled', driver_id = NULL, offered_to_driver_id = NULL,
-          offer_expires_at = NULL, updated_at = datetime('now')
-      WHERE order_id = ?
-    `).run(orderId);
-    db.prepare(`UPDATE products SET quantity = quantity + ? WHERE id = ?`)
-      .run(row.quantity, row.product_id);
-  })();
-
-  const order = getFullOrder(orderId);
-  archiveEphemeralForOrder(orderId);
-
-  if (io) {
-    emitOrderUpdate(io, order);
-    io.to(`order_${orderId}`).emit('order:cancelled', { orderId, order });
-    io.to(`merchant_${order.merchant_id}`).emit('order:cancelled', { orderId, order });
-
-    const cancelledPayload = { missionId, orderId, order };
-    const notifiedDrivers = new Set();
-    for (const id of [driverId, offeredDriverId]) {
-      if (id && !notifiedDrivers.has(id)) {
-        io.to(`user_${id}`).emit('mission:cancelled', cancelledPayload);
-        notifiedDrivers.add(id);
-        assignPendingOrdersToDriver(id, io);
-      }
-    }
-
-    io.emit('product:stock_updated', {
-      productId: row.product_id,
-      quantity: row.product_stock + row.quantity,
-      storeId: row.store_id,
-    });
-  }
-  return { order };
+/**
+ * Libère la mission d'une commande annulée : plus de livreur, plus d'offre.
+ *
+ * Appelé par l'organe Orders DANS sa transaction d'annulation. Ne touche NI la
+ * commande NI le stock, et n'annule pas le minuteur d'offre : celui-ci vit en
+ * mémoire et doit être coupé après commit, pas pendant.
+ */
+function releaseMissionForOrder(orderId) {
+  db.prepare(`
+    UPDATE missions
+    SET status = 'cancelled', driver_id = NULL, offered_to_driver_id = NULL,
+        offer_expires_at = NULL, updated_at = datetime('now')
+    WHERE order_id = ?
+  `).run(orderId);
 }
 
 module.exports = {
+  createMissionForOrder,
+  releaseMissionForOrder,
   driverHasAcceptedMission,
   driverHasPendingOffer,
   driverIsBusyForNewOffer,
@@ -290,8 +244,6 @@ module.exports = {
   assignOrderToDriver,
   assignPendingOrdersToDriver,
   tryDispatchNewOrder,
-  createOrderWithDispatch,
-  cancelOrderByClient,
   getFullMission,
   emitOrderUpdate,
 };

@@ -4,6 +4,16 @@ import { API_URL } from '../config';
 
 const api = axios.create({ baseURL: API_URL, timeout: 15000 });
 
+/**
+ * Le client HTTP lui-même, partagé avec `api/v1.js`.
+ *
+ * Exporté à l'étape 7 pour que la surface versionnée hérite des intercepteurs de ce
+ * fichier — jeton en en-tête, purge de session sur 401. Une seconde instance d'axios
+ * aurait donné deux comportements d'authentification à maintenir, et le second aurait
+ * fini par diverger sans que personne s'en aperçoive avant une déconnexion inexpliquée.
+ */
+export const client = api;
+
 /** Callback unique (AppContext) pour purger une session JWT morte. */
 let unauthorizedHandler = null;
 export function onUnauthorized(handler) {
@@ -204,6 +214,28 @@ export const discoverLantern    = (id) => api.post(`/api/events/${id}/discover`)
 export const getIdentityToken = () => api.get('/api/identity/token');
 export const verifyIdentity = (data) => api.post('/api/identity/verify', data);
 export const getIdentityHistory = () => api.get('/api/identity/history');
+
+// ── Intégrations (les logiciels du commerçant) ─────────────────────────────────
+//
+// AUCUN NOM D'ÉDITEUR DANS CE FICHIER, et ce n'est pas un détail de propreté. Le backend
+// décrit ce qu'il faut demander pour brancher chaque logiciel (`form`) ; le mobile lit cette
+// description et dessine. C'est ce qui fait que le prochain logiciel du marché — Lightspeed,
+// SumUp, Zettle, WooCommerce, Sage — n'ajoutera pas une ligne ici.
+export const getIntegrations = (storeId) => api.get(`/api/integration/stores/${storeId}`);
+export const connectIntegration = (storeId, connectorId, payload = {}) =>
+  api.post(`/api/integration/stores/${storeId}/connect/${connectorId}`, payload);
+export const disconnectIntegration = (storeId, connectorId) =>
+  api.delete(`/api/integration/stores/${storeId}/connectors/${connectorId}`);
+export const reconcileIntegrations = (storeId, full = false) =>
+  api.post(`/api/integration/stores/${storeId}/reconcile`, { full });
+export const inspectCatalogImport = (storeId, document) =>
+  api.post(`/api/integration/stores/${storeId}/import/inspect`, { document });
+export const importCatalog = (storeId, document) =>
+  api.post(`/api/integration/stores/${storeId}/import`, { document });
+export const getIntegrationConflicts = (storeId, pendingOnly = false) =>
+  api.get(`/api/integration/stores/${storeId}/conflicts${pendingOnly ? '?pending=1' : ''}`);
+export const acknowledgeIntegrationConflict = (conflictId) =>
+  api.post(`/api/integration/conflicts/${conflictId}/acknowledge`);
 
 // ── Conversations (legacy alias) ───────────────────────────────────────────────
 export const getConversations     = () => api.get('/api/conversations');

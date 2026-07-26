@@ -2,6 +2,7 @@ const jwt = require('jsonwebtoken');
 const db = require('../db');
 const { JWT_SECRET } = require('../middleware/auth');
 const { assignPendingOrdersToDriver } = require('../lib/dispatch');
+const { canViewOrder, canAccessConversation } = require('../lib/access');
 
 module.exports = function setupSocket(io) {
   // Authentification de chaque connexion socket
@@ -45,9 +46,17 @@ module.exports = function setupSocket(io) {
 
     // ── Événements émis par le client mobile ──────────────────────────────
 
-    // Rejoindre la room d'une commande (client/livreur/commerçant pendant le suivi)
-    socket.on('join:order', (orderId) => {
+    // Rejoindre la room d'une commande (client/livreur/commerçant pendant le suivi).
+    // Une room de commande diffuse la position du livreur et l'adresse de
+    // livraison : y entrer sans être partie prenante est une fuite de données.
+    socket.on('join:order', (orderId, ack) => {
+      if (!canViewOrder(socket.user, orderId)) {
+        console.warn(`[Socket] ${name} refusé sur order_${orderId}`);
+        if (typeof ack === 'function') ack({ ok: false, error: 'Accès refusé' });
+        return;
+      }
       socket.join(`order_${orderId}`);
+      if (typeof ack === 'function') ack({ ok: true });
       console.log(`[Socket] ${name} a rejoint order_${orderId}`);
     });
 
@@ -56,8 +65,14 @@ module.exports = function setupSocket(io) {
     });
 
     // Rejoindre / quitter la room d'UNE conversation précise (messagerie séparée)
-    socket.on('join:conversation', (conversationId) => {
+    socket.on('join:conversation', (conversationId, ack) => {
+      if (!canAccessConversation(socket.user, conversationId)) {
+        console.warn(`[Socket] ${name} refusé sur conv_${conversationId}`);
+        if (typeof ack === 'function') ack({ ok: false, error: 'Accès refusé' });
+        return;
+      }
       socket.join(`conv_${conversationId}`);
+      if (typeof ack === 'function') ack({ ok: true });
     });
     socket.on('leave:conversation', (conversationId) => {
       socket.leave(`conv_${conversationId}`);
@@ -80,9 +95,13 @@ module.exports = function setupSocket(io) {
       console.log(`[Socket] Livreur ${name} est HORS LIGNE`);
     });
 
-    // Indicateur de saisie dans le chat (par conversation)
-    socket.on('chat:typing', ({ conversationId }) => {
-      if (conversationId) socket.to(`conv_${conversationId}`).emit('chat:typing', { userId: id, name });
+    // Indicateur de saisie dans le chat (par conversation).
+    // `socket.to()` diffuse dans une room même si l'émetteur n'y est pas : sans ce
+    // contrôle, n'importe qui pourrait se faire passer pour un participant.
+    socket.on('chat:typing', ({ conversationId } = {}) => {
+      if (!conversationId) return;
+      if (!canAccessConversation(socket.user, conversationId)) return;
+      socket.to(`conv_${conversationId}`).emit('chat:typing', { userId: id, name });
     });
 
     socket.on('disconnect', () => {

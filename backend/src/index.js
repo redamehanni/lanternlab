@@ -1,110 +1,95 @@
-require('./db'); // Initialise le schéma SQLite au démarrage
+/**
+ * Point d'entrée de production — écoute réseau, journalisation, arrêt propre.
+ *
+ * Le câblage de l'application vit dans `app.js` : ce fichier ne s'occupe que du
+ * cycle de vie du process.
+ */
+
+// `config/env` valide la configuration et fait échouer le démarrage si un secret
+// obligatoire manque : il doit être chargé AVANT tout le reste.
+const config = require('./config/env');
+const db = require('./db'); // Initialise le schéma SQLite au démarrage
 const { OFFER_MODE } = require('./config/dispatch');
+const logger = require('./lib/logger');
+const { isSandbox } = require('./lib/sandbox');
+const { createServer } = require('./app');
 
-const express = require('express');
-const http = require('http');
-const { Server: SocketIO } = require('socket.io');
-const cors = require('cors');
-const path = require('path');
-
-const authRoutes = require('./routes/auth');
-const storesRoutes = require('./routes/stores');
-const productsRoutes = require('./routes/products');
-const ordersRoutes = require('./routes/orders');
-const missionsRoutes = require('./routes/missions');
-const messagesRoutes = require('./routes/messages');
-const conversationsRoutes = require('./routes/conversations');
-const communicationRoutes = require('./routes/communication');
-const usersRoutes = require('./routes/users');
-const cartRoutes = require('./routes/cart');
-const favoritesRoutes = require('./routes/favorites');
-const promotionsRoutes = require('./routes/promotions');
-const driversRoutes = require('./routes/drivers');
-const merchantsRoutes = require('./routes/merchants');
-const walletRoutes = require('./routes/wallet');
-const identityRoutes = require('./routes/identity');
-const eventsRoutes = require('./routes/events');
-const adminRoutes = require('./routes/admin');
-const setupSocket = require('./socket/handlers');
-
-const app = express();
-const server = http.createServer(app);
-
-// ── Configuration ────────────────────────────────────────────────────────────
-
-app.use(cors({ origin: '*', credentials: true }));
-app.use(express.json());
-app.use(express.urlencoded({ extended: true }));
-
-// Servir les images uploadées
-app.use('/uploads', express.static(path.join(__dirname, '../uploads')));
-
-// ── Socket.io ────────────────────────────────────────────────────────────────
-
-const io = new SocketIO(server, {
-  cors: { origin: '*', methods: ['GET', 'POST', 'PATCH', 'PUT', 'DELETE'] },
-  transports: ['websocket', 'polling'],
-});
-
-// Rendre io accessible dans toutes les routes via req.app.get('io')
-app.set('io', io);
-setupSocket(io);
-
-// ── Routes HTTP ───────────────────────────────────────────────────────────────
-
-app.use('/api/auth', authRoutes);
-app.use('/api/users', usersRoutes);
-app.use('/api/stores', storesRoutes);
-app.use('/api/products', productsRoutes);
-app.use('/api/orders', ordersRoutes);
-app.use('/api/missions', missionsRoutes);
-app.use('/api/messages', messagesRoutes);
-app.use('/api/conversations', conversationsRoutes);
-app.use('/api/communication', communicationRoutes);
-app.use('/api/cart', cartRoutes);
-app.use('/api/favorites', favoritesRoutes);
-app.use('/api/promotions', promotionsRoutes);
-app.use('/api/drivers', driversRoutes);
-app.use('/api/merchants', merchantsRoutes);
-app.use('/api/wallet', walletRoutes);
-app.use('/api/identity', identityRoutes);
-app.use('/api/events', eventsRoutes);
-app.use('/api/admin', adminRoutes);
-
-// Healthcheck
-app.get('/health', (req, res) => res.json({ status: 'ok', time: new Date().toISOString() }));
-
-// Page d'accueil (évite "Cannot GET /" dans le navigateur)
-app.get('/', (req, res) => {
-  res.json({
-    name: 'Ma Zone API',
-    status: 'running',
-    message: 'Le backend fonctionne. L\'application mobile se lance via Expo (port 8081), pas ici.',
-    health: '/health',
-    docs: {
-      auth: '/api/auth',
-      products: '/api/products',
-      orders: '/api/orders',
-      promotions: '/api/promotions',
-    },
-    mobile: 'cd mobile && npm run ios',
-  });
-});
+const { server, io } = createServer();
 
 // ── Démarrage ─────────────────────────────────────────────────────────────────
 
-const PORT = process.env.PORT || 4000;
-// MODE TEST MAC UNIQUEMENT  → décommenter cette ligne (téléphones ne peuvent pas accéder)
-// server.listen(PORT, '127.0.0.1', () => {
+// L'hôte vient de la configuration : loopback en production (TLS terminé par un
+// reverse proxy), 0.0.0.0 en développement pour que les téléphones du Wi-Fi
+// puissent joindre le backend.
+server.listen(config.port, config.host, () => {
+  logger.info('Backend démarré', {
+    env: config.nodeEnv,
+    host: config.host,
+    port: config.port,
+    dispatchOfferMode: OFFER_MODE ? 'on' : 'off',
+    sandbox: isSandbox(),
+    corsOrigins: config.corsOrigins,
+  });
 
-// MODE MULTI-APPAREILS (Mac + téléphones sur le même Wi-Fi) → décommenter cette ligne
-server.listen(PORT, '0.0.0.0', () => {
-  console.log('\n╔═══════════════════════════════════════╗');
-  console.log('║         MA ZONE — Backend API         ║');
-  console.log('╠═══════════════════════════════════════╣');
-  console.log(`║  URL : http://localhost:${PORT}            ║`);
-  console.log(`║  Dispatch offer mode : ${OFFER_MODE ? 'ON (popup 20s)' : 'OFF (direct)'}   ║`);
-  console.log('║                                       ║');
-  console.log('║  Lancez l\'app : cd mobile && npm run ios');
-  console.log('╚═══════════════════════════════════════╝\n');
+  if (!config.isProduction) {
+    console.log('\n╔═══════════════════════════════════════╗');
+    console.log('║         MA ZONE — Backend API         ║');
+    console.log('╠═══════════════════════════════════════╣');
+    console.log(`║  URL : http://localhost:${config.port}            ║`);
+    console.log(`║  Dispatch offer mode : ${OFFER_MODE ? 'ON (popup 20s)' : 'OFF (direct)'}   ║`);
+    console.log(`║  Bac à Sable : ${isSandbox() ? 'ACTIF' : 'inactif'}                  ║`);
+    console.log('║                                       ║');
+    console.log('║  Lancez l\'app : cd mobile && npm run ios');
+    console.log('╚═══════════════════════════════════════╝\n');
+  }
+});
+
+// ── Arrêt propre ──────────────────────────────────────────────────────────────
+// Sans cela, un redéploiement coupe les requêtes en vol et laisse le WAL SQLite
+// dans un état qui rallonge la récupération au démarrage suivant.
+
+let shuttingDown = false;
+
+function shutdown(signal) {
+  if (shuttingDown) return;
+  shuttingDown = true;
+  logger.info('Arrêt demandé', { signal });
+
+  const forceExit = setTimeout(() => {
+    logger.warn('Arrêt forcé après délai de grâce');
+    process.exit(1);
+  }, 10_000);
+  forceExit.unref();
+
+  // Les minuteries d'offre de course retiennent l'event loop jusqu'à leur
+  // échéance (20 s) : sans cela, chaque redéploiement attend la dernière offre.
+  require('./lib/dispatchOffer').clearAllOfferTimeouts();
+
+  io.close(() => {
+    server.close(() => {
+      try {
+        db.pragma('wal_checkpoint(TRUNCATE)');
+        db.close();
+      } catch (err) {
+        logger.reportError('Fermeture base échouée', err);
+      }
+      logger.info('Arrêt terminé');
+      process.exit(0);
+    });
+  });
+}
+
+process.on('SIGTERM', () => shutdown('SIGTERM'));
+process.on('SIGINT', () => shutdown('SIGINT'));
+
+process.on('unhandledRejection', (reason) => {
+  logger.reportError(
+    'Promesse rejetée non gérée',
+    reason instanceof Error ? reason : new Error(String(reason))
+  );
+});
+
+process.on('uncaughtException', (err) => {
+  logger.reportError('Exception non capturée', err);
+  shutdown('uncaughtException');
 });

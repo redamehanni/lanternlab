@@ -4,6 +4,7 @@ const path = require('path');
 const db = require('../db');
 const { verifyToken, requireRole } = require('../middleware/auth');
 const { enrichProductWithPromo } = require('../lib/promotions');
+const inventory = require('../lib/inventory');
 
 const router = express.Router();
 
@@ -102,17 +103,22 @@ router.post('/', verifyToken, requireRole('merchant'), upload.single('image'), (
   const id = db.generateId();
   const image_url = req.file ? `/uploads/${req.file.filename}` : null;
 
+  // `quantity` est inséré à 0 : c'est un champ CALCULÉ depuis l'étape 4 (Loi 11).
+  // Le stock déclaré à la création devient le `on_hand` de l'organe Inventory, qui
+  // rétablit lui-même la projection.
   db.prepare(`
     INSERT INTO products (id, store_id, name, description, price, quantity, category, image_url, barcode)
-    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
-  `).run(id, store.id, name, description || null, parseFloat(price), parseInt(quantity) || 0, category || null, image_url, barcode || null);
+    VALUES (?, ?, ?, ?, ?, 0, ?, ?, ?)
+  `).run(id, store.id, name, description || null, parseFloat(price), category || null, image_url, barcode || null);
+
+  inventory.ensureLevel(id, null, { onHand: parseInt(quantity, 10) || 0 });
 
   const product = db.prepare('SELECT * FROM products WHERE id = ?').get(id);
   req.app.get('io').emit('product:created', { product, store });
   res.status(201).json({ product });
 });
 
-// PATCH /api/products/:id/stock — modifier le stock
+// PATCH /api/products/:id/stock — le commerçant déclare son stock
 router.patch('/:id/stock', verifyToken, requireRole('merchant'), (req, res) => {
   const { quantity, delta } = req.body;
   const p = db.prepare(`
@@ -121,20 +127,59 @@ router.patch('/:id/stock', verifyToken, requireRole('merchant'), (req, res) => {
   `).get(req.params.id, req.user.id);
   if (!p) return res.status(404).json({ error: 'Produit introuvable' });
 
-  let newQty;
-  if (typeof quantity === 'number') {
-    newQty = Math.max(0, quantity);
-  } else if (typeof delta === 'number') {
-    newQty = Math.max(0, p.quantity + delta);
-  } else {
-    return res.status(400).json({ error: 'quantity ou delta requis' });
+  try {
+    // L'écran commerçant affiche `products.quantity`, donc du VENDABLE : le nombre
+    // renvoyé est interprété dans la même unité que celle affichée, sinon le stock
+    // fondrait à chaque enregistrement dès qu'une commande est en cours.
+    let level;
+    if (typeof quantity === 'number') {
+      level = inventory.declareSellable({
+        productId: p.id,
+        sellable: Math.max(0, quantity),
+        actor: req.user.id,
+        reason: 'saisie commerçant',
+      });
+    } else if (typeof delta === 'number' && delta !== 0) {
+      level = inventory.adjust({
+        productId: p.id,
+        delta,
+        actor: req.user.id,
+        reason: 'ajustement commerçant',
+      });
+    } else {
+      return res.status(400).json({ error: 'quantity ou delta requis' });
+    }
+
+    const updated = db.prepare('SELECT * FROM products WHERE id = ?').get(p.id);
+    // Étape 7 : `available` porte le nom juste, `quantity` reste pour les écrans déjà
+    // installés. Même nombre, deux noms, une seule date de retrait (lib/sunset.js).
+    req.app.get('io').emit('product:stock_updated', {
+      productId: p.id,
+      storeId: p.store_id,
+      available: level.available,
+      quantity: level.available,
+    });
+    res.json({ product: updated, stock: level });
+  } catch (err) {
+    if (err?.status) return res.status(err.status).json({ error: err.message });
+    throw err;
   }
+});
 
-  db.prepare('UPDATE products SET quantity = ? WHERE id = ?').run(newQty, p.id);
-  const updated = db.prepare('SELECT * FROM products WHERE id = ?').get(p.id);
+// GET /api/products/:id/stock — état de stock détaillé (commerçant uniquement)
+router.get('/:id/stock', verifyToken, requireRole('merchant'), (req, res) => {
+  const p = db.prepare(`
+    SELECT p.* FROM products p JOIN stores s ON p.store_id = s.id
+    WHERE p.id = ? AND s.merchant_id = ?
+  `).get(req.params.id, req.user.id);
+  if (!p) return res.status(404).json({ error: 'Produit introuvable' });
 
-  req.app.get('io').emit('product:stock_updated', { productId: p.id, quantity: newQty, storeId: p.store_id });
-  res.json({ product: updated });
+  // LOI 12 : `on_hand` et `reserved` sont des données de gestion. Un client ne voit
+  // jamais cette route — seulement `available`, à travers `products.quantity`.
+  res.json({
+    stock: inventory.getLevel(p.id) || inventory.ensureLevel(p.id),
+    movements: inventory.readMovements(p.id, { limit: 50 }),
+  });
 });
 
 // PUT /api/products/:id — modifier les infos du produit
@@ -149,17 +194,28 @@ router.put('/:id', verifyToken, requireRole('merchant'), upload.single('image'),
   const image_url = req.file ? `/uploads/${req.file.filename}` : p.image_url;
 
   db.prepare(`
-    UPDATE products SET name=?, description=?, price=?, quantity=?, category=?, image_url=?, barcode=? WHERE id=?
+    UPDATE products SET name=?, description=?, price=?, category=?, image_url=?, barcode=? WHERE id=?
   `).run(
     name || p.name,
     description ?? p.description,
     price ? parseFloat(price) : p.price,
-    quantity !== undefined ? parseInt(quantity) : p.quantity,
     category ?? p.category,
     image_url,
     barcode ?? p.barcode,
     p.id
   );
+
+  // Le stock passe par l'organe, même quand il arrive dans le même formulaire que
+  // le nom et le prix : sinon la fiche produit redevient un chemin d'écriture
+  // parallèle sur un champ calculé.
+  if (quantity !== undefined) {
+    inventory.declareSellable({
+      productId: p.id,
+      sellable: Math.max(0, parseInt(quantity, 10) || 0),
+      actor: req.user.id,
+      reason: 'fiche produit modifiée',
+    });
+  }
 
   const updated = db.prepare('SELECT * FROM products WHERE id = ?').get(p.id);
   req.app.get('io').emit('product:updated', { product: updated });

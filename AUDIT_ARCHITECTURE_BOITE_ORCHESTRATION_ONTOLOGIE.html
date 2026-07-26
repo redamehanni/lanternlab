@@ -1,0 +1,615 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Audit d'architecture — Boîte d'orchestration & hypothèse ontologie</title>
+<style>
+  @page { margin: 16mm 14mm; }
+  body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Helvetica, Arial, sans-serif; font-size: 10.5pt; line-height: 1.45; color: #1a1a1a; max-width: 100%; }
+  h1 { font-size: 20pt; border-bottom: 2px solid #0f2d5c; padding-bottom: 8px; color: #0f2d5c; page-break-after: avoid; }
+  h2 { font-size: 14pt; margin-top: 22px; color: #0f2d5c; border-bottom: 1px solid #e5e7eb; padding-bottom: 4px; page-break-after: avoid; }
+  h3 { font-size: 11.5pt; margin-top: 14px; color: #1a4a8a; page-break-after: avoid; }
+  table { border-collapse: collapse; width: 100%; margin: 10px 0; font-size: 9pt; page-break-inside: avoid; }
+  th, td { border: 1px solid #d1d5db; padding: 5px 7px; text-align: left; vertical-align: top; }
+  th { background: #f3f4f6; font-weight: 600; }
+  code { background: #f3f4f6; padding: 1px 4px; border-radius: 3px; font-size: 8.5pt; }
+  pre { background: #f8fafc; border: 1px solid #e5e7eb; border-radius: 6px; padding: 10px; overflow-x: auto; font-size: 8pt; line-height: 1.35; white-space: pre-wrap; word-break: break-word; page-break-inside: avoid; }
+  pre code { background: none; padding: 0; }
+  blockquote { border-left: 4px solid #0f2d5c; margin: 10px 0; padding: 6px 14px; background: #f0f4f8; color: #1e3a5f; }
+  hr { border: none; border-top: 1px solid #e5e7eb; margin: 18px 0; }
+  ul, ol { padding-left: 22px; }
+  li { margin-bottom: 3px; }
+  p { margin: 8px 0; }
+  .pdf-note { display: none; }
+  @media screen {
+    .pdf-note { display: block; background: #eff6ff; border: 1px solid #bfdbfe; border-radius: 8px; padding: 12px 16px; margin-bottom: 24px; color: #1e3a8a; }
+  }
+</style>
+</head>
+<body>
+<div class="pdf-note">
+  <strong>Lecture dans Cursor / navigateur :</strong> ce fichier HTML est la version lisible du plan.
+  Pour le PDF, ouvrez <code>AUDIT_ARCHITECTURE_BOITE_ORCHESTRATION_ONTOLOGIE.pdf</code> depuis le Finder (clic droit → Ouvrir avec Aperçu)
+  ou double-cliquez le fichier <code>Ouvrir_*_PDF.command</code> correspondant à la racine du projet.
+</div>
+<h1>Audit d'architecture — Boîte d'orchestration &amp; hypothèse ontologie</h1>
+<table>
+<thead>
+<tr>
+<th></th>
+<th></th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><strong>Nature</strong></td>
+<td>Audit d'architecture (posture CTO)</td>
+</tr>
+<tr>
+<td><strong>Date</strong></td>
+<td>2026-07-25</td>
+</tr>
+<tr>
+<td><strong>Auteur</strong></td>
+<td>Cursor Reda</td>
+</tr>
+<tr>
+<td><strong>Contexte</strong></td>
+<td>Chantier « Fondation API compatible tous logiciels » — nouvelle hypothèse ontologie compilée</td>
+</tr>
+<tr>
+<td><strong>Références</strong></td>
+<td>FD-000 · FD-001 · Plan_Conception_API_Compatible_Logiciels_Commerciaux_V1 · walletRegistry.js · eventRegistry.js</td>
+</tr>
+<tr>
+<td><strong>Statut</strong></td>
+<td>Document d'analyse — décision recommandée, non validée humainement</td>
+</tr>
+</tbody>
+</table>
+<hr />
+<h2>Verdict en une phrase</h2>
+<p><strong>L'intuition est juste, l'outil est faux.</strong> Séparer la connaissance métier déclarative de son exécution est exactement la bonne idée — Ma Zone le fait déjà partiellement. Mais formaliser cette connaissance en <strong>ontologie</strong> puis écrire un <strong>compilateur ontologie → règles</strong> est, pour Ma Zone en 2026, une fausse bonne idée : coût d'un formalisme conçu pour un autre problème, équipe de deux personnes, zéro commerçant en production.</p>
+<p><strong>Recommandation : ne pas signer cette architecture.</strong> Signer à la place une architecture CDM + registres déclaratifs + machines à états + process manager + Outbox (détaillée en §6–8).</p>
+<hr />
+<h2>0. Trois idées empilées — ne pas les confondre</h2>
+<p>Le message initial contient trois propositions de niveaux très différents. Les évaluer ensemble mène à une mauvaise décision.</p>
+<table>
+<thead>
+<tr>
+<th>#</th>
+<th>Proposition</th>
+<th>Verdict</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>1</td>
+<td><strong>Stratégie</strong> : intercaler Ma Zone entre le commerçant et sa régie logicielle, puis substituer brique par brique</td>
+<td><strong>Excellente</strong> — pattern Strangler Fig, meilleur atout stratégique</td>
+</tr>
+<tr>
+<td>2</td>
+<td><strong>Principe technique</strong> : connaissance métier déclarative, exécution compilée/rapide</td>
+<td><strong>Juste — et déjà partiellement fait</strong> dans le code</td>
+</tr>
+<tr>
+<td>3</td>
+<td><strong>Implémentation</strong> : ontologie formelle + compilateur vers règles d'exécution</td>
+<td><strong>À rejeter</strong> au stade actuel</td>
+</tr>
+</tbody>
+</table>
+<p>Le risque : la qualité de (1) et (2) sert de caution à (3). C'est le mécanisme qui produit les architectures qu'on ne peut plus maintenir trois ans plus tard.</p>
+<hr />
+<h2>1. Pertinente ou fausse bonne idée ?</h2>
+<p><strong>Fausse bonne idée</strong>, pour quatre raisons dont la première est décisive.</p>
+<h3>1.1 Une ontologie suppose un monde ouvert. Le métier Ma Zone est un monde fermé.</h3>
+<p>Les ontologies (OWL, RDF, reasoners type HermiT/Pellet) reposent sur l'<strong>hypothèse du monde ouvert</strong> : ce qui n'est pas connu n'est pas faux, c'est inconnu. Puissant pour intégrer des vocabulaires hétérogènes écrits par des gens qui ne se parlent pas.</p>
+<p>Le domaine Ma Zone est un monde <strong>fermé</strong> et transactionnel :</p>
+<ul>
+<li>« Cette unité n'est pas réservée » doit signifier <em>elle n'est pas réservée</em>, pas <em>on ne sait pas</em>.</li>
+<li><code>available = on_hand - reserved - safety_buffer</code> doit être vrai <strong>maintenant</strong>, dans une transaction, avec un verrou.</li>
+<li>Une survente n'est pas une inconsistance logique à signaler — c'est de l'argent perdu et un client furieux.</li>
+</ul>
+<p>On peut forcer le monde fermé (SHACL, contraintes d'unicité, closure axioms) — mais on paie le prix d'OWL sans en toucher les bénéfices.</p>
+<h3>1.2 Une ontologie décrit ce qui <em>est</em>. L'orchestration décrit ce qu'il <em>faut faire</em>.</h3>
+<p>Erreur de catégorie fréquente et coûteuse.</p>
+<p>Une ontologie sait : « une Commande a des Lignes », « un Billet est un Objet Numérique ». Elle sait classifier, subsumer, détecter une incohérence.</p>
+<p>Elle ne sait pas exprimer, nativement et de façon exécutable :</p>
+<ul>
+<li>appelle l'API Shopify, avec un <code>Idempotency-Key</code>, retry exponentiel, timeout 3 s ;</li>
+<li>si l'appel échoue après le débit du <code>reserved</code>, <strong>compense</strong> en libérant la réservation ;</li>
+<li>si le connecteur ne déclare pas la capacité <code>push_sales</code>, saute cette étape et notifie le commerçant ;</li>
+<li>émets un socket <code>product:stock_updated</code> aux commerçants (<code>on_hand</code>) et aux clients (<code>available</code> seulement).</li>
+</ul>
+<p>Ce sont des <strong>effets de bord ordonnés, faillibles et compensables</strong>. Le vocabulaire : saga / process manager / outbox — pas la logique de description.</p>
+<h3>1.3 Le compilateur est la partie la plus chère et la moins prouvée</h3>
+<p>« Compiler l'ontologie en règles rapides » est la clef de voûte de l'hypothèse, et la brique la moins précisée. Significatif.</p>
+<p>Écrire un compilateur, c'est :</p>
+<ul>
+<li>une phase de build supplémentaire sans CI mature ;</li>
+<li>des artefacts générés à versionner, diffuser, <strong>débugger</strong> ;</li>
+<li>une compétence rare, à maintenir dix ans, à deux.</li>
+</ul>
+<p><strong>Scénario décisif :</strong> 2 h du matin, un commerçant a survendu 4 unités. Avec organes + journal append-only (déjà en place) : lire le journal, lire la fonction, comprendre en dix minutes. Avec ontologie → règles générées : comprendre la règle générée, remonter à l'axiome, vérifier que le build prod correspond à la version lue. Un bug devient une enquête.</p>
+<h3>1.4 Formaliser une connaissance qu'on n'a pas encore</h3>
+<p>Une ontologie est rentable quand le domaine est <strong>stable et connu</strong>, et que le goulot est la cohérence de vocabulaires multiples.</p>
+<p>Situation Ma Zone : zéro commerçant en production, zéro connecteur livré, modèle économique V0 non écrit. On formaliserait des <strong>hypothèses</strong>. Le formalisme ne les rend pas vraies — il les rend coûteuses à changer. Pire des deux mondes : rigidité sans validation terrain.</p>
+<hr />
+<h2>2. Quels problèmes l'idée résout-elle réellement ?</h2>
+<p>Trois problèmes réels visés — tous légitimes, aucun n'exige une ontologie.</p>
+<table>
+<thead>
+<tr>
+<th>Problème</th>
+<th>Description</th>
+<th>Solution sans ontologie</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><strong>Dispersion de la connaissance métier</strong></td>
+<td>« Que se passe-t-il quand une commande est annulée ? » répondu à plusieurs endroits</td>
+<td>CDM typé + registres déclaratifs + organes</td>
+</tr>
+<tr>
+<td><strong>Traduction inter-logiciels</strong></td>
+<td>« Stock » Shopify ≠ Zettle ≠ Lightspeed</td>
+<td>CDM + ACL connecteurs + matrice propriétaire/miroir/calculateur</td>
+</tr>
+<tr>
+<td><strong>Nouveau logiciel sans refactor du cœur</strong></td>
+<td>Ajouter un POS ne doit pas toucher Inventory</td>
+<td><code>connectorRegistry</code> + pattern Open/Closed (déjà Wallet/Event)</td>
+</tr>
+</tbody>
+</table>
+<p>Le CDM du plan Fondation API + les registres existants résolvent déjà ces trois points, à un coût bien inférieur.</p>
+<hr />
+<h2>3. Quels nouveaux problèmes introduit-elle ?</h2>
+<table>
+<thead>
+<tr>
+<th>Problème introduit</th>
+<th>Gravité</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><strong>Deux représentations qui dérivent</strong> (ontologie source + règles générées)</td>
+<td>Élevée</td>
+</tr>
+<tr>
+<td><strong>Débogage à deux niveaux</strong> (règle générée → axiome source)</td>
+<td>Élevée</td>
+</tr>
+<tr>
+<td><strong>Compétence rare à maintenir 10 ans</strong> (bus factor = 1)</td>
+<td>Élevée à 2 personnes</td>
+</tr>
+<tr>
+<td><strong>Build step obligatoire</strong> avant déploiement</td>
+<td>Moyenne</td>
+</tr>
+<tr>
+<td><strong>Tentation de tout mettre dans l'ontologie</strong> (cas particuliers Shopify dans le méta-modèle)</td>
+<td>Élevée</td>
+</tr>
+<tr>
+<td><strong>Perte de lisibilité du code</strong></td>
+<td>Moyenne</td>
+</tr>
+<tr>
+<td><strong>Faux sentiment de complétude</strong> (belle ontologie ≠ métier validé terrain)</td>
+<td>Sournoise</td>
+</tr>
+<tr>
+<td><strong>Contredit FD-000</strong> : « Surface compose, organe décide » — un moteur central re-concentre la décision</td>
+<td>Structurelle</td>
+</tr>
+</tbody>
+</table>
+<hr />
+<h2>4. Ontologie ou approche plus simple ?</h2>
+<p><strong>Approche plus simple et plus robuste : oui — et déjà écrite dans le code.</strong></p>
+<h3>Ce que fait déjà Ma Zone (ontologie-lite)</h3>
+<p><strong>Wallet Registry</strong> (<code>backend/src/lib/walletRegistry.js</code>) :</p>
+<ul>
+<li>Kinds déclaratifs (<code>event_ticket</code>, <code>pickup_ticket</code>, …)</li>
+<li>Transitions d'état par kind</li>
+<li>Capacités avec <code>handledBy: 'wallet' | 'source' | 'device'</code></li>
+<li>Validation fail-fast au boot (<code>validateCapabilityContract</code>)</li>
+</ul>
+<p><strong>Event Registry</strong> (<code>backend/src/lib/eventEngine/eventRegistry.js</code>) :</p>
+<ul>
+<li>Types d'événements déclaratifs</li>
+<li>Cycles de vie par type (<code>lifecycle.js</code>)</li>
+<li>Capacités connues (<code>canTicket</code>, <code>isLantern</code>, …)</li>
+<li>Open/Closed : nouveau type sans toucher le cœur</li>
+</ul>
+<p><strong>Event Lifecycle</strong> (<code>backend/src/lib/eventEngine/lifecycle.js</code>) :</p>
+<ul>
+<li>Graphe de transitions générique</li>
+<li><code>canTransition(typeDef, from, to)</code> — exécution O(1), zéro raisonnement</li>
+</ul>
+<p>C'est <strong>exactement</strong> le schéma décrit (connaissance déclarative → exécution rapide) sans ontologie, sans compilateur, sans build step. La « compilation » = chargement du module + validation au boot.</p>
+<h3>Recommandation : généraliser, pas surcouche</h3>
+<p>Généraliser ce pattern à Inventory et Integration — pas inventer une quatrième couche ontologique au-dessus.</p>
+<h3>Quand une vraie ontologie serait justifiée (déclencheurs futurs)</h3>
+<ol>
+<li>Plus de 15 connecteurs, maintenance des mappings domine la roadmap</li>
+<li>Commerçants configurent eux-mêmes des automatisations sans déploiement</li>
+<li>Assistant IA raisonne sur le domaine (même là : catalogue de commandes typées &gt; logique de description)</li>
+</ol>
+<p>Aucun de ces déclencheurs n'est présent aujourd'hui.</p>
+<hr />
+<h2>5. Construirais-je cette approche pour dix ans et des milliers de commerces ?</h2>
+<p><strong>Non.</strong> L'argument « tenir dix ans » plaide <strong>contre</strong> l'ontologie.</p>
+<p>Ce qui tient dix ans : le nombre de personnes capables de reprendre le système. CDM typé + machines à états + sagas lisibles + adapters isolés = reprenable par tout bon développeur. Pipeline ontologie → compilateur → règles = reprenable par quelqu'un qui a déjà fait ça (peu).</p>
+<p>Ce qui tue les plateformes d'orchestration à dix ans :</p>
+<table>
+<thead>
+<tr>
+<th>Risque réel</th>
+<th>L'ontologie aide ?</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Fiabilité synchronisation (doublons, drift, compensations)</td>
+<td>Non</td>
+</tr>
+<tr>
+<td>Versions d'API tierces qui changent sans prévenir</td>
+<td>Non</td>
+</tr>
+<tr>
+<td>Observabilité (pourquoi ce stock est faux)</td>
+<td>Non</td>
+</tr>
+<tr>
+<td>Migration de données</td>
+<td>Non</td>
+</tr>
+<tr>
+<td>Ajouter un connecteur en une semaine</td>
+<td>Non</td>
+</tr>
+</tbody>
+</table>
+<p>Un bon Outbox, un bon journal et de bons tests aident sur les cinq.</p>
+<hr />
+<h2>6. Architecture recommandée à la place</h2>
+<p>Six décisions structurantes — chaque brique éprouvée, déjà amorcée chez Ma Zone.</p>
+<h3>6.1 Schéma global</h3>
+<pre><code>[Commerçant] → [API v1 Intentions] → [Politiques / invariants]
+                                              ↓
+                                    [Organes : Inventory, Orders, Event, Wallet]
+                                              ↓
+                                    [Process Manager — saga, compensation]
+                                              ↓
+                                    [Outbox / Inbox]
+                                              ↓
+                                    [Connecteurs ACL — toCanonical / fromCanonical]
+                                              ↓
+                                    [Logiciels externes : POS, e-commerce, hub]
+
+[Registres déclaratifs — CDM, lifecycles, capabilities] — lus par toutes les couches, jamais exécutés
+</code></pre>
+<h3>6.2 Les six briques</h3>
+<table>
+<thead>
+<tr>
+<th>#</th>
+<th>Brique</th>
+<th>Rôle</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>1</td>
+<td><strong>CDM typé versionné</strong></td>
+<td>Schémas, invariants, matrice owner/mirror/calculator. Validation Zod/JSON Schema. Pas de comportement.</td>
+</tr>
+<tr>
+<td>2</td>
+<td><strong>Registres déclaratifs</strong></td>
+<td><code>connectorRegistry</code>, <code>movementRegistry</code>, <code>inventoryPolicyRegistry</code> — modèle <code>eventRegistry.js</code>. Fail-fast au boot.</td>
+</tr>
+<tr>
+<td>3</td>
+<td><strong>Machines à états explicites</strong></td>
+<td>Un graphe par agrégat (Orders, Inventory, Event). Pas de graphe universel.</td>
+</tr>
+<tr>
+<td>4</td>
+<td><strong>Intention → Commande</strong></td>
+<td>« Je ferme demain » → <code>CloseStoreExceptionally { storeId, date, reason }</code>. Boîte intelligente côté entrée.</td>
+</tr>
+<tr>
+<td>5</td>
+<td><strong>Process Manager (saga)</strong></td>
+<td>Séquence effets multi-systèmes, compensation, idempotence. Plan = table de correspondance + <code>capabilities()</code> connecteur.</td>
+</tr>
+<tr>
+<td>6</td>
+<td><strong>Moteur de règles (plus tard, borné)</strong></td>
+<td>Promos, seuils réassort, gates publication — variabilité humaine. Invariants stock = fonctions pures + tests.</td>
+</tr>
+</tbody>
+</table>
+<h3>6.3 Coût comparé</h3>
+<table>
+<thead>
+<tr>
+<th>Approche</th>
+<th>Effort estimé</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Architecture recommandée (plan Fondation API + process manager)</td>
+<td>Quelques semaines</td>
+</tr>
+<tr>
+<td>Ontologie + compilateur + règles générées</td>
+<td>Plusieurs mois-homme avant le 1er commerçant servi</td>
+</tr>
+</tbody>
+</table>
+<hr />
+<h2>7. Organisation précise de la « boîte intelligente »</h2>
+<p>Cinq étages. Règle : <strong>on ne remonte jamais</strong>.</p>
+<table>
+<thead>
+<tr>
+<th>Étage</th>
+<th>Rôle</th>
+<th>Ce qu'il ne fait jamais</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><strong>1. Intention</strong></td>
+<td>Traduire geste commerçant → commande typée validée</td>
+<td>Décider du métier</td>
+</tr>
+<tr>
+<td><strong>2. Politique</strong></td>
+<td>Autoriser/refuser, invariants, propriété par attribut</td>
+<td>Appeler un système externe</td>
+</tr>
+<tr>
+<td><strong>3. Organes</strong></td>
+<td>Décider et transiger localement</td>
+<td>Connaître Shopify</td>
+</tr>
+<tr>
+<td><strong>4. Orchestration</strong></td>
+<td>Séquencer effets multi-systèmes, compenser, idempotence</td>
+<td>Règles métier propres à un organe</td>
+</tr>
+<tr>
+<td><strong>5. Transport</strong></td>
+<td>Outbox/Inbox/adapters/webhooks</td>
+<td>Décider quoi que ce soit</td>
+</tr>
+</tbody>
+</table>
+<h3>Exemple : « J'annule une commande »</h3>
+<ol>
+<li><strong>Intention</strong> : <code>CancelOrder { orderId, reason }</code> — validée</li>
+<li><strong>Politique</strong> : annulation permise dans cet état ? → machine à états Orders</li>
+<li><strong>Organes</strong> : Orders transitionne ; Inventory <code>release</code> ; Communication archive fil éphémère — transaction locale + Outbox <strong>même transaction</strong></li>
+<li><strong>Orchestration</strong> : saga lit <code>capabilities()</code> du connecteur. Si <code>push_sales</code> → annulation POS ; sinon → notification commerçant « à faire manuellement »</li>
+<li><strong>Transport</strong> : worker Outbox publie, retente, journalise échec en conflit visible</li>
+</ol>
+<hr />
+<h2>8. Séparation des responsabilités</h2>
+<table>
+<thead>
+<tr>
+<th>Brique</th>
+<th>Responsabilité</th>
+<th>Autorité d'exécution</th>
+<th>Emplacement cible</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><strong>CDM</strong></td>
+<td>Vocabulaire, schémas, propriété par attribut</td>
+<td>Aucune — vocabulaire</td>
+<td><code>backend/src/lib/cdm/</code></td>
+</tr>
+<tr>
+<td><strong>Ontologie</strong></td>
+<td><strong>Aucune au runtime.</strong> Export dérivé (JSON-LD) pour doc/mapping si besoin</td>
+<td>Jamais</td>
+<td>Artefact généré, pas source</td>
+</tr>
+<tr>
+<td><strong>Registres déclaratifs</strong></td>
+<td>Types, cycles de vie, capacités, connecteurs</td>
+<td>Lus, jamais exécutés</td>
+<td>Pattern <code>eventRegistry.js</code></td>
+</tr>
+<tr>
+<td><strong>Moteur de règles</strong></td>
+<td>Variabilité configurable (promos, seuils)</td>
+<td>Bornée, auditée</td>
+<td>Plus tard si besoin</td>
+</tr>
+<tr>
+<td><strong>Orchestration</strong></td>
+<td>Séquence, compensation, idempotence</td>
+<td>Forte, sans règle métier organe</td>
+<td><code>backend/src/lib/orchestration/</code></td>
+</tr>
+<tr>
+<td><strong>Connecteurs (ACL)</strong></td>
+<td>Traduire CDM ↔ dialecte externe, <code>capabilities()</code></td>
+<td>Nulle sur le métier</td>
+<td><code>backend/src/lib/integration/connectors/</code></td>
+</tr>
+<tr>
+<td><strong>Synchronisation</strong></td>
+<td>Outbox, Inbox, réconciliation, conflits</td>
+<td>Infrastructure</td>
+<td><code>backend/src/lib/integration/sync/</code></td>
+</tr>
+<tr>
+<td><strong>API</strong></td>
+<td>Transport : commandes, projections, webhooks</td>
+<td>Aucune</td>
+<td><code>backend/src/routes/v1/</code></td>
+</tr>
+</tbody>
+</table>
+<p><strong>Renversement clé vs hypothèse ontologie :</strong> l'ontologie n'est pas en amont, elle est en aval. Si besoin sémantique un jour → générer depuis le CDM. Dépendance : code → sémantique, jamais l'inverse.</p>
+<hr />
+<h2>9. Risques</h2>
+<h3>9.1 Comparaison des deux approches</h3>
+<table>
+<thead>
+<tr>
+<th>Axe</th>
+<th>Ontologie + compilateur</th>
+<th>Architecture recommandée</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Performance runtime</td>
+<td>Bonne après compilation — problème auto-créé</td>
+<td>Bonne nativement ; coût réel = I/O, SQLite, API tierces</td>
+</tr>
+<tr>
+<td>Maintenance</td>
+<td>Élevée : compilateur, artefacts, expertise</td>
+<td>Faible : JS lisible, patterns connus</td>
+</tr>
+<tr>
+<td>Évolutivité</td>
+<td>Théorique forte, pratique risquée</td>
+<td>Forte : 3 registres Open/Closed en prod</td>
+</tr>
+<tr>
+<td>Dette technique</td>
+<td>Structurelle, difficile à sortir</td>
+<td>Incrémentale, réversible</td>
+</tr>
+<tr>
+<td>Débogage incident</td>
+<td>Deux niveaux + build</td>
+<td>Journal append-only + code</td>
+</tr>
+<tr>
+<td>Bus factor</td>
+<td>1</td>
+<td>2+</td>
+</tr>
+</tbody>
+</table>
+<h3>9.2 Risque non mentionné n°1 : les API tierces n'écrivent pas</h3>
+<p>La promesse « le commerçant ne dialogue plus qu'avec Ma Zone » dépend des <strong>capacités d'écriture des API tierces</strong> — souvent limitées, parfois inexistantes, rarement transactionnelles.</p>
+<p>« Je ferme exceptionnellement demain » n'a souvent pas d'endpoint chez les caisses. Aucune ontologie ne créera cet endpoint.</p>
+<p><strong>Conséquence produit :</strong> l'interface doit assumer trois états par action — <em>fait automatiquement</em>, <em>fait partiellement</em>, <em>à faire vous-même</em>. Une boîte qui prétend tout faire et échoue en silence détruit la confiance plus vite qu'une boîte honnête sur ses limites.</p>
+<h3>9.3 Risque non mentionné n°2 : tension avec la position NF525</h3>
+<p>FD-000 et le plan affirment que Ma Zone n'est pas une caisse fiscale. Mais la vision « le commerçant ne dialogue plus qu'avec Ma Zone » implique qu'il <strong>enregistre des ventes dans Ma Zone</strong>. En France, dès qu'un logiciel enregistre les règlements de clients particuliers, la question réglementaire caisse se pose — et la V2 (POS Ma Zone) y va frontalement.</p>
+<p><strong>À instruire avant</strong> de construire l'orchestration d'écriture : peut redéfinir le périmètre V2, le calendrier, le choix de rester en lecture seule plus longtemps. Plus déterminant pour dix ans que ontologie vs registres.</p>
+<hr />
+<h2>10. Signerais-je cette architecture pour dix ans ?</h2>
+<p><strong>Non</strong>, pas l'architecture ontologie + compilateur.</p>
+<p>Refus non par ambition — par <strong>déplacement d'effort au mauvais endroit</strong>. Investir dans la représentation de la connaissance alors que les risques réels (sync fiable, capacités d'écriture API, conformité, vélocité connecteurs) ne sont pas adressés par l'ontologie.</p>
+<p>Critère dur : refuser une architecture dont <strong>une seule personne</strong> peut assurer la maintenance.</p>
+<h3>Ce que je signerais</h3>
+<ul>
+<li>Stratégie boîte d'orchestration + substitution progressive (Strangler Fig)</li>
+<li>CDM typé + registres déclaratifs (modèle Wallet/Event existant)</li>
+<li>Machines à états explicites</li>
+<li>Process manager avec compensation</li>
+<li>Outbox fiable</li>
+<li>Connecteurs strictement isolés en ACL</li>
+</ul>
+<p>Moins impressionnant sur un schéma. Debout, lisible et modifiable en 2036.</p>
+<h3>Réexamen ontologie (déclencheurs)</h3>
+<p>Si dans 3 ans : 20+ connecteurs, maintenance mappings étouffe, ou commerçants configurent automatisations → introduire couche sémantique <strong>dérivée</strong> du CDM. Gagnée par l'expérience, pas postulée.</p>
+<hr />
+<h2>11. Recommandations immédiates</h2>
+<table>
+<thead>
+<tr>
+<th>#</th>
+<th>Action</th>
+<th>Priorité</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>1</td>
+<td><strong>Acter la stratégie, refuser l'implémentation</strong> : boîte d'orchestration + substitution progressive = oui ; ontologie exécutable = non (avec déclencheurs §4)</td>
+<td>Immédiat</td>
+</tr>
+<tr>
+<td>2</td>
+<td><strong>Ajouter chapitre orchestration au plan Fondation API</strong> : couche Intention → Commande + process manager (manquent aujourd'hui)</td>
+<td>Court terme</td>
+</tr>
+<tr>
+<td>3</td>
+<td><strong>Instruire question conformité caisse</strong> avant conception écriture vers POS</td>
+<td>Avant Tranche D</td>
+</tr>
+<tr>
+<td>4</td>
+<td><strong>Formaliser en FD-002</strong> (optionnel) : décision d'architecture, alternatives écartées, déclencheurs réexamen — pour aligner les deux Cursor</td>
+<td>Si validation humaine</td>
+</tr>
+</tbody>
+</table>
+<hr />
+<h2>Annexe — Alignement avec le code existant</h2>
+<table>
+<thead>
+<tr>
+<th>Pattern existant</th>
+<th>Fichier</th>
+<th>Leçon pour Fondation API</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Registre Open/Closed</td>
+<td><code>walletRegistry.js</code></td>
+<td>Modèle pour <code>connectorRegistry</code></td>
+</tr>
+<tr>
+<td>Lifecycle déclaratif</td>
+<td><code>eventEngine/lifecycle.js</code></td>
+<td>Modèle pour Inventory state machine</td>
+</tr>
+<tr>
+<td>Capabilities + handledBy</td>
+<td><code>walletRegistry.js</code></td>
+<td>Modèle pour effets orchestration délégués</td>
+</tr>
+<tr>
+<td>Fail-fast validation</td>
+<td><code>validateCapabilityContract()</code></td>
+<td>À reproduire sur tout registre</td>
+</tr>
+<tr>
+<td>Journal append-only</td>
+<td>Wallet ledger, Event journal</td>
+<td>Base observabilité orchestration</td>
+</tr>
+</tbody>
+</table>
+<p><strong>Principe FD-000 respecté :</strong> « Surface compose, organe décide » — la décision métier reste dans l'organe ; l'orchestration séquence sans décider.</p>
+<hr />
+<p><em>Document généré le 2026-07-25 — Cursor Reda — Audit posture CTO, chantier Fondation API.</em></p>
+</body>
+</html>

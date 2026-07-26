@@ -12,6 +12,19 @@ function clearOfferTimeout(missionId) {
   }
 }
 
+/**
+ * Annule toutes les minuteries d'offre en attente.
+ *
+ * Une offre en cours retient l'event loop jusqu'à son échéance : sans cet appel,
+ * un arrêt propre attend la dernière offre, et un process de test ne se termine
+ * jamais. Les échéances restent en base (`offer_expires_at`) — c'est justement le
+ * défaut de fiabilité connu, à traiter après l'étape 5.
+ */
+function clearAllOfferTimeouts() {
+  for (const timeout of pendingTimeouts.values()) clearTimeout(timeout);
+  pendingTimeouts.clear();
+}
+
 function computeOffer(totalPrice) {
   const bonus = Math.round(totalPrice * BONUS_RATE * 100) / 100;
   const earnings = Math.round((BASE_EARNINGS + bonus) * 100) / 100;
@@ -119,6 +132,7 @@ module.exports = {
   proposeOrderToDriver,
   expireOffer,
   clearOfferTimeout,
+  clearAllOfferTimeouts,
   getOfferedMissionForDriver,
   buildOfferPayload,
   computeOffer,

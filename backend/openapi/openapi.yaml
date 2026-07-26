@@ -1,0 +1,978 @@
+openapi: 3.1.0
+
+# ┌────────────────────────────────────────────────────────────────────────────┐
+# │ CONTRAT IMPLÉMENTÉ — VÉRIFIÉ EN CI, DANS LES DEUX SENS                     │
+# │                                                                            │
+# │ Écrit en squelette à l'étape 1 de ROADMAP_ORGANE_ORCHESTRATION_MAZONE.md,   │
+# │ implémenté à l'étape 7. L'écart était volontaire : les intentions           │
+# │ n'existaient pas avant l'étape 5, et un contrat écrit avant elles aurait    │
+# │ été un contrat deviné.                                                     │
+# │                                                                            │
+# │ `test/api-v1.test.js` compare ce document aux routes RÉELLEMENT servies :   │
+# │   · une route non documentée fait échouer la suite ;                       │
+# │   · une route documentée mais absente aussi.                               │
+# │                                                                            │
+# │ Autrement dit, ce fichier ne peut pas mentir longtemps. C'est la seule      │
+# │ propriété qui rende une spécification utile — celles qu'on met à jour       │
+# │ « quand on a le temps » sont plus nuisibles qu'une absence de contrat, car  │
+# │ on les croit.                                                              │
+# └────────────────────────────────────────────────────────────────────────────┘
+
+info:
+  title: Ma Zone — API v1
+  version: 1.0.0
+  description: |
+    Contrat public de Ma Zone. Deux surfaces seulement, et la distinction est
+    structurante :
+
+    **Les intentions** (`POST /intents/{intentId}`) expriment ce que l'utilisateur
+    veut obtenir. Elles traversent plusieurs organes, sont journalisées, et
+    compensent en cas d'échec partiel. Une intention exige toujours une
+    `Idempotency-Key` : rejouer ne doit jamais produire deux ventes.
+
+    **Les projections** (`GET`) exposent l'état. Elles sont séparées par audience,
+    et cette séparation est une règle, pas une commodité : une réponse destinée à
+    un client ne contient JAMAIS `on_hand`. Le stock physique d'une boutique est
+    une information commerciale qui n'appartient pas à l'acheteur.
+
+    Ce qui n'apparaît pas ici est délibéré. Il n'existe aucune route qui écrit
+    directement dans une table. Aucune route ne compose deux organes elle-même :
+    c'est le rôle de l'Organe d'Orchestration (Loi 5). Une seule écriture n'est pas
+    une intention — `PATCH /inventory/{productId}` — parce qu'elle ne concerne qu'un
+    organe, et qu'une action mono-organe s'adresse à cet organe directement.
+
+    **Aucune intention ne nomme un logiciel tiers** (Loi 16). Une intention est un
+    acte métier — « une vente a lieu » — jamais une instruction technique
+    — « pousser vers tel logiciel ». L'Organe d'Orchestration ne dialogue jamais
+    directement avec un logiciel tiers : traduction, authentification, mapping,
+    webhook, synchronisation et protocole appartiennent exclusivement à
+    l'Integration Engine et aux connecteurs.
+
+    Conséquence visible dans ce contrat : ce qui dépend d'un logiciel externe
+    n'apparaît que sous deux formes. Une **capacité** abstraite (`push_sales`), qui
+    dit ce qu'une boutique sait faire sans dire par quel outil. Et une **étape
+    reportée** (`deferred`) dans la réponse d'une intention, quand la capacité
+    manque : la vente aboutit, et ce qui n'a pas pu être fait est dit (Loi 12).
+
+    ## Ce qui n'est pas encore ici
+
+    Ni messagerie, ni panier, ni portefeuille, ni identité, ni transitions de
+    livraison. Aucun de ces domaines n'a encore d'organe avec sa machine à états et
+    son journal ; la messagerie vit même en triple pile côté historique. Publier une
+    forme qu'on sait devoir refaire, c'est choisir entre s'interdire de la refaire et
+    casser sa promesse de stabilité. `/api` non versionnée reste la porte de tout le
+    reste jusqu'à sa fin de vie, déclarée ci-dessous.
+
+    ## Fin de vie de l'API non versionnée
+
+    Les routes `/api` sans version portent les en-têtes `Deprecation` et `Sunset`
+    (RFC 8594) et disparaîtront le **31/01/2027**. Les dates vivent dans le code
+    (`backend/src/lib/sunset.js`), et un test échoue lorsqu'une échéance est
+    dépassée : une date qui ne fait rien quand elle arrive n'est pas une date.
+
+servers:
+  - url: https://api.mazone.app/api/v1
+    description: Production
+  - url: http://localhost:4000/api/v1
+    description: Développement
+
+security:
+  - bearerAuth: []
+
+tags:
+  - name: Intentions
+    description: Actions métier traversant plusieurs organes
+  - name: Catalogue
+    description: Boutiques et produits — projection client
+  - name: Inventaire
+    description: Stock à triple état — projection boutique uniquement
+  - name: Commandes
+  - name: Livraisons
+  - name: Intégrations
+    description: Ce qu'une boutique sait faire, et ce que Ma Zone a refusé
+
+paths:
+  # ── Intentions ──────────────────────────────────────────────────────────────
+
+  /intents:
+    get:
+      tags: [Intentions]
+      summary: Intentions disponibles pour mon rôle
+      description: |
+        Liste déclarative issue du registre d'intentions. Permet à une surface de
+        savoir ce qu'elle peut proposer sans le coder en dur, et de connaître les
+        capacités manquantes (Loi 12 — honnêteté fonctionnelle).
+      responses:
+        '200':
+          description: Liste des intentions
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  intents:
+                    type: array
+                    items: { $ref: '#/components/schemas/IntentDescriptor' }
+
+  /intents/{intentId}:
+    get:
+      tags: [Intentions]
+      summary: Plan complet d'une intention
+      description: |
+        Comprendre tous les effets d'une intention en lisant un seul endroit. Sans
+        secret : un plan décrit ce que Ma Zone fait quand on le lui demande.
+      parameters:
+        - $ref: '#/components/parameters/IntentId'
+      responses:
+        '200':
+          description: Plan de l'intention
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  intent: { $ref: '#/components/schemas/IntentPlan' }
+        '404':
+          description: Intention inconnue
+
+    post:
+      tags: [Intentions]
+      summary: Exécuter une intention
+      description: |
+        Exécute le plan déclaré. Chaque étape est journalisée ; un échec déclenche les
+        compensations en ordre inverse.
+
+        Une étape optionnelle dont la capacité manque n'échoue pas : elle est
+        rapportée dans `deferred` pour que l'interface le dise à l'utilisateur.
+
+        `201` à la première exécution, `200` sur un rejeu de la même
+        `Idempotency-Key` : un intégrateur qui réessaie après un timeout doit pouvoir
+        distinguer les deux sans relire le corps.
+      parameters:
+        - $ref: '#/components/parameters/IntentId'
+        - name: Idempotency-Key
+          in: header
+          required: true
+          description: |
+            Rejouer la même clé renvoie le premier résultat, sans nouvel effet.
+            Obligatoire : sur un réseau mobile, un timeout sans clé se termine par
+            une double vente.
+          schema: { type: string, minLength: 8 }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                params:
+                  type: object
+                  additionalProperties: true
+                  description: Paramètres déclarés par l'intention (voir `GET /intents/{intentId}`).
+      responses:
+        '201':
+          description: Intention exécutée
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/IntentResult' }
+        '200':
+          description: Rejeu — premier résultat renvoyé, aucun nouvel effet
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/IntentResult' }
+        '400':
+          description: Paramètres invalides, ou `Idempotency-Key` absente ou trop courte
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/IntentFailure' }
+        '403':
+          description: Ce rôle ne peut pas formuler cette intention
+        '404':
+          description: Intention inconnue
+        '409':
+          description: L'état actuel ne permet pas cette intention
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/IntentFailure' }
+        '422':
+          description: |
+            Intention compensée — des étapes avaient réussi, elles ont été défaites.
+            Aucun effet net, hors compensation en échec explicitement listée.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/IntentFailure' }
+
+  /intents/runs/{runId}:
+    get:
+      tags: [Intentions]
+      summary: Déroulé journalisé d'une exécution
+      description: |
+        Chaque pas, dans l'ordre, avec son issue. Lisible par son auteur seulement :
+        une exécution contient l'enchaînement des décisions prises en son nom.
+      parameters:
+        - { name: runId, in: path, required: true, schema: { type: string } }
+      responses:
+        '200':
+          description: Déroulé
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  run_id: { type: string }
+                  steps:
+                    type: array
+                    items: { $ref: '#/components/schemas/RunStep' }
+        '404':
+          description: Introuvable, ou exécution d'un autre utilisateur
+
+  # ── Catalogue (projection client) ────────────────────────────────────────────
+
+  /stores:
+    get:
+      tags: [Catalogue]
+      summary: Boutiques, les plus proches d'abord
+      description: |
+        Une boutique dont on ne connaît pas les coordonnées n'est jamais écartée par
+        le rayon : invisible pour toujours est pire que mal triée.
+      parameters:
+        - { name: lat, in: query, schema: { type: number } }
+        - { name: lng, in: query, schema: { type: number } }
+        - { name: radius_km, in: query, schema: { type: number } }
+      responses:
+        '200':
+          description: Boutiques
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  stores:
+                    type: array
+                    items: { $ref: '#/components/schemas/Store' }
+
+  /stores/{storeId}:
+    get:
+      tags: [Catalogue]
+      summary: Une boutique
+      parameters:
+        - $ref: '#/components/parameters/StoreId'
+      responses:
+        '200':
+          description: Boutique
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  store: { $ref: '#/components/schemas/Store' }
+        '404':
+          description: Boutique introuvable
+
+  /stores/{storeId}/products:
+    get:
+      tags: [Catalogue]
+      summary: Catalogue d'une boutique — projection CLIENT
+      description: Ne contient que les produits en vente, et jamais le stock physique.
+      parameters:
+        - $ref: '#/components/parameters/StoreId'
+      responses:
+        '200':
+          description: Produits
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  products:
+                    type: array
+                    items: { $ref: '#/components/schemas/ProductPublic' }
+        '404':
+          description: Boutique introuvable
+
+  /products/{productId}:
+    get:
+      tags: [Catalogue]
+      summary: Fiche produit — projection CLIENT
+      description: |
+        N'expose que `available`. `on_hand`, `reserved` et `safety_buffer` sont
+        absents du schéma, pas seulement omis en pratique : un test automatisé balaie
+        toutes les réponses client à la recherche de ces champs.
+
+        Un produit retiré de la vente répond 404 : un acheteur n'a pas à distinguer
+        « n'existe pas » de « n'est plus proposé ».
+      parameters:
+        - $ref: '#/components/parameters/ProductId'
+      responses:
+        '200':
+          description: Produit
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  product: { $ref: '#/components/schemas/ProductPublic' }
+        '404':
+          description: Produit introuvable ou retiré de la vente
+
+  # ── Inventaire (projection boutique) ─────────────────────────────────────────
+
+  /inventory:
+    get:
+      tags: [Inventaire]
+      summary: Inventaire d'une boutique — équipe de la boutique uniquement
+      parameters:
+        - name: store_id
+          in: query
+          required: true
+          schema: { type: string }
+      responses:
+        '200':
+          description: Niveaux de stock
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  store_id: { type: string }
+                  levels:
+                    type: array
+                    items: { $ref: '#/components/schemas/StockLevel' }
+        '400':
+          description: Paramètre `store_id` manquant
+        '404':
+          description: Boutique introuvable, ou appelant hors de l'équipe
+
+  /inventory/{productId}:
+    get:
+      tags: [Inventaire]
+      summary: État de stock complet — boutique uniquement
+      description: |
+        Expose les quatre valeurs. `available` est calculé à la lecture et n'est
+        jamais écrivable (Loi 11). `inventory_owner` dit qui décide de `on_hand`.
+
+        `adopted: false` signale un produit dont l'organe Inventory n'a pas encore de
+        ligne : la lecture ne la crée pas — un `GET` qui écrit est une surprise qu'on
+        finit toujours par payer.
+      parameters:
+        - $ref: '#/components/parameters/ProductId'
+      responses:
+        '200':
+          description: Niveau de stock
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  stock: { $ref: '#/components/schemas/StockLevel' }
+                  adopted: { type: boolean }
+        '404':
+          description: Produit introuvable, ou appelant hors de l'équipe de la boutique
+
+    patch:
+      tags: [Inventaire]
+      summary: Déclarer le stock PHYSIQUE
+      description: |
+        Le corps porte des valeurs **cibles**, jamais des deltas : envoyer deux fois
+        `{"on_hand": 12}` laisse le stock à 12. C'est pourquoi aucune
+        `Idempotency-Key` n'est exigée ici — la forme du corps rend le rejeu sans
+        danger.
+
+        `on_hand` signifie bien le physique. L'API historique devait deviner que le
+        nombre saisi par le commerçant était du vendable, parce que ses écrans
+        affichaient la projection ; ici les champs portent leur vrai nom.
+
+        Une action mono-organe ne passe pas par une intention (Loi 5).
+      parameters:
+        - $ref: '#/components/parameters/ProductId'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                on_hand:
+                  type: integer
+                  minimum: 0
+                  description: Stock physique constaté. Refusé si `inventory_owner = pos`.
+                safety_buffer:
+                  type: integer
+                  minimum: 0
+                  description: Marge de sécurité commerciale de la boutique.
+                reason: { type: string }
+              additionalProperties: false
+      responses:
+        '200':
+          description: Niveau après déclaration
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  stock: { $ref: '#/components/schemas/StockLevel' }
+        '400':
+          description: Aucun champ à déclarer, ou valeur invalide
+        '404':
+          description: Produit introuvable, ou appelant hors de l'équipe de la boutique
+        '409':
+          description: |
+            Stock physique en mode miroir (`inventory_owner = pos`) : il se corrige
+            dans la caisse, pas dans Ma Zone.
+
+  /inventory/{productId}/movements:
+    get:
+      tags: [Inventaire]
+      summary: Journal des mouvements de stock
+      description: Append-only (Loi 9). Répond à « pourquoi mon stock a bougé ».
+      parameters:
+        - $ref: '#/components/parameters/ProductId'
+        - { name: limit, in: query, schema: { type: integer, maximum: 200, default: 50 } }
+      responses:
+        '200':
+          description: Mouvements
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  product_id: { type: string }
+                  movements:
+                    type: array
+                    items: { $ref: '#/components/schemas/StockMovement' }
+        '404':
+          description: Produit introuvable, ou appelant hors de l'équipe de la boutique
+
+  # ── Commandes ────────────────────────────────────────────────────────────────
+
+  /orders:
+    get:
+      tags: [Commandes]
+      summary: Commandes d'une boutique
+      parameters:
+        - name: store_id
+          in: query
+          required: true
+          schema: { type: string }
+        - { name: limit, in: query, schema: { type: integer, maximum: 200, default: 50 } }
+      responses:
+        '200':
+          description: Commandes
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  store_id: { type: string }
+                  orders:
+                    type: array
+                    items: { $ref: '#/components/schemas/Order' }
+        '400':
+          description: Paramètre `store_id` manquant
+        '404':
+          description: Boutique introuvable, ou appelant hors de l'équipe
+
+  /orders/mine:
+    get:
+      tags: [Commandes]
+      summary: Mes commandes, en tant qu'acheteur
+      parameters:
+        - { name: limit, in: query, schema: { type: integer, maximum: 200, default: 50 } }
+      responses:
+        '200':
+          description: Commandes
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  orders:
+                    type: array
+                    items: { $ref: '#/components/schemas/Order' }
+
+  /orders/{orderId}:
+    get:
+      tags: [Commandes]
+      summary: Commande — visible des seules parties prenantes
+      description: "Un tiers reçoit 404, jamais 403 : l'existence n'est pas révélée."
+      parameters:
+        - $ref: '#/components/parameters/OrderId'
+      responses:
+        '200':
+          description: Commande
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  order: { $ref: '#/components/schemas/Order' }
+        '404':
+          description: Introuvable, ou accès non autorisé
+
+  /orders/{orderId}/journal:
+    get:
+      tags: [Commandes]
+      summary: Journal de la commande
+      description: |
+        Chaque décision d'organe, dans l'ordre. Ce qui n'est pas journalisé n'est pas
+        arrivé (Loi 9) ; cette route est ce qui rend la loi utile à un humain.
+      parameters:
+        - $ref: '#/components/parameters/OrderId'
+      responses:
+        '200':
+          description: Entrées de journal
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  order_id: { type: string }
+                  journal:
+                    type: array
+                    items: { $ref: '#/components/schemas/OrderJournalEntry' }
+        '404':
+          description: Introuvable, ou accès non autorisé
+
+  # ── Livraisons ───────────────────────────────────────────────────────────────
+
+  /deliveries/mine:
+    get:
+      tags: [Livraisons]
+      summary: Courses du livreur connecté
+      description: |
+        `active` est extrait plutôt que laissé à deviner : faire filtrer quatre
+        statuts par une application mobile reviendrait à publier une règle métier
+        dans un client.
+
+        Faire AVANCER une course reste sur l'API historique : ces transitions
+        écrivent dans `missions` et dans `orders` sans machine à états déclarée, et on
+        ne versionne que ce qui est passé derrière un organe.
+      parameters:
+        - { name: limit, in: query, schema: { type: integer, maximum: 200, default: 50 } }
+      responses:
+        '200':
+          description: Livraisons
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  deliveries:
+                    type: array
+                    items: { $ref: '#/components/schemas/Delivery' }
+                  active:
+                    oneOf:
+                      - $ref: '#/components/schemas/Delivery'
+                      - type: 'null'
+
+  # ── Intégrations ─────────────────────────────────────────────────────────────
+
+  /integrations:
+    get:
+      tags: [Intégrations]
+      summary: Connecteurs disponibles, et ce que la boutique sait faire
+      description: |
+        Les capacités sont déclarées honnêtement : si un logiciel ne sait pas
+        recevoir une annulation, l'interface le dit au commerçant au lieu de le
+        laisser croire que c'est fait (Loi 12).
+
+        `store_id` est optionnel. Sans lui, on répond le catalogue des connecteurs ;
+        avec lui, chacun porte son état de branchement et la boutique ses capacités.
+      parameters:
+        - name: store_id
+          in: query
+          required: false
+          schema: { type: string }
+      responses:
+        '200':
+          description: Connecteurs
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  store_id: { type: [string, 'null'] }
+                  connectors:
+                    type: array
+                    items: { $ref: '#/components/schemas/Connector' }
+                  capabilities:
+                    type: array
+                    description: Union des capacités des connecteurs actifs de la boutique.
+                    items: { type: string }
+        '404':
+          description: Boutique introuvable, ou appelant hors de l'équipe
+
+  /integrations/{connectorId}/conflicts:
+    get:
+      tags: [Intégrations]
+      summary: Ce que Ma Zone a refusé d'un logiciel tiers
+      description: |
+        Un conflit tu devient une perte de confiance : le commerçant constate un
+        stock qui ne correspond pas à sa caisse sans savoir que Ma Zone a
+        délibérément gardé sa valeur. Chaque entrée porte donc la valeur proposée,
+        celle retenue, et la raison du refus.
+      parameters:
+        - { name: connectorId, in: path, required: true, schema: { type: string } }
+        - name: store_id
+          in: query
+          required: true
+          schema: { type: string }
+      responses:
+        '200':
+          description: Conflits
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  store_id: { type: string }
+                  connector_id: { type: string }
+                  conflicts:
+                    type: array
+                    items: { $ref: '#/components/schemas/SyncConflict' }
+        '400':
+          description: Paramètre `store_id` manquant
+        '404':
+          description: Boutique introuvable, ou appelant hors de l'équipe
+
+components:
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+
+  parameters:
+    IntentId:
+      name: intentId
+      in: path
+      required: true
+      schema: { type: string, examples: ['order.place', 'order.cancel'] }
+    StoreId:
+      name: storeId
+      in: path
+      required: true
+      schema: { type: string }
+    ProductId:
+      name: productId
+      in: path
+      required: true
+      schema: { type: string }
+    OrderId:
+      name: orderId
+      in: path
+      required: true
+      schema: { type: string }
+
+  schemas:
+    IntentDescriptor:
+      type: object
+      properties:
+        id: { type: string, examples: ['order.place'] }
+        label: { type: string }
+        actors:
+          type: array
+          items: { type: string, enum: [client, merchant, driver, system, admin] }
+        params:
+          type: object
+          description: |
+            Paramètres attendus, sous la forme `nom: type`. Un type suffixé de `?` est
+            optionnel. Une surface construit donc son formulaire depuis le contrat au
+            lieu de coder en dur ce que l'intention réclame.
+          additionalProperties: { type: string }
+      required: [id, actors, params]
+
+    IntentPlan:
+      allOf:
+        - $ref: '#/components/schemas/IntentDescriptor'
+        - type: object
+          properties:
+            steps:
+              type: array
+              items:
+                type: object
+                properties:
+                  step: { type: string, examples: ['orders.create'] }
+                  optional: { type: boolean }
+                  requires:
+                    type: [string, 'null']
+                    description: Capacité abstraite exigée. Jamais un logiciel nommé (Loi 16).
+                  compensate: { type: [string, 'null'] }
+                required: [step, optional]
+          required: [steps]
+
+    IntentResult:
+      type: object
+      properties:
+        intent: { type: string }
+        run_id: { type: string }
+        status:
+          type: string
+          enum: [completed, partially_completed]
+          description: |
+            `partially_completed` quand des étapes ont été reportées. Ce n'est ni un
+            succès complet ni un échec, et l'interface doit pouvoir le dire.
+        replayed:
+          type: boolean
+          description: Vrai si cette clé d'idempotence avait déjà été jouée.
+        result:
+          type: object
+          additionalProperties: true
+          description: Résultat de chaque étape, indexé par `organe.action`.
+        deferred:
+          type: array
+          description: |
+            Étapes non exécutées, à annoncer à l'utilisateur. Jamais un échec
+            silencieux (Loi 12).
+          items: { $ref: '#/components/schemas/DeferredStep' }
+      required: [intent, run_id, status, result, deferred]
+
+    IntentFailure:
+      type: object
+      properties:
+        error: { type: string }
+        intent: { type: string }
+        run_id: { type: [string, 'null'] }
+        status:
+          type: string
+          enum: [failed, compensated]
+        compensated:
+          type: array
+          description: |
+            Étapes défaites. Une compensation en échec (`ok: false`) est le seul cas
+            où Ma Zone laisse derrière elle un état qu'elle sait faux : elle est donc
+            nommée, pas tue.
+          items:
+            type: object
+            properties:
+              step: { type: string }
+              ok: { type: boolean }
+              message: { type: [string, 'null'] }
+        deferred:
+          type: array
+          items: { $ref: '#/components/schemas/DeferredStep' }
+      required: [error]
+
+    DeferredStep:
+      type: object
+      properties:
+        step: { type: string, examples: ['integration.pushSale'] }
+        reason:
+          type: string
+          enum: [capability_missing, step_failed]
+        capability: { type: [string, 'null'], examples: ['push_sales'] }
+        message: { type: [string, 'null'] }
+      required: [step, reason]
+
+    RunStep:
+      type: object
+      properties:
+        id: { type: string }
+        run_id: { type: string }
+        intent_id: { type: string }
+        step: { type: [string, 'null'] }
+        status: { type: string }
+        created_at: { type: string }
+      required: [id, run_id, status]
+
+    Store:
+      type: object
+      properties:
+        id: { type: string }
+        name: { type: string }
+        address: { type: string }
+        description: { type: [string, 'null'] }
+        category: { type: [string, 'null'] }
+        phone: { type: [string, 'null'] }
+        image_url: { type: [string, 'null'] }
+        lat: { type: [number, 'null'] }
+        lng: { type: [number, 'null'] }
+        distance_km: { type: [number, 'null'] }
+      required: [id, name, address]
+      additionalProperties: false
+
+    ProductPublic:
+      type: object
+      description: Projection CLIENT. `on_hand` est structurellement absent.
+      properties:
+        id: { type: string }
+        store_id: { type: string }
+        name: { type: string }
+        description: { type: [string, 'null'] }
+        price: { type: number }
+        category: { type: [string, 'null'] }
+        image_url: { type: [string, 'null'] }
+        barcode: { type: [string, 'null'] }
+        available:
+          type: integer
+          minimum: 0
+          description: Quantité réellement commandable, calculée.
+        active: { type: boolean }
+        promotion:
+          oneOf:
+            - $ref: '#/components/schemas/Promotion'
+            - type: 'null'
+      required: [id, store_id, name, price, available, active]
+      additionalProperties: false
+
+    Promotion:
+      type: object
+      description: |
+        `remaining_quantity` est absent volontairement : c'est un compteur de gestion,
+        et l'exposer inviterait à déduire le rythme des ventes d'une boutique.
+      properties:
+        id: { type: [string, 'null'] }
+        type: { type: [string, 'null'], enum: [discount, buy_get, null] }
+        label: { type: [string, 'null'] }
+        price: { type: [number, 'null'] }
+        original_price: { type: [number, 'null'] }
+        discount_percent: { type: [number, 'null'] }
+        buy_quantity: { type: [integer, 'null'] }
+        get_quantity: { type: [integer, 'null'] }
+        ends_at: { type: [string, 'null'] }
+      additionalProperties: false
+
+    StockLevel:
+      type: object
+      description: Projection BOUTIQUE.
+      properties:
+        product_id: { type: string }
+        product_name: { type: [string, 'null'] }
+        variant_id: { type: [string, 'null'] }
+        on_hand:
+          type: integer
+          description: Stock physique. Miroir de la caisse quand `inventory_owner = pos`.
+        reserved:
+          type: integer
+          description: Promis à des clients par Ma Zone. Toujours propriété de Ma Zone.
+        safety_buffer:
+          type: integer
+          description: Marge de sécurité, politique de la boutique.
+        available:
+          type: integer
+          description: '`on_hand - reserved - safety_buffer`. Lecture seule.'
+          readOnly: true
+        inventory_owner: { type: string, enum: [mazone, pos] }
+        updated_at: { type: [string, 'null'] }
+      required: [product_id, on_hand, reserved, safety_buffer, available, inventory_owner]
+
+    StockMovement:
+      type: object
+      properties:
+        id: { type: string }
+        product_id: { type: string }
+        kind: { type: string, enum: [reserve, release, commit, adjust, sync_on_hand] }
+        quantity: { type: integer }
+        reason: { type: [string, 'null'] }
+        origin: { type: string, enum: [mazone, connector, merchant] }
+        reference: { type: [string, 'null'] }
+        on_hand_after: { type: integer }
+        reserved_after: { type: integer }
+        occurred_at: { type: string }
+      required: [id, kind, quantity, origin, occurred_at]
+
+    Order:
+      type: object
+      properties:
+        id: { type: string }
+        client_id: { type: string }
+        store_id: { type: string }
+        product_id: { type: string }
+        quantity:
+          type: integer
+          description: Quantité COMMANDÉE. Ne dit rien du stock de la boutique.
+        total_price: { type: number }
+        status:
+          type: string
+          enum:
+            [placed, pending_driver, driver_assigned, picking_up, picked_up,
+             delivering, delivered, cancelled]
+        delivery_address: { type: [string, 'null'] }
+        estimated_minutes: { type: [integer, 'null'] }
+        created_at: { type: string }
+        updated_at: { type: [string, 'null'] }
+        store:
+          type: [object, 'null']
+          properties:
+            id: { type: string }
+            name: { type: string }
+            address: { type: [string, 'null'] }
+        product:
+          type: [object, 'null']
+          properties:
+            id: { type: string }
+            name: { type: string }
+            image_url: { type: [string, 'null'] }
+      required: [id, client_id, store_id, quantity, total_price, status]
+
+    OrderJournalEntry:
+      type: object
+      properties:
+        id: { type: string }
+        type: { type: string }
+        from_status: { type: [string, 'null'] }
+        to_status: { type: [string, 'null'] }
+        actor: { type: [string, 'null'] }
+        created_at: { type: string }
+      required: [id, type, created_at]
+
+    Delivery:
+      type: object
+      properties:
+        id: { type: string }
+        order_id: { type: string }
+        status: { type: string }
+        accepted_at: { type: [string, 'null'] }
+        created_at: { type: string }
+        pickup:
+          type: [object, 'null']
+          properties:
+            store_id: { type: string }
+            name: { type: string }
+            address: { type: [string, 'null'] }
+        dropoff:
+          type: object
+          properties:
+            address: { type: [string, 'null'] }
+        earnings:
+          type: [number, 'null']
+          description: Commission du livreur pour cette course.
+      required: [id, order_id, status]
+
+    Connector:
+      type: object
+      properties:
+        id: { type: string, examples: ['manual'] }
+        label: { type: string }
+        connected: { type: boolean }
+        status: { type: [string, 'null'], enum: [active, paused, null] }
+        capabilities:
+          type: array
+          description: Ce que ce logiciel sait réellement faire. Rien de plus.
+          items:
+            type: string
+            enum: [pull_catalog, pull_inventory, push_inventory, push_sales, webhooks]
+      required: [id, label, connected, capabilities]
+
+    SyncConflict:
+      type: object
+      description: |
+        Il n'existe pas de champ « résolution » : l'issue est toujours « Ma Zone garde
+        sa valeur ». Ce qui varie est la RAISON. Un enum de résolution laisserait
+        croire qu'un arbitrage silencieux en faveur de l'extérieur est possible.
+      properties:
+        id: { type: string }
+        connector_id: { type: string }
+        entity_type: { type: string }
+        mazone_id: { type: [string, 'null'] }
+        attribute: { type: string }
+        proposed_value: { type: [string, 'null'] }
+        retained_value: { type: [string, 'null'] }
+        reason:
+          type: string
+          enum:
+            [owner_priority, stale_timestamp, immutable, computed_field,
+             unmapped_entity, organ_refused]
+        acknowledged_at: { type: [string, 'null'] }
+        created_at: { type: string }
+      required: [id, connector_id, attribute, reason, created_at]

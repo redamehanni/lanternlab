@@ -5,14 +5,20 @@
  * sont RÉSERVÉS à l'environnement sandbox et ne doivent JAMAIS s'activer en
  * production. Cette garde centralise la règle en un seul point.
  *
- * Règle : actif en développement par défaut ; en production, il faut l'activer
- * explicitement via SANDBOX_MODE=on (choix conscient de l'exploitant).
+ * Règle (durcie à l'étape 0 de la roadmap Orchestration) : le sandbox est actif
+ * en développement par défaut, désactivable via SANDBOX_MODE=off, et JAMAIS
+ * activable en production. `SANDBOX_MODE=on` combiné à NODE_ENV=production fait
+ * échouer le démarrage dans `config/env.js` : la configuration dangereuse est
+ * refusée bruyamment plutôt qu'ignorée en silence.
  */
 
+const config = require('../config/env');
+
 function isSandbox() {
+  if (config.isProduction) return false;
   if (process.env.SANDBOX_MODE === 'on') return true;
   if (process.env.SANDBOX_MODE === 'off') return false;
-  return process.env.NODE_ENV !== 'production';
+  return true;
 }
 
 /**

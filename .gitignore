@@ -30,8 +30,12 @@ yarn-debug.log*
 yarn-error.log*
 
 # env files
+.env
 .env*.local
 mobile/.env
+backend/.env
+# Secrets de développement générés au boot (jamais committés)
+backend/data/.dev-secrets.json
 backend/data/
 backend/uploads/
 

@@ -3,7 +3,9 @@ const db = require('../db');
 const { verifyToken, requireRole } = require('../middleware/auth');
 const { archiveEphemeralForOrder } = require('../lib/communicationEngine');
 const { listAvailableMissions, missionToBroadcast } = require('../lib/missions');
-const { ORDER_STATUS } = require('../lib/orderStatus');
+const { ORDER_STATUS } = require('../lib/orders/lifecycle');
+const { transitionOrder } = require('../lib/orders');
+const { txn } = require('../lib/kernel');
 const { getFullMission, assignPendingOrdersToDriver, assignOrderToDriver, tryDispatchNewOrder } = require('../lib/dispatch');
 const { clearOfferTimeout, getOfferedMissionForDriver } = require('../lib/dispatchOffer');
 
@@ -152,15 +154,27 @@ router.patch('/:id/status', verifyToken, requireRole('driver'), (req, res) => {
   const mission = db.prepare('SELECT * FROM missions WHERE id = ? AND driver_id = ?').get(req.params.id, req.user.id);
   if (!mission) return res.status(404).json({ error: 'Mission introuvable' });
 
-  db.prepare("UPDATE missions SET status = ?, updated_at = datetime('now') WHERE id = ?").run(status, mission.id);
-
   const orderStatusMap = {
     picking_up: ORDER_STATUS.PICKING_UP,
     picked_up: ORDER_STATUS.PICKED_UP,
     delivering: ORDER_STATUS.DELIVERING,
     delivered: ORDER_STATUS.DELIVERED,
   };
-  db.prepare("UPDATE orders SET status = ?, updated_at = datetime('now') WHERE id = ?").run(orderStatusMap[status], mission.order_id);
+
+  try {
+    // Mission et commande avancent ensemble ou pas du tout : c'est le graphe de
+    // l'organe Orders qui autorise le pas, et un pas interdit annule aussi la
+    // mise à jour de la mission. Avant, la mission pouvait revenir en arrière
+    // depuis un état terminal en entraînant la commande avec elle.
+    txn.run(() => {
+      db.prepare("UPDATE missions SET status = ?, updated_at = datetime('now') WHERE id = ?")
+        .run(status, mission.id);
+      transitionOrder(mission.order_id, orderStatusMap[status], { actor: req.user.id });
+    });
+  } catch (err) {
+    if (err?.status) return res.status(err.status).json({ error: err.message });
+    throw err;
+  }
 
   const full = getFullMission(mission.id);
   const io = req.app.get('io');

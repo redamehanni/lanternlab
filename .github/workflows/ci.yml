@@ -1,0 +1,370 @@
+name: CI
+
+# Étape 0 de la roadmap Organe d'Orchestration : sans CI, le filet de sécurité de
+# l'étape 1 ne protège personne — des tests que personne n'exécute ne sont pas
+# des tests.
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  backend:
+    name: Backend — tests
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: backend
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+          cache-dependency-path: backend/package-lock.json
+
+      - name: Installer les dépendances
+        run: npm ci
+
+      - name: Tests
+        run: npm test
+
+  architecture:
+    name: Lois d'architecture
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+
+      # Loi 1 — aucun organe métier ne connaît un logiciel tiers.
+      # Le dossier `integration/` est le seul autorisé à nommer un éditeur.
+      - name: Loi 1 — aucun SDK tiers dans les organes
+        run: |
+          if grep -rniE "shopify|lightspeed|zettle|chift" backend/src/lib \
+               --exclude-dir=integration --include='*.js' ; then
+            echo "::error::Loi 1 violée — un organe métier nomme un logiciel tiers."
+            exit 1
+          fi
+          echo "Loi 1 respectée."
+
+      # Loi 4 — le CDM est un vocabulaire, pas un magasin : il n'accède jamais
+      # à la base. Le contrôle ne s'active qu'une fois le CDM créé (étape 1).
+      - name: Loi 4 — le CDM n'accède pas à la base
+        run: |
+          if [ ! -d backend/src/lib/cdm ]; then
+            echo "CDM absent (étape 1 non démarrée) — contrôle ignoré."
+            exit 0
+          fi
+          if grep -rnE "require\(.*['\"].*/db['\"]\)" backend/src/lib/cdm --include='*.js' ; then
+            echo "::error::Loi 4 violée — le CDM importe la base de données."
+            exit 1
+          fi
+          echo "Loi 4 respectée."
+
+      # Loi 5 — une route traduit, elle ne décide pas. Le contrôle porte sur les
+      # routes déjà passées derrière un organe ; les autres suivront étape par
+      # étape, et cette liste doit grandir à chaque organe extrait.
+      - name: Loi 5 — les routes d'organe ne décident pas
+        run: |
+          for route in backend/src/routes/orders.js ; do
+            [ -f "$route" ] || continue
+            if grep -nE "\b(INSERT INTO|UPDATE [a-z_]+ SET|DELETE FROM)\b" "$route" ; then
+              echo "::error::Loi 5 violée — $route écrit directement en base."
+              exit 1
+            fi
+            if grep -n "db.transaction" "$route" ; then
+              echo "::error::Loi 5 violée — $route ouvre une transaction."
+              exit 1
+            fi
+          done
+          echo "Loi 5 respectée."
+
+      # Loi 11 — un champ calculé ne s'écrit pas. `products.quantity` est devenu la
+      # projection de `available` à l'étape 4 : seul le miroir de l'organe Inventory
+      # a le droit de l'écrire.
+      - name: Loi 11 — un seul écrivain de products.quantity
+        run: |
+          if [ ! -d backend/src/lib/inventory ]; then
+            echo "Inventory absent (étape 4 non démarrée) — contrôle ignoré."
+            exit 0
+          fi
+          offenders=$(grep -rl "UPDATE products SET quantity" backend/src --include='*.js' \
+            | grep -v '^backend/src/lib/inventory/stockLevels.js$' || true)
+          if [ -n "$offenders" ]; then
+            echo "::error::Loi 11 violée — products.quantity écrit hors du miroir Inventory : $offenders"
+            exit 1
+          fi
+          echo "Loi 11 respectée."
+
+      # RISQUE PRINCIPAL DE LA ROADMAP — l'orchestrateur attire le métier. Un plan
+      # d'intention est une LISTE d'étapes. Le jour où il contient une condition,
+      # l'orchestrateur a recommencé à décider, et dans dix-huit mois il portera vingt
+      # cas particuliers que personne n'osera plus toucher. Ce contrôle n'est pas un
+      # détail de style : c'est ce qui empêche l'architecture de se dissoudre.
+      - name: Loi 5 — aucune règle métier dans les plans d'intention
+        run: |
+          plans_dir=backend/src/lib/orchestration/intents
+          if [ ! -d "$plans_dir" ]; then
+            echo "Orchestration absente (étape 5 non démarrée) — contrôle ignoré."
+            exit 0
+          fi
+          for plan in "$plans_dir"/*.js ; do
+            [ "$(basename "$plan")" = "index.js" ] && continue
+            # Les commentaires sont retirés avant analyse : ils expliquent les
+            # décisions, ils n'en prennent pas.
+            code=$(sed -E 's://.*::' "$plan" | sed -E '/^\s*\*/d')
+            if echo "$code" | grep -nE "\bif\s*\(" ; then
+              echo "::error::$plan contient une condition — un plan est une liste, pas un algorithme."
+              exit 1
+            fi
+            if echo "$code" | grep -nE "\b(SELECT|INSERT|UPDATE|DELETE)\b" ; then
+              echo "::error::$plan contient du SQL."
+              exit 1
+            fi
+            if echo "$code" | grep -n "require(" | grep -v "intentRegistry" ; then
+              echo "::error::$plan importe autre chose que le registre d'intentions."
+              exit 1
+            fi
+          done
+          echo "Plans d'intention purement déclaratifs."
+
+      # Loi 16 — FRONTIÈRE DE SUBSTITUTION. L'Organe d'Orchestration ne dialogue jamais
+      # directement avec un logiciel tiers : il orchestre des intentions métier. Toute
+      # traduction, authentification, mapping, webhook, synchronisation ou protocole
+      # appartient exclusivement à l'Integration Engine et aux connecteurs.
+      #
+      # Ce n'est pas une préférence de style. C'est la condition de la substitution
+      # progressive : retirer un logiciel du commerçant doit rester le débranchement d'un
+      # connecteur, jamais une réécriture du cœur.
+      - name: Loi 16 — l'orchestration ignore les logiciels tiers
+        run: |
+          orch=backend/src/lib/orchestration
+          if [ ! -d "$orch" ]; then
+            echo "Orchestration absente (étape 5 non démarrée) — contrôle ignoré."
+            exit 0
+          fi
+          # Le contrôle porte sur le CODE, pas sur la prose : les commentaires de ce
+          # dossier parlent nécessairement de webhooks et de jetons pour dire ce qui est
+          # interdit. Les lignes de commentaire sont donc retirées avant analyse — mais
+          # `[^:]` avant `//` est indispensable : sans lui, `https://…` passerait pour un
+          # commentaire et une URL d'éditeur se cacherait derrière son propre protocole.
+          violation=0
+          for file in $(find "$orch" -name '*.js') ; do
+            code=$(sed -E 's:([^:])//.*:\1:' "$file" | sed -E '/^[[:space:]]*[*/]/d')
+            check() {
+              if echo "$code" | grep -qiE "$1" ; then
+                echo "::error file=$file::Loi 16 violée — ce fichier $2. Cela appartient à l'Integration Engine."
+                violation=1
+              fi
+            }
+            check "shopify|lightspeed|zettle|chift" "nomme un logiciel tiers"
+            check "fetch[[:space:]]*\(|axios|node-fetch" "fait un appel réseau sortant"
+            check "oauth|access_token|refresh_token|client_secret|api_key" "manipule une authentification externe"
+            check "webhook" "traite un webhook"
+            check "toCanonical|fromCanonical" "traduit un format externe"
+            check "external_bindings|sync_conflicts" "manipule un identifiant externe"
+          done
+          # Seul `adapters/integration.js` peut nommer des opérations externes, et il
+          # n'importe rien : il déclare un vocabulaire, pas une mise en œuvre.
+          intruders=$(grep -rn "require('.*integration" "$orch" --include='*.js' \
+            | grep -v "adapters/integration'" || true)
+          if [ -n "$intruders" ]; then
+            echo "::error::Loi 16 violée — l'orchestration importe l'Integration Engine : $intruders"
+            violation=1
+          fi
+          [ "$violation" -eq 0 ] || exit 1
+          echo "Loi 16 respectée — la frontière de substitution tient."
+
+      # ÉTAPE 7 — CE QUI EMPÊCHE `/api/v1` DE REDEVENIR `/api`.
+      #
+      # L'audit de la roadmap nomme le risque : « /api/v1 devient un miroir de tables au
+      # lieu d'un contrat d'intentions ». Ce n'est pas une crainte théorique, c'est ainsi
+      # que toutes les API « v2 » finissent par ressembler à leur v1 — une route pratique à
+      # la fois, chacune justifiée, aucune refusée.
+      #
+      # La règle est donc mécanique : dans `routes/v1/`, une écriture n'existe que dans
+      # `intents.js` (multi-organe, par l'orchestration) et dans `inventory.js`
+      # (mono-organe, par son organe). Une troisième porte doit être discutée, pas glissée.
+      - name: Loi 5 — /api/v1 n'écrit que par intention ou par organe unique
+        run: |
+          dir=backend/src/routes/v1
+          if [ ! -d "$dir" ]; then
+            echo "API v1 absente (étape 7 non démarrée) — contrôle ignoré."
+            exit 0
+          fi
+          violation=0
+          for file in "$dir"/*.js ; do
+            name=$(basename "$file")
+            code=$(sed -E 's:([^:])//.*:\1:' "$file" | sed -E '/^[[:space:]]*[*/]/d')
+
+            # Aucune route de la surface publique n'écrit en base, ni n'ouvre de transaction.
+            if echo "$code" | grep -qE "\b(INSERT INTO|UPDATE [a-z_]+ SET|DELETE FROM)\b|db\.transaction" ; then
+              echo "::error file=$file::Loi 5 violée — une route de /api/v1 écrit directement en base."
+              violation=1
+            fi
+
+            # Un verbe d'écriture ailleurs que dans les deux fichiers autorisés.
+            case "$name" in
+              intents.js|inventory.js) ;;
+              *)
+                if echo "$code" | grep -qE "router\.(post|patch|put|delete)\(" ; then
+                  echo "::error file=$file::Une écriture apparaît hors de intents.js et inventory.js — une action multi-organe passe par une intention (Loi 5)."
+                  violation=1
+                fi
+                ;;
+            esac
+          done
+          [ "$violation" -eq 0 ] || exit 1
+          echo "Surface v1 conforme — deux écritures, toutes deux justifiées."
+
+      # ÉTAPE 7 — le stock physique d'une boutique n'appartient pas à l'acheteur.
+      #
+      # Le test `api-v1.test.js` balaie les réponses réelles ; ce contrôle-ci lit le code, et
+      # les deux ne servent pas à la même chose. Le test attrape une fuite par les données,
+      # celui-ci attrape le geste qui la produit — un fichier de projection client qui se met
+      # à parler de `on_hand`. Seuls `inventory.js` (surface boutique) et `projections.js`
+      # (qui définit l'interdiction) ont le droit de prononcer ces mots.
+      - name: Loi 12 — aucune surface client ne nomme le stock de gestion
+        run: |
+          dir=backend/src/routes/v1
+          if [ ! -d "$dir" ]; then
+            echo "API v1 absente (étape 7 non démarrée) — contrôle ignoré."
+            exit 0
+          fi
+          violation=0
+          for file in "$dir"/*.js ; do
+            case "$(basename "$file")" in inventory.js|projections.js) continue ;; esac
+            # Le contrôle porte sur le CODE, pas sur la prose : les en-têtes de ces fichiers
+            # expliquent précisément pourquoi `on_hand` ne doit pas sortir, et une règle qui
+            # punirait cette explication pousserait à ne plus l'écrire.
+            code=$(sed -E 's:([^:])//.*:\1:' "$file" | sed -E '/^[[:space:]]*[*/]/d')
+            if echo "$code" | grep -qE "on_hand|safety_buffer" ; then
+              echo "::error file=$file::Une surface client nomme le stock de gestion."
+              violation=1
+            fi
+          done
+          [ "$violation" -eq 0 ] || exit 1
+          echo "Séparation des projections respectée."
+
+      # ÉTAPE 8 — LOI 17 : CONFINEMENT DU DIALECTE.
+      #
+      # Shopify est le premier logiciel du marché branché sur Ma Zone. Il n'est qu'un premier
+      # cas : Lightspeed, SumUp, Zettle, WooCommerce ou Sage doivent coûter un dossier, pas
+      # une modification du cœur.
+      #
+      # Ce contrôle est ce qui rend cette phrase VÉRIFIABLE au lieu d'être une intention. La
+      # règle : le nom d'un éditeur n'apparaît nulle part dans `backend/src` en dehors de
+      # `lib/integration/connectors/<éditeur>/`. Pas dans le CDM, pas dans un organe, pas
+      # dans l'orchestration, pas dans l'API, et pas non plus dans le moteur d'intégration.
+      #
+      # La liste des éditeurs n'est pas écrite ici : elle est DÉDUITE des dossiers de
+      # connecteurs. Le prochain éditeur sera donc gardé par cette règle le jour où son
+      # dossier existe, sans que personne pense à l'ajouter.
+      - name: Loi 17 — le dialecte d'un éditeur reste dans son dossier
+        run: |
+          dir=backend/src/lib/integration/connectors
+          if [ ! -d "$dir" ]; then
+            echo "Aucun connecteur (étape 6 non démarrée) — contrôle ignoré."
+            exit 0
+          fi
+          violation=0
+          editors=0
+          for path in "$dir"/*/ ; do
+            [ -d "$path" ] || continue
+            editor=$(basename "$path")
+            editors=$((editors + 1))
+            for file in $(find backend/src -name '*.js' | grep -v "^$dir/$editor/") ; do
+              # Le contrôle porte sur le CODE, pas sur la prose. Les commentaires de ce dépôt
+              # nomment nécessairement des éditeurs pour expliquer ce qui est interdit — une
+              # règle qui punirait l'explication pousserait à ne plus l'écrire. La seule ligne
+              # de code autorisée à nommer un éditeur est son enregistrement.
+              code=$(sed -E 's:([^:])//.*:\1:' "$file" \
+                | sed -E '/^[[:space:]]*[*/]/d' \
+                | grep -vE "require\('\./$editor'\)" || true)
+              if echo "$code" | grep -qi "$editor" ; then
+                echo "::error file=$file::Loi 17 violée — « $editor » est nommé hors de connectors/$editor/. Un éditeur ne doit jamais apparaître dans le cœur."
+                violation=1
+              fi
+            done
+          done
+          [ "$violation" -eq 0 ] || exit 1
+          echo "Loi 17 respectée — $editors dialecte(s) confiné(s)."
+
+      # ÉTAPE 8 — un connecteur TRADUIT et TRANSPORTE. Il ne décide pas (Loi 2), ne lit pas la
+      # base (le CDM serait contourné), n'ouvre pas le coffre (ses identifiants lui sont
+      # remis) et n'appelle pas le réseau lui-même (il perdrait délai, quotas et testabilité).
+      #
+      # Ces quatre interdits se lisent dans ses `require`, et c'est la seule vérification qui
+      # ne dépend pas de la bonne volonté de l'auteur du prochain connecteur.
+      - name: Loi 17 — un connecteur ne touche ni la base, ni un organe, ni le coffre
+        run: |
+          dir=backend/src/lib/integration/connectors
+          if [ ! -d "$dir" ]; then
+            echo "Aucun connecteur — contrôle ignoré."
+            exit 0
+          fi
+          violation=0
+          for file in $(find "$dir" -name '*.js') ; do
+            code=$(sed -E 's:([^:])//.*:\1:' "$file" | sed -E '/^[[:space:]]*[*/]/d')
+            check() {
+              if echo "$code" | grep -qE "$1" ; then
+                echo "::error file=$file::Un connecteur $2."
+                violation=1
+              fi
+            }
+            check "require\('[^']*/db'\)" "importe la base : il contournerait le CDM"
+            check "require\('[^']*lib/(orders|inventory|catalog|orchestration|kernel)" \
+              "importe un organe : il déciderait au lieu de traduire (Loi 2)"
+            check "require\('[^']*/secrets'\)" \
+              "ouvre le coffre lui-même : ses identifiants lui sont remis par le contexte"
+            check "\bfetch[[:space:]]*\(|axios|node-fetch" \
+              "appelle le réseau directement : le transport passe par ctx.request"
+          done
+          [ "$violation" -eq 0 ] || exit 1
+          echo "Connecteurs isolés — traduction et transport, rien d'autre."
+
+      # ÉTAPE 8 — un identifiant de logiciel tiers est une PROCURATION du commerçant.
+      #
+      # Il ne vit que chiffré, dans une seule table, lue par un seul fichier. Toute autre
+      # lecture serait un second chemin d'accès aux jetons de tous les commerçants — et un
+      # second chemin est celui qu'on oublie de surveiller.
+      - name: Étape 8 — les identifiants tiers ne sortent pas du coffre
+        run: |
+          vault=backend/src/lib/integration/secrets.js
+          if [ ! -f "$vault" ]; then
+            echo "Coffre absent (étape 8 non démarrée) — contrôle ignoré."
+            exit 0
+          fi
+          violation=0
+          guard() {
+            found=$(grep -rln "$1" backend/src --include='*.js' | grep -vE "$2" || true)
+            if [ -n "$found" ]; then
+              echo "::error::« $1 » apparaît hors du coffre : $found"
+              violation=1
+            fi
+          }
+          # La table des secrets, la clé maîtresse et le déchiffrement : un seul lecteur.
+          guard "integration_secrets" "integration/secrets\.js"
+          guard "createDecipheriv" "integration/secrets\.js"
+          guard "INTEGRATION_SECRET_KEY" "integration/secrets\.js|config/env\.js"
+          [ "$violation" -eq 0 ] || exit 1
+          echo "Coffre étanche — un seul fichier lit les procurations des commerçants."
+
+      # Les secrets de développement historiques sont publics : ils ne doivent
+      # jamais réapparaître comme valeur par défaut dans le code.
+      - name: Aucun secret en dur
+        run: |
+          if grep -rn "mazone-secret-dev-2024\|mazone-admin-secret-dev-2024" \
+               backend/src --include='*.js' ; then
+            echo "::error::Un secret de développement historique est présent dans le code."
+            exit 1
+          fi
+          echo "Aucun secret en dur."

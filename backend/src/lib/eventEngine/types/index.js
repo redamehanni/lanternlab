@@ -9,3 +9,4 @@ require('./atelier');
 require('./degustation');
 require('./promo');
 require('./lanterne');
+require('./annonce_boutique');

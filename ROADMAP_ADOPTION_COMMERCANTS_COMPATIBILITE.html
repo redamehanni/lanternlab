@@ -1,0 +1,954 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Roadmap Ma Zone — Produit déployable & adoption commerçants sans friction de compatibilité</title>
+<style>
+  @page { margin: 16mm 14mm; }
+  body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Helvetica, Arial, sans-serif; font-size: 10.5pt; line-height: 1.45; color: #1a1a1a; max-width: 100%; }
+  h1 { font-size: 20pt; border-bottom: 2px solid #0f2d5c; padding-bottom: 8px; color: #0f2d5c; page-break-after: avoid; }
+  h2 { font-size: 14pt; margin-top: 22px; color: #0f2d5c; border-bottom: 1px solid #e5e7eb; padding-bottom: 4px; page-break-after: avoid; }
+  h3 { font-size: 11.5pt; margin-top: 14px; color: #1a4a8a; page-break-after: avoid; }
+  table { border-collapse: collapse; width: 100%; margin: 10px 0; font-size: 9pt; page-break-inside: avoid; }
+  th, td { border: 1px solid #d1d5db; padding: 5px 7px; text-align: left; vertical-align: top; }
+  th { background: #f3f4f6; font-weight: 600; }
+  code { background: #f3f4f6; padding: 1px 4px; border-radius: 3px; font-size: 8.5pt; }
+  pre { background: #f8fafc; border: 1px solid #e5e7eb; border-radius: 6px; padding: 10px; overflow-x: auto; font-size: 8pt; line-height: 1.35; white-space: pre-wrap; word-break: break-word; page-break-inside: avoid; }
+  pre code { background: none; padding: 0; }
+  blockquote { border-left: 4px solid #0f2d5c; margin: 10px 0; padding: 6px 14px; background: #f0f4f8; color: #1e3a5f; }
+  hr { border: none; border-top: 1px solid #e5e7eb; margin: 18px 0; }
+  ul, ol { padding-left: 22px; }
+  li { margin-bottom: 3px; }
+  p { margin: 8px 0; }
+  .pdf-note { display: none; }
+  @media screen {
+    .pdf-note { display: block; background: #eff6ff; border: 1px solid #bfdbfe; border-radius: 8px; padding: 12px 16px; margin-bottom: 24px; color: #1e3a8a; }
+  }
+</style>
+</head>
+<body>
+<div class="pdf-note">
+  <strong>Lecture dans Cursor / navigateur :</strong> ce fichier HTML est la version lisible du plan.
+  Pour le PDF, ouvrez <code>ROADMAP_ADOPTION_COMMERCANTS_COMPATIBILITE.pdf</code> depuis le Finder (clic droit → Ouvrir avec Aperçu)
+  ou double-cliquez le fichier <code>Ouvrir_*_PDF.command</code> correspondant à la racine du projet.
+</div>
+<h1>Roadmap Ma Zone — Produit déployable &amp; adoption commerçants sans friction de compatibilité</h1>
+<table>
+<thead>
+<tr>
+<th></th>
+<th></th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><strong>Nature</strong></td>
+<td>Roadmap produit / stratégique (document de cadrage)</td>
+</tr>
+<tr>
+<td><strong>Date</strong></td>
+<td>2026-07-24</td>
+</tr>
+<tr>
+<td><strong>Auteur</strong></td>
+<td>Reda Mehanni (synthèse Cursor Reda)</td>
+</tr>
+<tr>
+<td><strong>Références</strong></td>
+<td>FD-000 · FD-001 · Plan_Conception_API_Compatible_Logiciels_Commerciaux_V1 (amendé) · Horizon A déployable</td>
+</tr>
+<tr>
+<td><strong>Statut</strong></td>
+<td>Document de travail — vision d’arrivée « aucun commerçant exclu pour cause de logiciel »</td>
+</tr>
+</tbody>
+</table>
+<hr />
+<h2>1. Pourquoi cette roadmap existe</h2>
+<p>Ma Zone vise un stade où <strong>chaque commerçant</strong> qui entend parler du produit peut décider de l’adopter <strong>sans se demander</strong> :</p>
+<blockquote>
+<p>« Est-ce que ça marchera avec mes logiciels ? »</p>
+</blockquote>
+<p>Ce document décrit le chemin complet, phase par phase, pour y arriver — en partant de l’état actuel (prototype riche, pas encore production-ready) et en enchaînant :</p>
+<ol>
+<li>le <strong>socle déployable</strong> (paiement, hébergement, fiabilité commande/livraison) ;</li>
+<li>la <strong>Fondation API / Inventory</strong> (plan actuel A+B+C+E) ;</li>
+<li>les <strong>connecteurs</strong> mass market puis long-tail ;</li>
+<li>la <strong>profondeur métier</strong> (push POS, CHR, services, scale).</li>
+</ol>
+<p>Il ne remplace ni FD-000 (contexte global) ni le plan technique Fondation API. Il <strong>orchestre</strong> ces documents vers un objectif commercial clair.</p>
+<hr />
+<h2>2. Objectif d’arrivée — définition opérationnelle</h2>
+<h3>2.1 Ce que « compatible pour le plus grand nombre » veut dire</h3>
+<table>
+<thead>
+<tr>
+<th>Illusion</th>
+<th>Réalité opérationnelle</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Brancher 50 POS natifs avant le lancement</td>
+<td>Impossible et inutile</td>
+</tr>
+<tr>
+<td>Un seul hub (Chift) suffit à tout</td>
+<td>Couvre beaucoup, pas tout ; profondeur variable</td>
+</tr>
+<tr>
+<td>Excel / pas de caisse = hors cible</td>
+<td>Au contraire : <strong>premier marché</strong> via autonomie Ma Zone</td>
+</tr>
+<tr>
+<td>Compatibilité = connexion API obligatoire</td>
+<td>Compatibilité = <strong>adoption sans doute</strong></td>
+</tr>
+</tbody>
+</table>
+<p><strong>Définition retenue :</strong></p>
+<p>Un commerçant est « compatible » dès qu’il peut :</p>
+<ul>
+<li><strong>soit</strong> brancher son logiciel (POS / e-commerce / hub) ;</li>
+<li><strong>soit</strong> gérer son stock <strong>dans Ma Zone</strong> dès le jour 1 (Épée / CSV / saisie) ;</li>
+<li><strong>jamais</strong> entendre : « Reviens quand on aura ton logiciel. »</li>
+</ul>
+<h3>2.2 Phrase commerciale cible</h3>
+<blockquote>
+<p>« Compatible avec votre caisse si elle a une API ou est couverte par notre hub ; sinon Ma Zone fonctionne en autonomie dès le jour 1. »</p>
+</blockquote>
+<p>C’est cette phrase — pas « 200 connecteurs natifs » — qui enlève l’hésitation.</p>
+<h3>2.3 Deux chemins d’adoption (toujours ouverts)</h3>
+<table>
+<thead>
+<tr>
+<th>Chemin</th>
+<th>Pour qui</th>
+<th>Promesse</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><strong>A — Ma Zone gère le stock</strong></td>
+<td>Pas de POS API, Excel, caisse fermée, refus d’intégrer au début</td>
+<td>Saisie Épée / CSV / scan — opérationnel immédiatement</td>
+</tr>
+<tr>
+<td><strong>B — Ma Zone miroir du POS</strong></td>
+<td>Shopify, Zettle, Lightspeed, hub Chift, etc.</td>
+<td>Connexion OAuth → catalogue / stock synchronisés</td>
+</tr>
+</tbody>
+</table>
+<p>Dès qu’un commerçant tombe dans <strong>A ou B</strong> sans friction, la question de compatibilité disparaît pour lui.</p>
+<hr />
+<h2>3. État de départ (aujourd’hui)</h2>
+<p>Référence : Ma Zone ~v0.9.5.2 · FD-000.</p>
+<table>
+<thead>
+<tr>
+<th>Domaine</th>
+<th>État</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Produit vivant</td>
+<td><code>mobile/</code> + <code>backend/</code> Node · SQLite</td>
+</tr>
+<tr>
+<td>Marketplace Première Âme</td>
+<td>Fonctionnelle (labo)</td>
+</tr>
+<tr>
+<td>Deuxième Âme / Event Engine</td>
+<td>Implémentés (v1)</td>
+</tr>
+<tr>
+<td>Stock</td>
+<td>Compteur <code>products.quantity</code> — fragile (survente, pas de réservation)</td>
+</tr>
+<tr>
+<td>Connecteurs POS</td>
+<td><strong>Aucun</strong></td>
+</tr>
+<tr>
+<td>Paiement réel (PSP)</td>
+<td><strong>Absent</strong></td>
+</tr>
+<tr>
+<td>Hébergement prod / stores</td>
+<td><strong>Absent</strong></td>
+</tr>
+<tr>
+<td>Sécurité Phase 0</td>
+<td>Secrets fallback, CORS ouvert, sandbox à verrouiller</td>
+</tr>
+</tbody>
+</table>
+<p><strong>Conclusion :</strong> on a une architecture et une vision solides ; on n’a pas encore un produit <strong>déployable chez le plus grand nombre</strong>.</p>
+<hr />
+<h2>4. Vue d’ensemble des phases</h2>
+<pre><code>Phase 0 ───── Déployable (paiement, HTTPS, dispatch, stores, confiance)
+    │
+Phase 1 ───── Fondation stock A–E : triple état + chemin universel (manuel)
+    │         → TOUT commerçant peut démarrer (chemin A)
+    │
+Phase 2 ───── Connecteurs masse : Shopify → Zettle → Lightspeed → Chift
+    │         → majorité des stacks « modernes » (chemin B)
+    │
+Phase 3 ───── Couverture « je n’ai plus à me poser la question »
+    │         → long-tail + onboarding sans cul-de-sac
+    │
+Phase 4 ───── Profondeur (push POS, CHR, services, Postgres…)
+              → rétention / professionnalisation
+</code></pre>
+<p><strong>Règles de chevauchement :</strong></p>
+<ul>
+<li>Phases <strong>0</strong> et <strong>1</strong> peuvent avancer <strong>en parallèle</strong>.</li>
+<li>Phase <strong>2</strong> (Shopify / webhooks) exige Phase 1 <strong>A–E done</strong> + <strong>Phase 0 minimum</strong> (secrets, sandbox).</li>
+<li>Phases <strong>2–3</strong> transforment « belle archi » en « le marché nous croit ».</li>
+<li>Phase <strong>4</strong> vient <strong>après</strong> un volume d’adoption réel.</li>
+</ul>
+<hr />
+<h2>5. Phase 0 — Socle déployable</h2>
+<h3>5.1 Intention</h3>
+<p>Sans cette phase, même avec tous les connecteurs du monde, Ma Zone reste un <strong>labo local</strong>. Phase 0 ouvre la porte : <em>« on peut ouvrir un pilote fermé / une vraie zone. »</em></p>
+<h3>5.2 Pourquoi c’est prioritaire</h3>
+<p>Un commerçant n’adopte pas un outil qui :</p>
+<ul>
+<li>n’encaise pas vraiment ;</li>
+<li>plante sur une commande / un livreur ;</li>
+<li>n’a pas d’URL HTTPS stable ;</li>
+<li>laisse le bac à sable ouvert en production.</li>
+</ul>
+<p>La compatibilité logicielle <strong>ne sert à rien</strong> si la confiance produit est absente.</p>
+<h3>5.3 Livrables concrets</h3>
+<h4>A. Sécurité &amp; ops (Phase 0 technique FD-000)</h4>
+<table>
+<thead>
+<tr>
+<th>Livrable</th>
+<th>Détail</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Secrets</td>
+<td><code>JWT_SECRET</code> / <code>ADMIN_JWT_SECRET</code> obligatoires — crash au boot si absents</td>
+</tr>
+<tr>
+<td>CORS</td>
+<td>Allowlist (plus de <code>*</code>)</td>
+</tr>
+<tr>
+<td>Sandbox</td>
+<td><code>SANDBOX_MODE=off</code> en prod ; impersonation / World Factory <strong>interdits</strong> hors staging</td>
+</tr>
+<tr>
+<td>Rate limit / helmet</td>
+<td>Auth et routes sensibles</td>
+</tr>
+<tr>
+<td>Logs / monitoring</td>
+<td>Erreurs API, dispatch, sockets</td>
+</tr>
+<tr>
+<td>Env</td>
+<td>Séparation claire <code>dev</code> / <code>staging</code> / <code>prod</code></td>
+</tr>
+</tbody>
+</table>
+<h4>B. Fiabilité métier Première Âme</h4>
+<table>
+<thead>
+<tr>
+<th>Livrable</th>
+<th>Détail</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Dispatch P1–P3</td>
+<td>Missions fantômes, socket perdu, tiroir livreur — plan stabilisation existant</td>
+</tr>
+<tr>
+<td>Parcours E2E</td>
+<td>Commande → attribution → livraison → livré (cas limites documentés)</td>
+</tr>
+<tr>
+<td>Stock</td>
+<td>Au minimum : ne pas promettre n’importe quoi ; idéalement déjà branché Phase 1</td>
+</tr>
+</tbody>
+</table>
+<h4>C. Business &amp; confiance</h4>
+<table>
+<thead>
+<tr>
+<th>Livrable</th>
+<th>Détail</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>PSP</td>
+<td>Stripe (ou équivalent acté) — paiement commande, webhooks, remboursements</td>
+</tr>
+<tr>
+<td>Mentions légales</td>
+<td>CGU, confidentialité <strong>dans l’app</strong></td>
+</tr>
+<tr>
+<td>Support / litiges</td>
+<td>Process + outil minimum (qui traite, en combien de temps)</td>
+</tr>
+<tr>
+<td>Commission / modèle V0</td>
+<td>Même court — cadre wallet / reçus / litiges</td>
+</tr>
+</tbody>
+</table>
+<h4>D. Distribution</h4>
+<table>
+<thead>
+<tr>
+<th>Livrable</th>
+<th>Détail</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Backend hébergé</td>
+<td>HTTPS + WSS</td>
+</tr>
+<tr>
+<td>iOS App Store</td>
+<td>Priorité selon capacité</td>
+</tr>
+<tr>
+<td>Android Play Store</td>
+<td>Dès que possible après iOS, ou en parallèle si capacité</td>
+</tr>
+<tr>
+<td>Config prod</td>
+<td><code>EXPO_PUBLIC_API_URL</code>, sockets WSS</td>
+</tr>
+</tbody>
+</table>
+<h3>5.4 Critère de sortie Phase 0</h3>
+<ul>
+<li>Un <strong>pilote fermé</strong> (quartier / commerçants invités) peut tourner sur staging ou prod soft.</li>
+<li>Paiement réel testé bout-en-bout.</li>
+<li>Sandbox labo <strong>impossible</strong> à activer par erreur en prod.</li>
+<li>Dispatch ne bloque plus silencieusement les commandes dans les scénarios connus.</li>
+</ul>
+<h3>5.5 Porte ouverte</h3>
+<blockquote>
+<p>« On peut déployer. »</p>
+</blockquote>
+<hr />
+<h2>6. Phase 1 — Fondation stock &amp; API (tranches A + B + C + E)</h2>
+<h3>6.1 Intention</h3>
+<p>Exécuter le <strong>Plan Fondation API amendé</strong> : rendre le stock <strong>fiable</strong> et offrir un chemin d’adoption <strong>universel</strong> (manuel), sans encore brancher Shopify.</p>
+<p>C’est le chantier <strong>Horizon A</strong> anti-survente — pas un « enrichissement shiny ».</p>
+<h3>6.2 Ce qui change dans le produit</h3>
+<table>
+<thead>
+<tr>
+<th>Avant</th>
+<th>Après Phase 1</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Un compteur <code>products.quantity</code></td>
+<td>Triple état : <code>on_hand</code> / <code>reserved</code> / <code>available</code></td>
+</tr>
+<tr>
+<td>Décrément direct à la commande</td>
+<td><code>reserve</code> → commande → <code>commit</code> / <code>release</code></td>
+</tr>
+<tr>
+<td>Pas d’API versionnée métier</td>
+<td><code>/api/v1</code> en parallèle de <code>/api/*</code></td>
+</tr>
+<tr>
+<td>Pas d’intégrations</td>
+<td>Integration Engine + connecteur <strong>manual</strong> (Épée / CSV)</td>
+</tr>
+<tr>
+<td>Pas de file sync</td>
+<td>Inbox / Outbox, idempotence, journal de conflits</td>
+</tr>
+<tr>
+<td>Mobile</td>
+<td><strong>Inchangé</strong> pendant A–E (lit encore <code>quantity</code> = miroir de <code>available</code>)</td>
+</tr>
+</tbody>
+</table>
+<h3>6.3 Modes magasin (normatifs)</h3>
+<table>
+<thead>
+<tr>
+<th>Mode</th>
+<th>Qui écrit <code>on_hand</code></th>
+<th>À la livraison MZ</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>inventory_owner = mazone</code> (<strong>défaut</strong>)</td>
+<td>Inventory Engine (Épée / CSV)</td>
+<td>Baisse <code>on_hand</code> + <code>reserved</code></td>
+</tr>
+<tr>
+<td><code>inventory_owner = pos</code> (plus tard, Phase 2+)</td>
+<td>Adapter POS</td>
+<td>Baisse <strong>seulement</strong> <code>reserved</code> — évite double décrément</td>
+</tr>
+</tbody>
+</table>
+<h3>6.4 Tranches de code (rappel)</h3>
+<table>
+<thead>
+<tr>
+<th>Tranche</th>
+<th>Contenu</th>
+<th>Dans le 1er build ?</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><strong>A</strong></td>
+<td>Contrats OpenAPI <code>/v1</code>, squelette tables</td>
+<td>Oui</td>
+</tr>
+<tr>
+<td><strong>B</strong></td>
+<td>Inventory Engine + branchement commandes</td>
+<td>Oui</td>
+</tr>
+<tr>
+<td><strong>C</strong></td>
+<td>Integration Engine + connecteur manual / CSV</td>
+<td>Oui</td>
+</tr>
+<tr>
+<td><strong>E</strong></td>
+<td>Outbox / Inbox / réconciliation / busy_timeout</td>
+<td>Oui</td>
+</tr>
+<tr>
+<td><strong>D</strong></td>
+<td>Shopify natif</td>
+<td><strong>Non</strong> — Phase 2</td>
+</tr>
+<tr>
+<td><strong>F</strong></td>
+<td>Zettle / Lightspeed / Chift / push</td>
+<td><strong>Non</strong> — Phases 2–4</td>
+</tr>
+</tbody>
+</table>
+<h3>6.5 Ce que Phase 1 débloque déjà pour les commerçants</h3>
+<ul>
+<li><strong>100 % des commerçants</strong> peuvent démarrer <strong>sans</strong> logiciel tiers.</li>
+<li>Anti-survente sur le canal Ma Zone.</li>
+<li>Base pour brancher un POS plus tard <strong>sans refactor</strong> Orders.</li>
+<li>OV / marketplace peuvent s’appuyer sur <code>available</code> (promesses honnêtes).</li>
+</ul>
+<h3>6.6 Critère de sortie Phase 1</h3>
+<ul>
+<li>Plus aucun <code>UPDATE products SET quantity</code> hors module miroir Inventory.</li>
+<li>Magasin sans POS : stock géré via Épée / CSV, commandes réservent correctement.</li>
+<li>Scénarios oversell / annulation / livraison validés manuellement (ou tests headless).</li>
+<li>FD-001 amendée avec les résultats (écarts plan vs réel).</li>
+</ul>
+<h3>6.7 Porte ouverte</h3>
+<blockquote>
+<p>« Tout commerçant peut adopter Ma Zone dès demain — en autonomie. »</p>
+</blockquote>
+<p>C’est déjà la réponse à la compatibilité pour ceux qui n’ont rien, ou qui refusent de brancher leur caisse au jour 1.</p>
+<hr />
+<h2>7. Phase 2 — « Connecte ta caisse » — masse critique</h2>
+<h3>7.1 Intention</h3>
+<p>Couvrir les stacks <strong>les plus fréquents</strong> chez les TPE / PME locales, pour que le chemin B soit réel — pas seulement documenté.</p>
+<h3>7.2 Prérequis (normatifs)</h3>
+<ul>
+<li>Phase 1 <strong>A–E done</strong>.</li>
+<li>Phase 0 <strong>minimum</strong> : secrets hors code, sandbox verrouillable, HTTPS pour webhooks.</li>
+<li>GO explicite Reda + Adam avant chaque connecteur natif.</li>
+</ul>
+<h3>7.3 Ordre de couverture recommandé</h3>
+<table>
+<thead>
+<tr>
+<th>Ordre</th>
+<th>Connecteur</th>
+<th>Pourquoi</th>
+<th>Capacité V1 typique</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>1</td>
+<td><strong>Shopify</strong></td>
+<td>Très présent retail / click &amp; collect</td>
+<td>Lecture catalogue + inventaire, webhooks → <code>on_hand</code></td>
+</tr>
+<tr>
+<td>2</td>
+<td><strong>Zettle</strong></td>
+<td>Très présent petits commerces FR</td>
+<td>Miroir mouvements stock</td>
+</tr>
+<tr>
+<td>3</td>
+<td><strong>Lightspeed</strong> (X-Series)</td>
+<td>Retail / CHR mid</td>
+<td>Outlets / inventory API</td>
+</tr>
+<tr>
+<td>4</td>
+<td><strong>Chift</strong></td>
+<td>Un adapter → long-tail FR</td>
+<td>Couverture large, profondeur selon l’éditeur derrière Chift</td>
+</tr>
+</tbody>
+</table>
+<p>Chaque connecteur = <strong>un adapter</strong> dans <code>connectorRegistry</code> (Open/Closed) — jamais un SDK Shopify dans <code>orders.js</code>.</p>
+<h3>7.4 UX Épée obligatoire — « Mes intégrations »</h3>
+<p>Écran commerçant avec, pour chaque magasin :</p>
+<table>
+<thead>
+<tr>
+<th>État</th>
+<th>Message / action</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Non connecté</td>
+<td>« Gérer le stock dans Ma Zone » (chemin A) <strong>ou</strong> « Connecter mon logiciel »</td>
+</tr>
+<tr>
+<td>Connecté</td>
+<td>Nom du connecteur, dernier sync, conflits éventuels</td>
+</tr>
+<tr>
+<td>Logiciel inconnu</td>
+<td>« Continuer avec Ma Zone » + « Demander mon logiciel » (file produit)</td>
+</tr>
+</tbody>
+</table>
+<p><strong>Règle d’or UX :</strong> jamais un cul-de-sac « logiciel non supporté » sans alternative A.</p>
+<h3>7.5 Comportement stock en mode POS</h3>
+<ol>
+<li>Le POS (ou Shopify) est maître de <code>on_hand</code>.</li>
+<li>Ma Zone réserve (<code>reserved</code>) à la commande.</li>
+<li>À la livraison MZ : on libère / commit <strong>sans</strong> re-décrémenter <code>on_hand</code> si le POS le fera (ou l’a déjà fait).</li>
+<li>Push vente MZ → POS = <strong>option Phase 4</strong>, pas bloquant Phase 2.</li>
+</ol>
+<h3>7.6 Critère de sortie Phase 2</h3>
+<ul>
+<li>Au moins <strong>Shopify</strong> live en lecture (miroir inventaire) sur staging puis prod pilote.</li>
+<li>Idéalement Zettle <strong>ou</strong> Lightspeed + <strong>Chift</strong> démarré.</li>
+<li>Onboarding commerçant : choix A/B en moins de 5 minutes.</li>
+<li>Zéro double décrément constaté sur scénarios de test.</li>
+</ul>
+<h3>7.7 Porte ouverte</h3>
+<blockquote>
+<p>« La majorité des commerçants “modernes” se connectent en un clic ; les autres restent sur le chemin A. »</p>
+</blockquote>
+<hr />
+<h2>8. Phase 3 — Couverture « je n’ai plus à me poser la question »</h2>
+<h3>8.1 Intention</h3>
+<p>Atteindre le <strong>ressenti universel</strong> : quel que soit le commerçant, l’onboarding a une réponse.</p>
+<h3>8.2 Leviers</h3>
+<h4>1. Maximiser Chift</h4>
+<p>Tout ce que Chift couvre devient « compatible via hub » — même si la profondeur (webhooks temps réel, push) varie selon l’éditeur.</p>
+<h4>2. Natifs FR ciblés</h4>
+<p>Là où Chift est faible ou un partenariat API existe :</p>
+<table>
+<thead>
+<tr>
+<th>Cible</th>
+<th>Vertical typique</th>
+<th>Note</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><strong>Clictill</strong></td>
+<td>Épicerie / retail FR</td>
+<td>Selon accès API</td>
+</tr>
+<tr>
+<td><strong>L’Addition</strong></td>
+<td>CHR</td>
+<td>Partiel Inventory ; tables / KDS = Phase 4</td>
+</tr>
+<tr>
+<td><strong>SumUp</strong> / <strong>Square</strong></td>
+<td>Petits commerces</td>
+<td>Natif ou via hub si couvert</td>
+</tr>
+</tbody>
+</table>
+<h4>3. Onboarding magique</h4>
+<p>Parcours type :</p>
+<ol>
+<li>« Quel logiciel utilises-tu ? » (liste + recherche)</li>
+<li>Si <strong>connu + connecteur</strong> → bouton <strong>Connecter</strong></li>
+<li>Si <strong>inconnu / pas d’API</strong> → <strong>Continuer avec Ma Zone</strong> (CSV / saisie) + option <strong>Demander mon logiciel</strong></li>
+<li>File d’attente produit : volume de demandes = priorité des prochains adapters</li>
+</ol>
+<h4>4. Filet de sécurité permanent</h4>
+<p>Le chemin A (autonomie Ma Zone) reste <strong>toujours</strong> excellent : UX stock Épée, alertes rupture, import CSV, éventuellement scan code-barres (niveau autonomie 1).</p>
+<h3>8.3 Ce qu’on peut dire commercialement (et ce qu’on ne dit pas)</h3>
+<table>
+<thead>
+<tr>
+<th>On dit</th>
+<th>On ne dit pas</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Compatible avec les principales caisses / Shopify / hub</td>
+<td>Compatible avec absolument tous les logiciels natifs</td>
+</tr>
+<tr>
+<td>Sinon, opérationnel en autonomie jour 1</td>
+<td>Vous devez attendre notre connecteur</td>
+</tr>
+<tr>
+<td>Demandez votre logiciel — on priorise</td>
+<td>On ne supportera jamais X</td>
+</tr>
+</tbody>
+</table>
+<h3>8.4 Critère de sortie Phase 3</h3>
+<ul>
+<li>Onboarding <strong>ne bloque jamais</strong> un commerçant.</li>
+<li>Top stacks (Shopify, Zettle, Lightspeed) + hub Chift en production.</li>
+<li>Au moins 1–2 natifs FR (Clictill et/ou SumUp/L’Addition) en cours ou live.</li>
+<li>Phrase commerciale cible utilisable sans astérisque trompeur.</li>
+<li>Métrique interne : % d’onboardings qui terminent sans ticket « incompatibilité ».</li>
+</ul>
+<h3>8.5 Porte ouverte</h3>
+<blockquote>
+<p>« Aucun commerçant n’est exclu pour raison de compatibilité logicielle. »</p>
+</blockquote>
+<hr />
+<h2>9. Phase 4 — Profondeur métier &amp; scale</h2>
+<h3>9.1 Intention</h3>
+<p>Après l’adoption : réduire la double saisie, couvrir les verticaux hors SKU simple, industrialiser.</p>
+<h3>9.2 Chantiers typiques</h3>
+<table>
+<thead>
+<tr>
+<th>Chantier</th>
+<th>Valeur</th>
+<th>Complexité</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><strong>Push vente MZ → POS</strong></td>
+<td>Une commande Ma Zone apparaît dans la caisse</td>
+<td>Moyenne — tranche F du plan</td>
+</tr>
+<tr>
+<td><strong>Prix / catalogue bi-directionnels</strong></td>
+<td>Selon matrice propriétaire / miroir CDM</td>
+<td>Moyenne</td>
+</tr>
+<tr>
+<td><strong>CHR</strong> (tables, KDS, L’Addition / Lightspeed K)</td>
+<td>Resto = pas seulement stock SKU</td>
+<td>Haute — autre modèle d’offre</td>
+</tr>
+<tr>
+<td><strong>Services</strong> (Planity, agendas)</td>
+<td>Capacité / créneaux ≠ <code>on_hand</code></td>
+<td>Haute — organe capacité</td>
+</tr>
+<tr>
+<td><strong>Multi-magasins / multi-outlet</strong></td>
+<td>Chaînes locales</td>
+<td>Moyenne</td>
+</tr>
+<tr>
+<td><strong>Postgres</strong></td>
+<td>Concurrence, backups, scale</td>
+<td>Moyenne — déclenché par seuil <code>SQLITE_BUSY</code> / volume</td>
+</tr>
+<tr>
+<td><strong>Scan / CSV / alertes</strong> (niveau stock 1+)</td>
+<td>Autonomie commerçant sans POS</td>
+<td>Faible à moyenne</td>
+</tr>
+</tbody>
+</table>
+<h3>9.3 Porte ouverte</h3>
+<blockquote>
+<p>« Ma Zone n’est plus seulement un canal de livraison : c’est un miroir opérationnel du commerce. »</p>
+</blockquote>
+<hr />
+<h2>10. Matrice logiciels — où on en sera à chaque phase</h2>
+<h3>10.1 Après Phase 1 seulement</h3>
+<table>
+<thead>
+<tr>
+<th>Logiciel / chemin</th>
+<th>Compatible ?</th>
+<th>Comment</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Saisie Épée / CSV</td>
+<td><strong>Oui</strong></td>
+<td>Chemin A</td>
+</tr>
+<tr>
+<td>Shopify, Zettle, Lightspeed, Chift, Clictill…</td>
+<td><strong>Non encore</strong></td>
+<td>Architecture prête, adapter absent</td>
+</tr>
+</tbody>
+</table>
+<h3>10.2 Après Phase 2 (cible)</h3>
+<table>
+<thead>
+<tr>
+<th>Logiciel</th>
+<th>Statut cible</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Épée / CSV</td>
+<td>Oui</td>
+</tr>
+<tr>
+<td>Shopify</td>
+<td>Oui (lecture inventaire)</td>
+</tr>
+<tr>
+<td>Zettle</td>
+<td>Oui ou en cours</td>
+</tr>
+<tr>
+<td>Lightspeed</td>
+<td>Oui ou en cours</td>
+</tr>
+<tr>
+<td>Chift (hub)</td>
+<td>Démarré / partiel</td>
+</tr>
+</tbody>
+</table>
+<h3>10.3 Après Phase 3 (cible « sans question »)</h3>
+<table>
+<thead>
+<tr>
+<th>Famille</th>
+<th>Statut cible</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Chemin A</td>
+<td>Excellent, toujours disponible</td>
+</tr>
+<tr>
+<td>Top natifs + Chift</td>
+<td>Production</td>
+</tr>
+<tr>
+<td>Natifs FR prioritaires</td>
+<td>Au moins partiels</td>
+</tr>
+<tr>
+<td>Logiciel inconnu</td>
+<td>Jamais bloqué — autonomie + demande</td>
+</tr>
+</tbody>
+</table>
+<h3>10.4 Hors Inventory / hors promesse Phase 1–3</h3>
+<table>
+<thead>
+<tr>
+<th>Famille</th>
+<th>Pourquoi</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Planity / Square Appointments</td>
+<td>Agenda ≠ stock SKU</td>
+</tr>
+<tr>
+<td>Deliveroo / Uber Eats / Just Eat</td>
+<td>Canaux commande — autre chantier</td>
+</tr>
+<tr>
+<td>Comptabilité Sage / NF525 « être la caisse »</td>
+<td>Ma Zone ne remplace pas la caisse fiscale</td>
+</tr>
+<tr>
+<td>Toast / Odoo / Prestashop…</td>
+<td>Via Chift si couvert, sinon file d’attente</td>
+</tr>
+</tbody>
+</table>
+<hr />
+<h2>11. Ce qui manque pour chaque logiciel « pas encore »</h2>
+<p>Pour <strong>chaque</strong> connecteur non livré, le même kit :</p>
+<ol>
+<li><strong>Adapter</strong> (<code>toCanonical</code> / <code>fromCanonical</code>, auth, pull, webhooks)</li>
+<li><strong>Credentials</strong> (OAuth app, clés API, compte hub)</li>
+<li><strong>Mapping</strong> outlet POS ↔ <code>store</code> Ma Zone (<code>ExternalBinding</code>)</li>
+<li><strong>Mode</strong> <code>inventory_owner = pos</code> + anti double-décrément</li>
+<li><strong>Phase 0</strong> (secrets, HTTPS, sandbox) avant webhooks publics</li>
+<li>Optionnel : <strong>push</strong> vente MZ → POS</li>
+</ol>
+<p>Pour <strong>Chift</strong> : compte / contrat + un adapter <code>chift</code> unique.<br />
+Pour <strong>CHR / services</strong> : pas seulement un adapter stock — un <strong>modèle d’offre</strong> adapté (table, créneau).</p>
+<hr />
+<h2>12. Organisation duo Reda ↔ Adam (suggestion)</h2>
+<table>
+<thead>
+<tr>
+<th>Phase</th>
+<th>Focus typique</th>
+<th>Prérequis docs</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>0</td>
+<td>Sécurité, PSP, hébergement, dispatch</td>
+<td>FD-000 Horizon A</td>
+</tr>
+<tr>
+<td>1</td>
+<td>Inventory + manual (A–E)</td>
+<td>FD-001 + Plan conception amendé</td>
+</tr>
+<tr>
+<td>2</td>
+<td>Shopify puis Zettle / Lightspeed / Chift</td>
+<td>GO après A–E + Phase 0 min</td>
+</tr>
+<tr>
+<td>3</td>
+<td>Onboarding + long-tail + natifs FR</td>
+<td>Métriques demandes « mon logiciel »</td>
+</tr>
+<tr>
+<td>4</td>
+<td>Push / CHR / services / Postgres</td>
+<td>Après volume réel</td>
+</tr>
+</tbody>
+</table>
+<p>Règle Cursor : <strong>git pull</strong> · lire FD-000 · FD-001 si stock/API · ne pas démarrer D avant A–E + Phase 0 min.</p>
+<hr />
+<h2>13. Risques et garde-fous</h2>
+<table>
+<thead>
+<tr>
+<th>Risque</th>
+<th>Mitigation</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Lancer les connecteurs avant le stock triple état</td>
+<td>Phase 1 avant Phase 2</td>
+</tr>
+<tr>
+<td>Webhooks en prod sans secrets</td>
+<td>Phase 0 min avant D</td>
+</tr>
+<tr>
+<td>Promettre « tous les logiciels »</td>
+<td>Phrase commerciale §2.2</td>
+</tr>
+<tr>
+<td>Double décrément MZ + POS</td>
+<td>Modes <code>mazone</code> / <code>pos</code></td>
+</tr>
+<tr>
+<td>Double vérité <code>quantity</code></td>
+<td>Migration T0–T3 normative</td>
+</tr>
+<tr>
+<td>Négliger le chemin A</td>
+<td>UX Épée / CSV = produit à part entière</td>
+</tr>
+<tr>
+<td>Refactor mobile trop tôt</td>
+<td>Mobile inchangé pendant A–E</td>
+</tr>
+<tr>
+<td>SQLite saturé</td>
+<td>Seuil busy → discussion Postgres (Phase 4)</td>
+</tr>
+</tbody>
+</table>
+<hr />
+<h2>14. Synthèse exécutive</h2>
+<table>
+<thead>
+<tr>
+<th>Question</th>
+<th>Réponse</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Par où commencer ?</td>
+<td>Phase 0 (déployable) <strong>en parallèle</strong> de Phase 1 (stock A–E)</td>
+</tr>
+<tr>
+<td>Quand le 1er commerçant peut adopter sans POS ?</td>
+<td>Fin de Phase 1</td>
+</tr>
+<tr>
+<td>Quand la majorité des stacks modernes se connectent ?</td>
+<td>Fin de Phase 2</td>
+</tr>
+<tr>
+<td>Quand plus personne n’est exclu pour compatibilité ?</td>
+<td>Fin de Phase 3 (avec chemin A excellent)</td>
+</tr>
+<tr>
+<td>Faut-il 50 connecteurs natifs ?</td>
+<td><strong>Non</strong> — A universel + top natifs + Chift + onboarding sans cul-de-sac</td>
+</tr>
+<tr>
+<td>Le plan Fondation API actuel ?</td>
+<td>C’est <strong>exactement</strong> la Phase 1</td>
+</tr>
+</tbody>
+</table>
+<hr />
+<h2>15. Prochaine action concrète</h2>
+<ol>
+<li>Valider cette roadmap avec Adam (alignement vision).  </li>
+<li>Valider / amender FD-001 + plan conception (déjà amendés Reda — GO Adam).  </li>
+<li>Décider le <strong>parallèle</strong> Phase 0 vs Phase 1 (qui fait quoi sur les deux Cursor).  </li>
+<li><strong>Ne pas</strong> démarrer Shopify (D) avant A–E + Phase 0 min.  </li>
+<li>Après Phase 1 code : amender FD-001 (résultats), pas créer une fiche architecture séparée.</li>
+</ol>
+<hr />
+<p><em>Roadmap Adoption Commerçants &amp; Compatibilité — Ma Zone — 2026-07-24</em><br />
+<em>Document explicatif phase par phase — complémentaire de FD-000 / FD-001 / Plan Fondation API.</em></p>
+</body>
+</html>

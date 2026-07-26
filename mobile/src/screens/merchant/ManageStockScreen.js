@@ -6,12 +6,29 @@ import {
 import { useFocusEffect } from '@react-navigation/native';
 import { useApp } from '../../context/AppContext';
 import { getMyStore, getStoreProducts, updateProductStock, deleteProduct } from '../../api';
+import { getStoreInventory, declareOnHand } from '../../api/v1';
 import { imageUrl, euro } from '../../utils/format';
 import PriceTag from '../../components/ui/PriceTag';
 import PromoBadge from '../../components/ui/PromoBadge';
 import { confirmAction } from '../../utils/confirm';
-import { COLORS } from '../../config';
+import { COLORS, FEATURES } from '../../config';
 
+/**
+ * PREMIER ÉCRAN BASCULÉ SUR L'API v1 (étape 7 de la roadmap Organe d'Orchestration).
+ *
+ * Le rendu, les styles et les gestes sont INCHANGÉS. Seule la provenance des nombres
+ * change, et un détail d'affichage s'ajoute quand la v1 est active : le commerçant voit
+ * enfin ce que l'API historique ne pouvait pas lui dire — combien d'unités sont
+ * physiquement là, et combien sont déjà promises à des clients.
+ *
+ * POURQUOI CET ÉCRAN D'ABORD. Sur `/api`, le nombre affiché est `products.quantity`, devenu
+ * la projection du VENDABLE à l'étape 4. Quand le commerçant le réenregistrait, le backend
+ * devait deviner qu'il parlait de vendable et non de physique, sous peine de faire fondre le
+ * stock à chaque saisie. Sur `/api/v1`, les champs portent leur vrai nom : plus de devinette.
+ *
+ * LES DEUX CHEMINS COEXISTENT, ET AUCUN N'EST DÉGRADÉ. `FEATURES.stockV1` vaut `false` par
+ * défaut : la bascule s'éprouve en activant un drapeau, pas en livrant une réécriture.
+ */
 export default function ManageStockScreen({ navigation }) {
   const { socket } = useApp();
   const [products, setProducts] = useState([]);
@@ -23,8 +40,34 @@ export default function ManageStockScreen({ navigation }) {
     try {
       const storeRes = await getMyStore();
       if (!storeRes.data.store) { setProducts([]); return; }
+
       const prodRes = await getStoreProducts(storeRes.data.store.id);
-      setProducts(prodRes.data.products || []);
+      const list = prodRes.data.products || [];
+
+      if (!FEATURES.stockV1) {
+        setProducts(list);
+        return;
+      }
+
+      // Le catalogue vient encore de `/api` — promotions, images, catégories n'ont pas
+      // d'équivalent commerçant en v1 — et seuls les NOMBRES viennent de l'inventaire
+      // versionné. Une bascule progressive est exactement cela : déplacer une
+      // responsabilité, pas un écran entier.
+      const inventory = await getStoreInventory(storeRes.data.store.id);
+      const byProduct = new Map((inventory.data.levels || []).map(l => [l.product_id, l]));
+
+      setProducts(list.map(p => {
+        const level = byProduct.get(p.id);
+        if (!level) return p;
+        return {
+          ...p,
+          // `quantity` reste le champ qu'affiche le rendu : le vendable, comme avant.
+          quantity: level.available,
+          on_hand: level.on_hand,
+          reserved: level.reserved,
+          inventory_owner: level.inventory_owner,
+        };
+      }));
     } catch {
       Alert.alert('Erreur', 'Impossible de charger les produits.');
     } finally {
@@ -37,8 +80,13 @@ export default function ManageStockScreen({ navigation }) {
 
   useEffect(() => {
     if (!socket) return;
-    const onStock = ({ productId, quantity }) =>
-      setProducts(prev => prev.map(p => p.id === productId ? { ...p, quantity } : p));
+    // `available` est le nom juste depuis l'étape 7 ; `quantity` porte le même nombre le
+    // temps que les autres écrans migrent. Lire les deux évite de dépendre de l'ordre de
+    // déploiement entre le backend et l'application.
+    const onStock = ({ productId, available, quantity }) => {
+      const value = available ?? quantity;
+      setProducts(prev => prev.map(p => p.id === productId ? { ...p, quantity: value } : p));
+    };
     socket.on('product:stock_updated', onStock);
     return () => socket.off('product:stock_updated', onStock);
   }, [socket]);
@@ -60,10 +108,40 @@ export default function ManageStockScreen({ navigation }) {
     if (updating[product.id]) return;
     setUpdating(u => ({ ...u, [product.id]: true }));
     try {
-      await updateProductStock(product.id, delta);
-      setProducts(prev => prev.map(p => p.id === product.id ? { ...p, quantity: Math.max(0, p.quantity + delta) } : p));
-    } catch {
-      Alert.alert('Erreur', 'Mise à jour impossible.');
+      if (!FEATURES.stockV1) {
+        await updateProductStock(product.id, delta);
+        setProducts(prev => prev.map(p => p.id === product.id
+          ? { ...p, quantity: Math.max(0, p.quantity + delta) }
+          : p));
+        return;
+      }
+
+      // En v1 le bouton « + » déclare une CIBLE de stock physique, pas un incrément. Le
+      // rejeu d'un appel perdu sur un réseau mobile ne peut donc pas compter deux fois.
+      const currentOnHand = product.on_hand ?? product.quantity;
+      const res = await declareOnHand(
+        product.id,
+        Math.max(0, currentOnHand + delta),
+        delta > 0 ? 'réassort' : 'correction à la baisse'
+      );
+
+      // On affiche ce que le serveur a retenu, jamais ce qu'on espérait : c'est ce qui rend
+      // visible un refus, une réservation concurrente, ou une valeur bornée par l'organe.
+      const level = res.data.stock;
+      setProducts(prev => prev.map(p => p.id === product.id
+        ? { ...p, quantity: level.available, on_hand: level.on_hand, reserved: level.reserved }
+        : p));
+    } catch (err) {
+      // 409 : le stock physique est le miroir d'une caisse. Le dire, plutôt qu'un « Mise à
+      // jour impossible » qui laisserait chercher une panne réseau (Loi 12).
+      const mirrored = err?.response?.status === 409;
+      Alert.alert(
+        mirrored ? 'Stock géré par votre caisse' : 'Erreur',
+        mirrored
+          ? err.response.data?.error || 'Ce stock se corrige dans votre logiciel de caisse.'
+          : 'Mise à jour impossible.'
+      );
+      load();
     } finally {
       setUpdating(u => ({ ...u, [product.id]: false }));
     }
@@ -147,6 +225,15 @@ export default function ManageStockScreen({ navigation }) {
             </TouchableOpacity>
           </View>
 
+          {/* Ce que l'API historique ne pouvait pas dire : d'où vient l'écart entre le
+              stock physique et ce qui reste vendable. Affiché seulement quand il y a un
+              écart — une ligne qui répète « 12 en stock, 12 vendables » n'informe personne. */}
+          {FEATURES.stockV1 && item.reserved > 0 && (
+            <Text style={styles.stockDetail}>
+              {item.on_hand} en rayon · {item.reserved} promis à des clients
+            </Text>
+          )}
+
           {/* Modifier / Supprimer / Promotion */}
           <View style={styles.actionsRow}>
             <TouchableOpacity style={styles.editBtn} onPress={() => navigation.navigate('AddProduct', { product: item })}>
@@ -192,6 +279,7 @@ const styles = StyleSheet.create({
   stockBadgeEmpty: { backgroundColor: '#fee2e2' },
   stockQty: { fontSize: 20, fontWeight: '800', color: COLORS.primary },
   stockUnit: { fontSize: 11, color: COLORS.textLight },
+  stockDetail: { fontSize: 11, color: COLORS.textLight, marginTop: 8, textAlign: 'center' },
   actionsRow: { flexDirection: 'row', gap: 8, marginTop: 12 },
   editBtn: { flex: 1, backgroundColor: COLORS.primary + '15', borderRadius: 8, paddingVertical: 10, alignItems: 'center' },
   editBtnText: { color: COLORS.primary, fontWeight: '700', fontSize: 13 },

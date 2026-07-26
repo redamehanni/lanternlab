@@ -78,6 +78,7 @@ import CreateEventScreen      from '../screens/merchant/CreateEventScreen';
 import DiffuseOpportunityScreen from '../screens/merchant/DiffuseOpportunityScreen';
 import MerchantInboxScreen    from '../screens/merchant/MerchantInboxScreen';
 import MesClientsScreen         from '../screens/merchant/MesClientsScreen';
+import MesIntegrationsScreen    from '../screens/merchant/MesIntegrationsScreen';
 import MerchantSupportChatScreen from '../screens/merchant/MerchantSupportChatScreen';
 import MerchantDrawerContent from '../components/merchant/MerchantDrawerContent';
 
@@ -542,6 +543,7 @@ function EpeeStack() {
       <Stack.Screen name="MerchantInbox" component={MerchantInboxScreen} options={{ title: 'Messages' }} />
       <Stack.Screen name="MerchantSupportChat" component={MerchantSupportChatScreen} options={{ title: 'Assistance Ma Zone' }} />
       <Stack.Screen name="MerchantStats" component={MerchantStatsScreen} options={{ title: 'Statistiques' }} />
+      <Stack.Screen name="MesIntegrations" component={MesIntegrationsScreen} options={{ title: 'Mes logiciels' }} />
       <Stack.Screen name="Profile" component={ProfileScreen} options={{ title: 'Mon profil' }} />
       <Stack.Screen name="Chat" component={ChatScreen} options={{ title: 'Messages' }} />
     </Stack.Navigator>

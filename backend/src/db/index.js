@@ -9,9 +9,23 @@ if (!fs.existsSync(DATA_DIR)) fs.mkdirSync(DATA_DIR, { recursive: true });
 const UPLOADS_DIR = path.join(__dirname, '../../uploads');
 if (!fs.existsSync(UPLOADS_DIR)) fs.mkdirSync(UPLOADS_DIR, { recursive: true });
 
-const db = new Database(path.join(DATA_DIR, 'mazone.db'));
+// `MAZONE_DB_PATH` permet aux tests d'ouvrir une base jetable : chaque fichier de
+// test travaille sur son propre fichier, sans jamais toucher la base de travail.
+const DB_PATH = process.env.MAZONE_DB_PATH || path.join(DATA_DIR, 'mazone.db');
+const db = new Database(DB_PATH);
 db.pragma('journal_mode = WAL');
 db.pragma('foreign_keys = ON');
+
+// Étape 6 — sans `busy_timeout`, une écriture qui trouve la base verrouillée échoue
+// IMMÉDIATEMENT en SQLITE_BUSY. C'était supportable tant que tout venait d'une requête
+// HTTP ; ça ne l'est plus dès qu'un worker de synchronisation écrit par lots en même
+// temps qu'un client commande. Avec 5000 ms, l'écrivain attend son tour au lieu de
+// renvoyer une erreur à un commerçant pour une raison qu'il ne peut pas comprendre.
+//
+// Ce n'est pas une solution à la concurrence, c'est un tampon. Le jour où ces 5 secondes
+// sont réellement consommées, le signal à écouter n'est pas « augmenter le timeout »
+// mais « passer à Postgres » (seuil chiffré : roadmap étape 6, dette technique).
+db.pragma('busy_timeout = 5000');
 
 db.exec(`
   CREATE TABLE IF NOT EXISTS users (

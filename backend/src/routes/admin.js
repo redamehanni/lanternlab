@@ -185,4 +185,55 @@ router.post('/lab/actions/:actionId', verifyAdmin, requireSandbox, (req, res) =>
   });
 });
 
+// ── Santé des files de synchronisation (étape 6) ───────────────────────────────
+//
+// Deux choses se surveillent ici, et une seule est un incident.
+//
+// Les LETTRES MORTES sont l'incident : un message qui n'a pas atteint le logiciel d'un
+// commerçant après six tentatives. Perdu en silence, il se transforme en écart de stock
+// qu'on découvrira par une survente.
+//
+// Le nombre de messages EN ATTENTE n'est pas un incident, c'est un signal. La roadmap
+// chiffre le seuil de réexamen : au-delà de 200 en attente de façon soutenue, la question
+// n'est plus « accélérer le worker » mais « passer à Postgres ». Sans compteur visible,
+// ce seuil resterait une phrase dans un document.
+router.get('/integration/queues', verifyAdmin, (req, res) => {
+  handle(res, () => {
+    const integration = require('../lib/integration');
+    const outbox = integration.outboxStats();
+
+    res.json({
+      outbox,
+      inbox: integration.inboxStats(),
+      deadLetters: integration.deadLetters({ limit: 100 }),
+      connectors: integration.connectors(),
+      postgresThreshold: { pending: outbox.pending, reviewAbove: 200 },
+    });
+  });
+});
+
+// ── Usage de l'API historique (étape 7) ────────────────────────────────────────
+//
+// LA SEULE QUESTION QUI PERMETTE DE COUPER `/api` SANS RIEN CASSER : qui l'appelle
+// encore ? Une date de fin de vie sans cette réponse laisse deux choix également mauvais
+// — couper à l'aveugle, ou repousser indéfiniment par prudence.
+//
+// Ce que ce compteur dit : quelles routes non versionnées ont été appelées depuis le
+// démarrage du serveur, combien de fois, et quand pour la dernière fois. Une route à zéro
+// appel sur plusieurs jours est une route qu'on peut retirer. Une route encore appelée est
+// une application installée sur le téléphone de quelqu'un.
+//
+// Ce qu'il ne dit pas : l'historique avant le dernier redémarrage. Compteurs en mémoire,
+// limite assumée et expliquée dans `lib/sunset.js` — payer une écriture SQLite par requête
+// pour de la télémétrie serait un mauvais échange sur une base à un seul écrivain.
+router.get('/api-usage', verifyAdmin, (req, res) => {
+  handle(res, () => {
+    const sunset = require('../lib/sunset');
+    res.json({
+      deadlines: sunset.schedule(),
+      legacy: sunset.legacyUsage(),
+    });
+  });
+});
+
 module.exports = router;

@@ -47,6 +47,32 @@ function getServerHost() {
 export const API_URL = getServerHost();
 export const SOCKET_URL = getServerHost();
 
+/**
+ * Bascule vers l'API v1, écran par écran.
+ *
+ * Étape 7 de la roadmap Organe d'Orchestration. Chaque drapeau couvre UN écran, et vaut
+ * `false` par défaut : la valeur par défaut d'un drapeau de migration doit être le
+ * comportement déjà éprouvé, sinon ce n'est plus une bascule progressive, c'est une
+ * livraison avec un interrupteur de secours.
+ *
+ * Activation : `EXPO_PUBLIC_V1_STOCK=1` dans `mobile/.env`, ou dans le shell avant `npm
+ * run ios`. Un drapeau qui demande de recompiler l'application ne serait pas utilisable
+ * pour ce qu'on veut en faire — comparer deux comportements en quelques minutes.
+ *
+ * L'écran commerçant de stock passe en premier parce qu'il GAGNE quelque chose : la v1 lui
+ * montre le stock physique, les unités promises et le vendable séparément. Les écrans
+ * client, eux, ne gagneraient rien aujourd'hui — `available` leur arrive déjà sous le nom
+ * `quantity` — et migrer sans bénéfice, c'est prendre un risque pour rien.
+ */
+export const FEATURES = {
+  stockV1: process.env.EXPO_PUBLIC_V1_STOCK === '1',
+};
+
+if (__DEV__) {
+  const enabled = Object.entries(FEATURES).filter(([, on]) => on).map(([name]) => name);
+  console.log(`[MaZone] API v1 : ${enabled.length ? enabled.join(', ') : 'aucun écran basculé'}`);
+}
+
 if (__DEV__) {
   // Visible dans la console Metro / Xcode : utile pour diagnostiquer login/register.
   console.log(`[MaZone] API_URL = ${API_URL}`);

@@ -4,15 +4,24 @@
 
 | | |
 |---|---|
-| **Nature** | Plan de conception / implémentation (PAS une fiche FD, PAS du code) |
+| **Nature** | **ANNEXE TECHNIQUE** de `ROADMAP_ORGANE_ORCHESTRATION_MAZONE.md` (PAS une fiche FD, PAS du code) |
 | **Date** | 2026-07-24 |
-| **Amendement** | 2026-07-24 soir — Cursor Reda (alignement FD-000 / Ma Zone v0.9.5.2) |
-| **Statut** | **Brouillon amendé** — validation Adam requise avant code |
-| **Chapitre** | Fondation API compatible avec les logiciels commerciaux |
+| **Amendements** | 2026-07-24 soir — Cursor Reda (alignement FD-000 / v0.9.5.2) · **2026-07-25 — statut annexe technique** |
+| **Statut** | **Annexe technique** — le document maître est la roadmap Orchestration |
+| **Chapitre** | Fondation API → **Organe d'Orchestration** (renommé 25/07) |
+| **Document maître** | **`ROADMAP_ORGANE_ORCHESTRATION_MAZONE.md`** (racine) — **prime en cas de divergence** |
 | **Sources** | [`Cartographie_Metier_V1.md`](./Cartographie_Metier_V1.md) · [FD-000](./FD-000-mise-a-niveau-global-cursor-adam-ma-zone.md) · code `backend/` / `mobile/` |
-| **Suite** | Voir [FD-001](./FD-001-chantier-fondation-api-logiciels-commerciaux.md) · code selon plan de codage (pas encore exécuté) |
+| **Suite** | Voir [FD-001](./FD-001-chantier-fondation-api-logiciels-commerciaux.md) §12 (correspondance tranches → étapes) |
 | **Ancien nom** | `Plan_Conception_API_Compatible_V1` (renommé 2026-07-24) |
 | **Source de vérité** | **Ce Markdown** — les PDF (racine / FICHE_DISCUSSION) peuvent être stale jusqu’à régénération |
+
+> **STATUT — 25/07/2026.** Ce document n'est plus un plan autonome. Il est l'**annexe technique** de `ROADMAP_ORGANE_ORCHESTRATION_MAZONE.md`.
+>
+> **Ce qui reste normatif ici :** le CDM détaillé (§4), la matrice de conflits (§5), le modèle de stock triple état et les modes `inventory_owner` (§6), le contrat Connector (§8), les contraintes SQLite Outbox/Inbox (§9).
+>
+> **Ce qui est remplacé par la roadmap :** l'**ordre d'exécution**. Les tranches A/B/C/D/E/F et le séquençage §1.6 / §11 sont remplacés par les étapes E0 → E8. En particulier `/api/v1` (tranche A) passe de **première** à **septième** position, et deux étapes inexistantes ici sont désormais prioritaires : le filet de sécurité (E1) et l'organe Orders (E3). Voir [FD-001 §12](./FD-001-chantier-fondation-api-logiciels-commerciaux.md) pour la table de correspondance complète.
+>
+> **En cas de divergence entre ce document et la roadmap : la roadmap prime.**
 
 > Ce document traduit la cartographie métier en conception technique.  
 > Chaque choix ci-dessous doit pouvoir se justifier par une conclusion de `Cartographie_Metier_V1`.  

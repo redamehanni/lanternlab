@@ -109,17 +109,59 @@ function getEffectivePrice(product, promo) {
   return product.price;
 }
 
-/** Décrémente le stock promotionnel après une vente */
+/**
+ * Décrémente le stock promotionnel après une vente.
+ *
+ * Renvoie l'identifiant de la promotion consommée, ou `null` : l'appelant doit
+ * pouvoir le journaliser, faute de quoi une annulation ne saura pas QUELLE
+ * promotion restituer. C'est exactement le bug corrigé à l'étape 4 — le stock
+ * promotionnel n'était jamais rendu.
+ *
+ * @returns {{ promotionId: string, quantity: number }|null}
+ */
 function consumePromoStock(productId, quantity = 1) {
   const promo = getActivePromotion(productId);
-  if (!promo || promo.remaining_quantity == null) return promo;
+  if (!promo || promo.remaining_quantity == null) return null;
 
   const newRemaining = Math.max(0, promo.remaining_quantity - quantity);
+  const consumed = promo.remaining_quantity - newRemaining;
   db.prepare('UPDATE promotions SET remaining_quantity = ? WHERE id = ?').run(newRemaining, promo.id);
   if (newRemaining <= 0) {
     db.prepare('UPDATE promotions SET active = 0 WHERE id = ?').run(promo.id);
   }
-  return getActivePromotion(productId);
+  return consumed > 0 ? { promotionId: promo.id, quantity: consumed } : null;
+}
+
+/**
+ * Restitue le stock promotionnel d'une vente annulée.
+ *
+ * On cible la promotion PAR SON IDENTIFIANT, pas par « la promotion active du
+ * produit » : entre la vente et l'annulation, la promotion a pu expirer, être
+ * désactivée par épuisement, ou être remplacée par une autre. Restituer à la
+ * promotion courante offrirait des unités promotionnelles à une opération qui n'a
+ * rien vendu.
+ *
+ * Une promotion épuisée puis rendue redevient active : elle a de nouveau du stock.
+ */
+function restorePromoStock(promotionId, quantity = 1) {
+  const promo = db.prepare('SELECT * FROM promotions WHERE id = ?').get(promotionId);
+  if (!promo || promo.remaining_quantity == null) return null;
+
+  const cap = promo.max_quantity ?? null;
+  const restored = cap == null
+    ? promo.remaining_quantity + quantity
+    : Math.min(cap, promo.remaining_quantity + quantity);
+
+  db.prepare('UPDATE promotions SET remaining_quantity = ? WHERE id = ?').run(restored, promotionId);
+
+  // Réactivation seulement si la promotion n'est pas terminée par ailleurs : une
+  // promotion expirée dans le temps ne doit pas repartir pour un tour.
+  const expired = promo.ends_at && new Date(`${promo.ends_at}Z`).getTime() < Date.now();
+  if (restored > 0 && !expired) {
+    db.prepare('UPDATE promotions SET active = 1 WHERE id = ?').run(promotionId);
+  }
+
+  return db.prepare('SELECT * FROM promotions WHERE id = ?').get(promotionId);
 }
 
 /** Désactive les autres promotions sur le même produit */
@@ -137,6 +179,7 @@ module.exports = {
   enrichProductWithPromo,
   getEffectivePrice,
   consumePromoStock,
+  restorePromoStock,
   deactivateProductPromotions,
   formatPromotion,
   formatFlashPromotion,

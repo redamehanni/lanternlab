@@ -2,40 +2,73 @@
 <html lang="fr">
 <head>
 <meta charset="utf-8">
-<title>Ma Zone — Architecture actuelle du MVP</title>
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Ma Zone — Architecture actuelle</title>
 <style>
-  @page { margin: 18mm 15mm; }
-  body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Helvetica, Arial, sans-serif; font-size: 11pt; line-height: 1.5; color: #1a1a1a; max-width: 100%; }
-  h1 { font-size: 22pt; border-bottom: 2px solid #0f2d5c; padding-bottom: 8px; color: #0f2d5c; }
-  h2 { font-size: 15pt; margin-top: 24px; color: #0f2d5c; border-bottom: 1px solid #e5e7eb; padding-bottom: 4px; }
-  h3 { font-size: 12pt; margin-top: 16px; color: #1a4a8a; }
-  table { border-collapse: collapse; width: 100%; margin: 12px 0; font-size: 9.5pt; }
-  th, td { border: 1px solid #d1d5db; padding: 6px 8px; text-align: left; }
+  @page { margin: 16mm 14mm; }
+  body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Helvetica, Arial, sans-serif; font-size: 10.5pt; line-height: 1.45; color: #1a1a1a; max-width: 100%; }
+  h1 { font-size: 20pt; border-bottom: 2px solid #0f2d5c; padding-bottom: 8px; color: #0f2d5c; page-break-after: avoid; }
+  h2 { font-size: 14pt; margin-top: 22px; color: #0f2d5c; border-bottom: 1px solid #e5e7eb; padding-bottom: 4px; page-break-after: avoid; }
+  h3 { font-size: 11.5pt; margin-top: 14px; color: #1a4a8a; page-break-after: avoid; }
+  table { border-collapse: collapse; width: 100%; margin: 10px 0; font-size: 9pt; page-break-inside: avoid; }
+  th, td { border: 1px solid #d1d5db; padding: 5px 7px; text-align: left; vertical-align: top; }
   th { background: #f3f4f6; font-weight: 600; }
-  code { background: #f3f4f6; padding: 1px 4px; border-radius: 3px; font-size: 9pt; }
-  pre { background: #f8fafc; border: 1px solid #e5e7eb; border-radius: 6px; padding: 12px; overflow-x: auto; font-size: 8.5pt; line-height: 1.4; white-space: pre-wrap; word-break: break-word; }
+  code { background: #f3f4f6; padding: 1px 4px; border-radius: 3px; font-size: 8.5pt; }
+  pre { background: #f8fafc; border: 1px solid #e5e7eb; border-radius: 6px; padding: 10px; overflow-x: auto; font-size: 8pt; line-height: 1.35; white-space: pre-wrap; word-break: break-word; page-break-inside: avoid; }
   pre code { background: none; padding: 0; }
-  blockquote { border-left: 4px solid #f59e0b; margin: 12px 0; padding: 8px 16px; background: #fffbeb; color: #92400e; }
-  hr { border: none; border-top: 1px solid #e5e7eb; margin: 20px 0; }
-  ul, ol { padding-left: 24px; }
+  blockquote { border-left: 4px solid #0f2d5c; margin: 10px 0; padding: 6px 14px; background: #f0f4f8; color: #1e3a5f; }
+  hr { border: none; border-top: 1px solid #e5e7eb; margin: 18px 0; }
+  ul, ol { padding-left: 22px; }
+  li { margin-bottom: 3px; }
+  p { margin: 8px 0; }
+  .pdf-note { display: none; }
+  @media screen {
+    .pdf-note { display: block; background: #eff6ff; border: 1px solid #bfdbfe; border-radius: 8px; padding: 12px 16px; margin-bottom: 24px; color: #1e3a8a; }
+  }
 </style>
 </head>
 <body>
-<h1 id="ma-zone-architecture-actuelle-du-mvp">Ma Zone — Architecture actuelle du MVP</h1>
+<div class="pdf-note">
+  <strong>Lecture dans Cursor / navigateur :</strong> ce fichier HTML est la version lisible du plan.
+  Pour le PDF, ouvrez <code>CURRENT_ARCHITECTURE.pdf</code> depuis le Finder (clic droit → Ouvrir avec Aperçu)
+  ou double-cliquez le fichier <code>Ouvrir_*_PDF.command</code> correspondant à la racine du projet.
+</div>
+<h1>Ma Zone — Architecture actuelle</h1>
 <blockquote>
-<p>Document de référence décrivant <strong>l'état réel du code</strong> (juin 2026), pas l'architecture cible.
+<p>Document de référence décrivant <strong>l'état réel du code</strong> au 25 juillet 2026, pas l'architecture cible.
 Stack : <strong>Expo / React Native</strong> (<code>mobile/</code>) + <strong>Node.js / Express / SQLite</strong> (<code>backend/</code>).</p>
 </blockquote>
+<p><strong>Deux documents, deux rôles, ne pas les confondre.</strong></p>
+<table>
+<thead>
+<tr>
+<th>Document</th>
+<th>Répond à</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><strong>Celui-ci</strong></td>
+<td>« Qu'est-ce qui existe aujourd'hui, et où ? »</td>
+</tr>
+<tr>
+<td><code>ROADMAP_ORGANE_ORCHESTRATION_MAZONE.md</code> (racine)</td>
+<td>« Où va-t-on, selon quelles lois, dans quel ordre ? » — <strong>document maître</strong></td>
+</tr>
+</tbody>
+</table>
+<p>En cas de contradiction entre ce document et le code, <strong>le code et les tests tranchent</strong>, et ce document doit être corrigé le jour même. Un document d'état en retard sur le code est plus nuisible qu'aucun document : il fait prendre des décisions sur une fiction.</p>
+<p><strong>Où en est le chantier.</strong> Les étapes <strong>E0 à E8</strong> de la roadmap sont livrées. E8 a ajouté une <strong>famille de connecteurs</strong> et son premier représentant, Shopify. Le récit des décisions et des écarts est dans <code>FICHE_DISCUSSION/FD-001-chantier-fondation-api-logiciels-commerciaux.md</code>.</p>
 <hr />
-<h2 id="1-vue-densemble">1. Vue d'ensemble</h2>
+<h2>1. Vue d'ensemble</h2>
 <pre><code>┌─────────────────┐     HTTP REST + JWT      ┌──────────────────────────────┐
-│  App mobile     │ ◄──────────────────────► │  backend/src/index.js        │
+│  App mobile     │ ◄──────────────────────► │  backend/src/app.js          │
 │  (3 rôles)      │     Socket.io (JWT auth) │  Express + Socket.io :4000   │
 └─────────────────┘                          └──────────────┬───────────────┘
                                                             │
                                                             ▼
                                                ┌──────────────────────────────┐
-                                               │  SQLite  backend/data/mazone.db │
+│ SQLite backend/data/mazone.db│
                                                └──────────────────────────────┘
 </code></pre>
 <table>
@@ -52,782 +85,1032 @@ Stack : <strong>Expo / React Native</strong> (<code>mobile/</code>) + <strong>No
 </tr>
 <tr>
 <td>API</td>
-<td>Express, better-sqlite3, JWT, Socket.io</td>
+<td>Express, better-sqlite3, JWT, Socket.io, helmet, rate limiting</td>
 </tr>
 <tr>
 <td>Persistance</td>
-<td>SQLite WAL, migrations incrémentales au démarrage</td>
+<td>SQLite WAL, <code>busy_timeout = 5000</code>, migrations incrémentales au démarrage</td>
 </tr>
 <tr>
 <td>Temps réel</td>
-<td>Socket.io avec rooms par utilisateur / commande / conversation</td>
+<td>Socket.io avec rooms par utilisateur / boutique / commande / conversation</td>
+</tr>
+<tr>
+<td>Tests</td>
+<td><code>node:test</code> (natif) — <code>npm test</code> dans <code>backend/</code></td>
 </tr>
 </tbody>
 </table>
-<p><strong>Rôles utilisateur</strong> : <code>client</code> | <code>merchant</code> | <code>driver</code> (table <code>users.role</code>).</p>
+<p><strong>Rôles utilisateur</strong> : <code>client</code> | <code>merchant</code> | <code>driver</code> (table <code>users.role</code>). Les administrateurs vivent dans une table séparée (<code>admin_users</code>) avec un secret JWT distinct : un jeton citoyen n'est jamais accepté sur une route admin.</p>
+<p><strong><code>backend/src/index.js</code> démarre, <code>backend/src/app.js</code> construit.</strong> La séparation existe pour que les tests montent un serveur complet sans lancer le processus.</p>
 <hr />
-<h2 id="2-modeles-de-donnees">2. Modèles de données</h2>
-<h3 id="21-user-users">2.1 User (<code>users</code>)</h3>
+<h2>2. Architecture en couches</h2>
+<p>C'est la lecture la plus utile du backend depuis les étapes 2 à 6, et elle se résume en une règle : <strong>une couche ne saute jamais par-dessus la suivante.</strong></p>
+<pre><code>┌──────────────────────────────────────────────────────────────────────────┐
+│  ROUTES                                                                  │
+│  src/routes/v1/  → contrat public versionné : intentions + projections   │
+│  src/routes/     → surface historique /api, dépréciée (fin 31/01/2027)   │
+│  Traduisent HTTP. Ne décident rien, ne composent rien.                   │
+└───────────────┬──────────────────────────────────┬───────────────────────┘
+                │ action multi-organe              │ action mono-organe
+                ▼                                  │
+┌──────────────────────────────────────────┐        │
+│  ORCHESTRATION  src/lib/orchestration/   │        │
+│  Déclare des INTENTIONS, exécute des     │        │
+│  plans, compense, journalise.            │        │
+│  Ne parle à AUCUN logiciel tiers.        │        │
+└───────────────┬──────────────────────────┘        │
+                ▼                                  ▼
+┌──────────────────────────────────────────────────────────────────────────┐
+│  ORGANES  orders/ · inventory/ · catalog/ · eventEngine/ · walletEngine  │
+│  Décident. Chacun possède ses tables et son journal.                     │
+└───────────────┬──────────────────────────────────────────────────────────┘
+                ▼
+┌──────────────────────────────────────────────────────────────────────────┐
+│  NOYAU  src/lib/kernel/    bus · journal · idempotency · txn             │
+│  Primitives. Ne décide rien.                                             │
+└──────────────────────────────────────────────────────────────────────────┘
+
+        ┌──────────────────────────────────────────────────────────┐
+        │  INTEGRATION ENGINE  src/lib/integration/                │
+        │  SEUL à traverser la frontière vers un logiciel tiers.   │
+        │  Se DÉCLARE à l'orchestration ; elle ne le connaît pas.  │
+        └──────────────────────────────────────────────────────────┘
+</code></pre>
+<h3>2.1 Le sens des dépendances, et pourquoi il compte</h3>
+<p>L'Integration Engine connaît l'orchestration et lui déclare ce qu'il sait faire. <strong>L'inverse n'existe pas.</strong> <code>lib/orchestration/adapters/integration.js</code> est un <strong>emplacement vide</strong> : il nomme trois opérations (<code>pushSale</code>, <code>pushCancel</code>, <code>pushStockMovement</code>) sans les mettre en œuvre et sans importer quoi que ce soit.</p>
+<p><strong>Ce qui est réellement garanti, et par quoi.</strong> Trois vérifications tiennent la frontière, et aucune ne repose sur la discipline de qui code :</p>
+<ol>
+<li><strong>Aucun fichier de <code>lib/orchestration/</code> n'importe l'Integration Engine</strong> — test structurel + contrôle CI.</li>
+<li><strong>Une vente aboutit sans aucun connecteur branché</strong>, l'étape externe étant <strong>reportée</strong> au commerçant — test <code>order.place</code> avec capacités vides.</li>
+<li><strong>Un connecteur retiré du code alors que des boutiques l'ont encore branché ne casse rien</strong> — la vente passe, l'étape est reportée.</li>
+</ol>
+<p><strong>E8 a mis cette frontière à l'épreuve, et elle a tenu</strong> : brancher un logiciel réel — autorisation déléguée, lecture de catalogue, notifications signées, poussée de stock — n'a modifié <strong>aucun fichier</strong> de <code>lib/orchestration/</code>. <code>adapters/integration.js</code> est resté l'emplacement vide qu'il était.</p>
+<p>Il en découle que retirer un logiciel tiers est un <strong>débranchement</strong>, pas une réécriture. C'est la condition de la substitution progressive : le jour où un plan d'intention suppose l'existence d'un logiciel externe, remplacer ce logiciel cesse d'être un geste local.</p>
+<h3>2.2 Ce que chaque couche ne fait pas</h3>
 <table>
 <thead>
 <tr>
-<th>Colonne</th>
-<th>Type</th>
-<th>Description</th>
+<th>Couche</th>
+<th>Ne fait <strong>jamais</strong></th>
 </tr>
 </thead>
 <tbody>
 <tr>
-<td><code>id</code></td>
-<td>TEXT PK</td>
-<td>UUID</td>
+<td>Route</td>
+<td>Décider, composer deux organes, écrire du SQL métier</td>
 </tr>
 <tr>
-<td><code>name</code>, <code>email</code>, <code>password</code></td>
-<td>TEXT</td>
-<td>Identité + auth</td>
+<td>Route <code>/api/v1</code></td>
+<td>Écrire hors d'une intention, sauf action <strong>mono-organe</strong> · exposer <code>on_hand</code> à un client</td>
 </tr>
 <tr>
-<td><code>phone</code>, <code>address</code></td>
-<td>TEXT</td>
-<td>Contact</td>
+<td>Orchestration</td>
+<td>Contenir une règle métier, parler à un logiciel tiers, s'imposer pour une action mono-organe</td>
 </tr>
 <tr>
-<td><code>role</code></td>
-<td>TEXT</td>
-<td><code>client</code> | <code>merchant</code> | <code>driver</code></td>
+<td>Organe</td>
+<td>Connaître un logiciel tiers, écrire les tables d'un autre organe</td>
 </tr>
 <tr>
-<td><code>lat</code>, <code>lng</code></td>
-<td>REAL</td>
-<td>Position (livreur notamment)</td>
+<td>Noyau</td>
+<td>Décider quoi que ce soit</td>
 </tr>
 <tr>
-<td><code>transport</code></td>
-<td>TEXT</td>
-<td>Moyen de transport livreur</td>
+<td>Connecteur</td>
+<td>Créer, annuler ou valider une entité métier · importer la base, un organe ou le coffre à secrets · appeler le réseau autrement que par <code>ctx.request</code></td>
 </tr>
 <tr>
-<td><code>photo_url</code></td>
-<td>TEXT</td>
-<td>Avatar</td>
-</tr>
-<tr>
-<td><code>driver_online</code></td>
-<td>INTEGER</td>
-<td><code>0</code> / <code>1</code> — livreur disponible pour dispatch</td>
-</tr>
-<tr>
-<td><code>first_name</code>, <code>last_name</code>, <code>vehicle_plate</code></td>
-<td>TEXT</td>
-<td>Migrations optionnelles</td>
-</tr>
-<tr>
-<td><code>created_at</code></td>
-<td>TEXT</td>
-<td>datetime SQLite</td>
+<td>Cœur (CDM, organes, orchestration, API, moteur d'intégration)</td>
+<td><strong>Nommer un éditeur</strong> (Loi 17, vérifiée en CI)</td>
 </tr>
 </tbody>
 </table>
-<p><strong>Relations</strong> : un commerçant possède un <code>store</code> ; un client passe des <code>orders</code> ; un livreur reçoit des <code>missions</code>.</p>
-<h3 id="22-order-orders">2.2 Order (<code>orders</code>)</h3>
+<hr />
+<h2>3. Les organes</h2>
+<h3>3.1 Noyau — <code>src/lib/kernel/</code></h3>
+<p>Quatre primitives, extraites de code qui les dupliquait trois fois (Event, Wallet, Identity).</p>
 <table>
 <thead>
 <tr>
-<th>Colonne</th>
-<th>Type</th>
-<th>Description</th>
-</tr>
-</thead>
-<tbody>
-<tr>
-<td><code>id</code></td>
-<td>TEXT PK</td>
-<td>UUID</td>
-</tr>
-<tr>
-<td><code>client_id</code></td>
-<td>TEXT FK → users</td>
-<td>Client</td>
-</tr>
-<tr>
-<td><code>product_id</code></td>
-<td>TEXT FK → products</td>
-<td>Produit commandé</td>
-</tr>
-<tr>
-<td><code>store_id</code></td>
-<td>TEXT FK → stores</td>
-<td>Boutique</td>
-</tr>
-<tr>
-<td><code>quantity</code></td>
-<td>INTEGER</td>
-<td>Quantité</td>
-</tr>
-<tr>
-<td><code>total_price</code></td>
-<td>REAL</td>
-<td>Montant TTC</td>
-</tr>
-<tr>
-<td><code>status</code></td>
-<td>TEXT</td>
-<td>Voir § 3.1</td>
-</tr>
-<tr>
-<td><code>delivery_address</code></td>
-<td>TEXT</td>
-<td>Adresse de livraison</td>
-</tr>
-<tr>
-<td><code>estimated_minutes</code></td>
-<td>INTEGER</td>
-<td>ETA calculée (<code>lib/geo.js</code>)</td>
-</tr>
-<tr>
-<td><code>created_at</code>, <code>updated_at</code></td>
-<td>TEXT</td>
-<td>Horodatage</td>
-</tr>
-</tbody>
-</table>
-<p><strong>Relation 1:1</strong> avec <code>missions</code> (une mission par commande, créée à la commande).</p>
-<p><strong>Vue enrichie</strong> : <code>getFullOrder()</code> (<code>backend/src/lib/orders.js</code>) joint client, produit, store, mission, livreur.</p>
-<h3 id="23-mission-missions">2.3 Mission (<code>missions</code>)</h3>
-<table>
-<thead>
-<tr>
-<th>Colonne</th>
-<th>Type</th>
-<th>Description</th>
-</tr>
-</thead>
-<tbody>
-<tr>
-<td><code>id</code></td>
-<td>TEXT PK</td>
-<td>UUID</td>
-</tr>
-<tr>
-<td><code>order_id</code></td>
-<td>TEXT FK → orders</td>
-<td>Commande liée</td>
-</tr>
-<tr>
-<td><code>driver_id</code></td>
-<td>TEXT FK → users</td>
-<td>Livreur (null tant que non attribuée)</td>
-</tr>
-<tr>
-<td><code>status</code></td>
-<td>TEXT</td>
-<td>Voir § 3.2</td>
-</tr>
-<tr>
-<td><code>accepted_at</code></td>
-<td>TEXT</td>
-<td>Date d'attribution</td>
-</tr>
-<tr>
-<td><code>created_at</code>, <code>updated_at</code></td>
-<td>TEXT</td>
-<td>Horodatage</td>
-</tr>
-</tbody>
-</table>
-<p><strong>Vue enrichie</strong> : <code>getFullMission()</code> (<code>backend/src/lib/dispatch.js</code>) joint commande, produit, store, client, livreur.</p>
-<h3 id="24-modeles-connexes-mvp">2.4 Modèles connexes (MVP)</h3>
-<table>
-<thead>
-<tr>
-<th>Table</th>
+<th>Fichier</th>
 <th>Rôle</th>
 </tr>
 </thead>
 <tbody>
 <tr>
-<td><code>stores</code></td>
-<td>Boutique du commerçant</td>
+<td><code>bus.js</code></td>
+<td>Transporte des faits <strong>déjà arrivés</strong>. Une erreur d'abonné n'interrompt jamais l'opération métier</td>
 </tr>
 <tr>
-<td><code>products</code></td>
-<td>Catalogue + stock</td>
+<td><code>journal.js</code></td>
+<td>Écrit et relit un historique <strong>append-only</strong>. N'interprète rien</td>
 </tr>
 <tr>
-<td><code>conversations</code></td>
-<td>Messagerie par paire (<code>client_merchant</code>, <code>client_driver</code>, <code>merchant_driver</code>)</td>
+<td><code>idempotency.js</code></td>
+<td>Répond « déjà fait, voici le résultat » (table <code>idempotency_keys</code>)</td>
 </tr>
 <tr>
-<td><code>cart_items</code></td>
-<td>Panier client</td>
-</tr>
-<tr>
-<td><code>promotions</code></td>
-<td>Promos commerçant</td>
-</tr>
-<tr>
-<td><code>driver_broadcast</code></td>
-<td>Message global affiché aux livreurs</td>
-</tr>
-<tr>
-<td><code>driver_notifications</code></td>
-<td>Notifications système livreur</td>
+<td><code>txn.js</code></td>
+<td>Garantit l'ordre <strong>commit → effets</strong>. Seul autorisé à retenir une émission socket</td>
 </tr>
 </tbody>
 </table>
-<hr />
-<h2 id="3-statuts-existants">3. Statuts existants</h2>
-<h3 id="31-statuts-commande-ordersstatus">3.1 Statuts commande (<code>orders.status</code>)</h3>
-<p><strong>Canoniques</strong> (définis dans <code>backend/src/lib/orderStatus.js</code>) :</p>
+<p><code>src/lib/eventEngine/bus.js</code> est devenu un <strong>réexport mince</strong> du bus du noyau : aucun appelant historique n'a été modifié.</p>
+<h3>3.2 Organe Orders — <code>src/lib/orders/</code></h3>
+<p>Remplace l'ancien fichier unique <code>src/lib/orders.js</code> (supprimé). <code>require('../lib/orders')</code> résout vers <code>index.js</code>, donc les appelants historiques fonctionnent sans modification.</p>
 <table>
 <thead>
 <tr>
-<th>Statut</th>
-<th>Label UI (<code>mobile/src/config.js</code>)</th>
-<th>Signification</th>
+<th>Fichier</th>
+<th>Rôle</th>
 </tr>
 </thead>
 <tbody>
 <tr>
-<td><code>placed</code></td>
-<td>Commande passée</td>
-<td>Rarement utilisé ; création utilise <code>pending_driver</code></td>
+<td><code>lifecycle.js</code></td>
+<td>Graphe de transitions explicite, <strong>fail-fast</strong></td>
 </tr>
 <tr>
-<td><code>pending_driver</code></td>
-<td>En attente de livreur</td>
-<td>Commande créée, pas encore attribuée</td>
+<td><code>orderEngine.js</code></td>
+<td>Créer, transiter, annuler — transactionnel, journalisé</td>
 </tr>
 <tr>
-<td><code>driver_assigned</code></td>
-<td>Livreur assigné</td>
-<td>Livreur attribué automatiquement</td>
+<td><code>orderJournal.js</code></td>
+<td>Table <code>order_journal</code> (append-only)</td>
 </tr>
 <tr>
-<td><code>picking_up</code></td>
-<td>En route vers le commerce</td>
-<td>Mission en cours</td>
+<td><code>placement.js</code></td>
+<td>Panier : plusieurs articles, échec partiel assumé</td>
 </tr>
 <tr>
-<td><code>picked_up</code></td>
-<td>Produit récupéré</td>
-<td>Colis pris au commerçant</td>
+<td><code>projection.js</code></td>
+<td><code>getFullOrder()</code> — vue enrichie</td>
 </tr>
 <tr>
-<td><code>delivering</code></td>
-<td>En route vers vous</td>
-<td>Livraison en cours</td>
-</tr>
-<tr>
-<td><code>delivered</code></td>
-<td>Livré</td>
-<td>Terminé</td>
-</tr>
-<tr>
-<td><code>cancelled</code></td>
-<td>Annulée</td>
-<td>Annulation client</td>
+<td><code>subscribers.js</code></td>
+<td><strong>Effets de bord après commit</strong> : sockets, notifications, conversations</td>
 </tr>
 </tbody>
 </table>
-<p><strong>Alias legacy</strong> encore présents en base / normalisés côté backend :</p>
+<h3>3.3 Organe Inventory — <code>src/lib/inventory/</code></h3>
+<p>Le stock est à <strong>triple état</strong>. C'est la correction de la survente, et la raison d'être de l'étape 4.</p>
+<pre><code>available = max(0, on_hand - reserved - safety_buffer)
+</code></pre>
 <table>
 <thead>
 <tr>
-<th>Alias</th>
-<th>Mappé vers</th>
+<th>Attribut</th>
+<th>Propriétaire</th>
 </tr>
 </thead>
 <tbody>
 <tr>
-<td><code>pending</code></td>
-<td><code>pending_driver</code></td>
+<td><code>on_hand</code></td>
+<td>Ma Zone en mode <code>mazone</code> · <strong>miroir</strong> de la caisse en mode <code>pos</code></td>
 </tr>
 <tr>
-<td><code>searching_driver</code></td>
-<td><code>pending_driver</code></td>
+<td><code>reserved</code></td>
+<td><strong>Toujours</strong> Ma Zone. Aucune caisse ne sait ce que Ma Zone a promis à un client</td>
 </tr>
 <tr>
-<td><code>offered</code></td>
-<td><code>pending_driver</code></td>
+<td><code>safety_buffer</code></td>
+<td>Ma Zone (politique commerciale du magasin)</td>
 </tr>
-<tr>
-<td><code>accepted</code></td>
-<td><code>driver_assigned</code></td>
-</tr>
-<tr>
-<td><code>accepted_by_driver</code></td>
-<td><code>driver_assigned</code></td>
-</tr>
-</tbody>
-</table>
-<blockquote>
-<p>Au démarrage du serveur, <code>backend/src/db/index.js</code> exécute des <code>UPDATE</code> pour ramener les anciens statuts vers <code>pending_driver</code> / <code>driver_assigned</code> et libérer les missions <code>offered</code>.</p>
-</blockquote>
-<h3 id="32-statuts-mission-missionsstatus">3.2 Statuts mission (<code>missions.status</code>)</h3>
-<table>
-<thead>
-<tr>
-<th>Statut</th>
-<th>Signification</th>
-</tr>
-</thead>
-<tbody>
 <tr>
 <td><code>available</code></td>
-<td>Mission créée, en attente d'attribution</td>
-</tr>
-<tr>
-<td><code>accepted</code></td>
-<td>Livreur attribué (équivalent « course active »)</td>
-</tr>
-<tr>
-<td><code>picking_up</code></td>
-<td>En route vers le commerçant</td>
-</tr>
-<tr>
-<td><code>picked_up</code></td>
-<td>Produit récupéré</td>
-</tr>
-<tr>
-<td><code>delivering</code></td>
-<td>En route vers le client</td>
-</tr>
-<tr>
-<td><code>delivered</code></td>
-<td>Livraison terminée</td>
-</tr>
-<tr>
-<td><code>cancelled</code></td>
-<td>Commande annulée</td>
+<td><strong>Calculé, jamais stocké</strong></td>
 </tr>
 </tbody>
 </table>
-<p><strong>Mission active</strong> (bloque le dispatch) : <code>accepted</code>, <code>picking_up</code>, <code>picked_up</code>, <code>delivering</code>.</p>
-<hr />
-<h2 id="4-flux-complet-dune-commande">4. Flux complet d'une commande</h2>
-<h3 id="41-diagramme">4.1 Diagramme</h3>
-<pre><code>CLIENT                          BACKEND                           LIVREUR (en ligne)
-  │                                │                                    │
-  │ POST /api/orders               │                                    │
-  ├──────────────────────────────►│ createOrderWithDispatch()          │
-  │                                │  → order: pending_driver           │
-  │                                │  → mission: available              │
-  │                                │                                    │
-  │                                │ tryDispatchNewOrder()              │
-  │                                │  → findAvailableDriver()           │
-  │                                │     (driver_online=1, pas de       │
-  │                                │      mission active)               │
-  │                                │  → assignOrderToDriver()           │
-  │                                │     order → driver_assigned        │
-  │                                │     mission → accepted             │
-  │                                │                                    │
-  │                                │ Socket mission:assigned ──────────►│ DriverContext
-  │                                │                                    │ → activeMission
-  │                                │                                    │ → DriverHomeScreen
-  │                                │                                    │   fullscreen + MissionDrawer
-  │                                │                                    │
-  │◄── order:status_updated ───────│ emitOrderUpdate()                  │
-  │                                │                                    │
-COMMERÇANT ◄── order:new ──────────│ notifyMerchantNewOrder()           │
-  │                                │                                    │
-  │                                │         PATCH mission/status       │
-  │                                │◄───────────────────────────────────┤
-  │                                │  picked_up → delivering → delivered│
-  │                                │                                    │
-  │                                │ Si delivered:                      │
-  │                                │  assignPendingOrdersToDriver()     │
-  │                                │  (file d'attente suivante)         │
-</code></pre>
-<h3 id="42-etapes-detaillees">4.2 Étapes détaillées</h3>
+<p>Opérations : <code>reserve</code>, <code>release</code>, <code>commit</code>, <code>adjust</code>, <code>syncOnHand</code>, <code>declareSellable</code>. Chaque mouvement est journalisé dans <code>stock_movements</code> <strong>dans la même transaction</strong> que l'écriture du niveau.</p>
+<p><strong><code>products.quantity</code> est devenu une projection de <code>available</code>.</strong> Le mobile continue de le lire sans avoir été modifié. Un seul module l'écrit (vérifié en CI).</p>
+<p><strong>Propriété du stock, depuis l'étape 6 :</strong> en mode <code>mazone</code>, un connecteur qui déclare un <code>on_hand</code> est <strong>refusé</strong> (409) et l'Integration Engine en fait un conflit visible. La propriété du stock se donne, elle ne se prend pas — brancher une caisse ne change pas les quantités du commerçant à son insu.</p>
+<h3>3.4 Organe Catalog — <code>src/lib/catalog/</code></h3>
+<p><strong>Périmètre volontairement étroit</strong> : la déclaration d'un produit (création ou mise à jour par référence) et sa mise en vente. Créé à l'étape 6 pour que le connecteur d'import n'écrive pas lui-même dans <code>products</code>.</p>
+<blockquote>
+<p><strong>Dette connue et bornée :</strong> deux chemins d'écriture coexistent sur <code>products</code> — l'Épée par <code>routes/products.js</code>, la déclaration en masse par cet organe. Aucun des deux n'écrit <code>quantity</code>.</p>
+</blockquote>
+<h3>3.5 Organe d'Orchestration — <code>src/lib/orchestration/</code></h3>
 <table>
 <thead>
 <tr>
-<th>#</th>
-<th>Étape</th>
-<th>Fichier / fonction</th>
+<th>Fichier</th>
+<th>Rôle</th>
 </tr>
 </thead>
 <tbody>
 <tr>
-<td>1</td>
-<td>Client passe commande</td>
-<td><code>POST /api/orders</code> ou <code>POST /api/orders/cart</code> → <code>routes/orders.js</code></td>
+<td><code>intentRegistry.js</code></td>
+<td>Déclaration des intentions, <strong>validée au démarrage</strong> (un plan faux empêche le serveur de démarrer)</td>
 </tr>
 <tr>
-<td>2</td>
-<td>Création commande + mission</td>
-<td><code>createOrderWithDispatch()</code> → <code>lib/dispatch.js</code></td>
+<td><code>processManager.js</code></td>
+<td>Exécute le plan, <strong>compense en ordre inverse</strong>, journalise chaque pas</td>
 </tr>
 <tr>
-<td>3</td>
-<td>Notification commerçant</td>
-<td><code>notifyMerchantNewOrder()</code> → socket <code>order:new</code></td>
+<td><code>capabilities.js</code></td>
+<td>Une capacité dit « cette boutique sait faire ceci », jamais par quel logiciel</td>
 </tr>
 <tr>
-<td>4</td>
-<td>Dispatch automatique</td>
-<td><code>tryDispatchNewOrder()</code> → <code>findAvailableDriver()</code> → <code>assignOrderToDriver()</code></td>
+<td><code>organs.js</code></td>
+<td>Annuaire <code>organe.action</code> → fonction (résolution paresseuse)</td>
 </tr>
 <tr>
-<td>5</td>
-<td>Si aucun livreur libre</td>
-<td>Commande reste <code>pending_driver</code>, mission <code>available</code> (file d'attente)</td>
+<td><code>journal.js</code></td>
+<td>Table <code>orchestration_journal</code></td>
 </tr>
 <tr>
-<td>6</td>
-<td>Livreur repasse en ligne</td>
-<td><code>PUT /api/drivers/online</code> ou socket <code>driver:online</code> → <code>assignPendingOrdersToDriver()</code></td>
-</tr>
-<tr>
-<td>7</td>
-<td>Réception livreur</td>
-<td>Socket <code>mission:assigned</code> → <code>DriverContext</code> → <code>DriverHomeScreen</code></td>
-</tr>
-<tr>
-<td>8</td>
-<td>Workflow livraison</td>
-<td><code>PATCH /api/missions/:id/status</code> → <code>MissionDrawer</code> + <code>SlideConfirm</code></td>
-</tr>
-<tr>
-<td>9</td>
-<td>Fin de course</td>
-<td><code>delivered</code> → libère le livreur → dispatch de la prochaine commande en file</td>
+<td><code>adapters/</code></td>
+<td>Délégations minces vers les organes ; <code>integration.js</code> est un <strong>emplacement vide</strong></td>
 </tr>
 </tbody>
 </table>
-<h3 id="43-conditions-du-dispatch-findavailabledriver">4.3 Conditions du dispatch (<code>findAvailableDriver</code>)</h3>
-<p>Un livreur est éligible si <strong>toutes</strong> ces conditions sont vraies :</p>
+<p><strong>Les six intentions déclarées, avec leur plan réel :</strong></p>
+<table>
+<thead>
+<tr>
+<th>Intention</th>
+<th>Plan (dans l'ordre)</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>order.place</code></td>
+<td><code>orders.create</code> <em>(compense : cancel)</em> → <code>dispatch.findDriver</code> → <code>integration.pushSale</code> <em>(optionnelle)</em></td>
+</tr>
+<tr>
+<td><code>order.cancel</code></td>
+<td><code>orders.assertClientOwns</code> → <code>orders.cancel</code> → <code>dispatch.reassignFreedDrivers</code> → <code>integration.pushCancel</code> <em>(optionnelle)</em></td>
+</tr>
+<tr>
+<td><code>product.reserve</code></td>
+<td><code>inventory.reserve</code> <em>(compense : release)</em> → <code>notifications.notifyReservation</code> → <code>integration.pushStockMovement</code> <em>(optionnelle)</em></td>
+</tr>
+<tr>
+<td><code>store.close_exceptionally</code></td>
+<td><code>catalog.deactivateStoreProducts</code> <em>(compense : reactivateProducts)</em> → <code>events.announceClosure</code> <em>(compense : retractAnnouncement)</em> → <code>notifications.notifyOpenOrders</code></td>
+</tr>
+<tr>
+<td><code>event.claim_opportunity</code></td>
+<td><code>events.loadOpportunity</code> → <code>wallet.claimOpportunity</code> <em>(compense : revokeClaimedObject)</em> → <code>events.markOpportunityAccepted</code></td>
+</tr>
+<tr>
+<td><code>catalog.declare_product</code></td>
+<td><code>catalog.declareProduct</code> → <code>inventory.declareSellable</code></td>
+</tr>
+</tbody>
+</table>
+<p><strong>Lire un plan.</strong> Une étape <code>optional</code> avec un <code>requires</code> est <strong>reportée</strong> quand la boutique n'a pas la capacité : la vente aboutit et ce qui n'a pas pu être fait est dit au commerçant. Une étape avec un <code>compensate</code> est défaite si une étape ultérieure échoue, <strong>en ordre inverse</strong>. Une étape sans compensation est soit lisible seulement, soit idempotente — jamais un oubli.</p>
+<p><strong>Une intention commence à deux organes</strong> (Loi 5). Le registre <strong>refuse</strong> une intention mono-organe : une action qui ne concerne qu'un organe s'adresse à cet organe directement. L'orchestration n'est pas un passage obligé, sinon elle devient un goulot et un god object.</p>
+<h3>3.6 Integration Engine — <code>src/lib/integration/</code></h3>
+<p>Le moteur d'intégration est <strong>une famille de mécanismes</strong>, pas une collection d'intégrations. Depuis E8, il possède tout ce qui est commun à n'importe quel éditeur du marché, et rien de ce qui est propre à l'un d'eux.</p>
+<table>
+<thead>
+<tr>
+<th>Fichier</th>
+<th>Rôle</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>contract.js</code></td>
+<td>Contrat Connector : capacités, <strong>modes de connexion</strong>, secrets exigés. Une capacité annoncée sans sa mécanique, ou un connecteur qu'on ne pourrait pas connecter, <strong>empêchent le démarrage</strong></td>
+</tr>
+<tr>
+<td><code>connectorRegistry.js</code></td>
+<td>Sixième registre de Ma Zone. Un connecteur se <strong>déclare</strong>, il ne se câble pas</td>
+</tr>
+<tr>
+<td><code>installations.js</code></td>
+<td>Quel connecteur est branché sur quelle boutique (<code>integration_installations</code>), et le <strong>débranchement</strong> qui rend la procuration</td>
+</tr>
+<tr>
+<td><code>bindings.js</code></td>
+<td><code>external_bindings</code> — <strong>seul endroit du système</strong> où vit un identifiant externe</td>
+</tr>
+<tr>
+<td><code>conflicts.js</code></td>
+<td><code>sync_conflicts</code> — ce que Ma Zone a refusé, et pourquoi</td>
+</tr>
+<tr>
+<td><code>outbox.js</code></td>
+<td>File sortante : <strong>6 tentatives</strong>, backoff exponentiel depuis 15 s, puis <strong>lettre morte</strong></td>
+</tr>
+<tr>
+<td><code>inbox.js</code></td>
+<td>File entrante : <strong>5 tentatives</strong>, backoff depuis 10 s. Déduplication en base, traitement asynchrone</td>
+</tr>
+<tr>
+<td><code>worker.js</code></td>
+<td><strong>Exactement un worker par file</strong>, garanti par un bail en base qui expire</td>
+</tr>
+<tr>
+<td><code>sync.js</code></td>
+<td>Livraison sortante (<strong>asynchrone</strong> depuis E8) et ingestion entrante</td>
+</tr>
+<tr>
+<td><code>importer.js</code></td>
+<td>Inspection et import d'un fichier — parse, ne déclare pas</td>
+</tr>
+<tr>
+<td><code>declare.js</code></td>
+<td><strong>E8</strong> : déclaration canonique d'un produit, partagée par tous les connecteurs. Le CSV a cessé d'être un chemin privilégié</td>
+</tr>
+<tr>
+<td><code>secrets.js</code></td>
+<td><strong>E8</strong> : coffre AES-256-GCM. Clé maîtresse en environnement, <strong>empreinte</strong> de clé stockée à côté de chaque secret, purge au débranchement</td>
+</tr>
+<tr>
+<td><code>http.js</code></td>
+<td><strong>E8</strong> : le <strong>seul</strong> transport sortant. Délai d'attente, 429 avec <code>Retry-After</code>, classification réessayable / définitif, <strong>injectable</strong> (d'où des tests hors ligne)</td>
+</tr>
+<tr>
+<td><code>signature.js</code></td>
+<td><strong>E8</strong> : vérification HMAC à <strong>temps constant</strong>. Algorithme, encodage et en-tête déclarés par le connecteur</td>
+</tr>
+<tr>
+<td><code>oauth.js</code></td>
+<td><strong>E8</strong> : flux <em>authorization code</em> générique. Jeton d'état à <strong>usage unique</strong> par écriture conditionnelle, <code>redirect_uri</code> construite par le moteur, échange, rafraîchissement optionnel</td>
+</tr>
+<tr>
+<td><code>cursors.js</code></td>
+<td><strong>E8</strong> : <code>integration_cursors</code> — où en était la dernière lecture, par ressource</td>
+</tr>
+<tr>
+<td><code>puller.js</code></td>
+<td><strong>E8</strong> : lecture incrémentielle (20 pages au plus par passe) et <strong>réconciliation</strong> périodique. Lit et enfile ; ne décide rien</td>
+</tr>
+<tr>
+<td><code>context.js</code></td>
+<td><strong>E8</strong> : ce qu'un connecteur reçoit — <code>request</code>, <code>credentials</code> (déchiffrés <strong>paresseusement</strong>), <code>externalIdFor</code>, <code>updateConfig</code>. Il ne va rien chercher lui-même</td>
+</tr>
+<tr>
+<td><code>connectors/manual.js</code></td>
+<td>Le chemin du tableur : CSV et export</td>
+</tr>
+<tr>
+<td><code>connectors/shopify/</code></td>
+<td><strong>E8</strong> : premier logiciel du marché. 4 fichiers, <strong>tout le dialecte confiné ici</strong></td>
+</tr>
+</tbody>
+</table>
+<p><strong>Le connecteur <code>manual</code> n'est pas un jouet</strong> : c'est le cas majoritaire des commerçants que Ma Zone adresse d'abord — un cahier ou un tableur. Il valide le contrat sans dépendre d'une API que nous ne contrôlons pas, et il reste le repli quand une connexion échoue.</p>
+<p><strong>Trois modes de connexion, déclarés et pas devinés.</strong> <code>delegated</code> (redirection chez l'éditeur), <code>credentials</code> (le commerçant colle une paire de clés) et <code>none</code>. Le second n'est pas un cas dégradé : une part importante des logiciels visés ne délivre pas de jeton par redirection. Un moteur qui ne connaîtrait que la redirection obligerait le connecteur suivant à <strong>simuler un flux qui n'existe pas chez lui</strong>.</p>
+<p><strong>Webhooks :</strong> <code>POST /api/integration/webhooks/:connectorId</code>, réponse <strong>202</strong> immédiate, aucun traitement dans la requête. La vérification appartient au connecteur — le moteur exige un verdict et n'accepte que « oui » —, et un connecteur qui ne sait pas vérifier reçoit <strong>501</strong>. Une notification non prouvée reçoit <strong>401</strong> et n'entre pas dans la file.</p>
+<p><strong>Le coffre existe, et le refus d'E6 a changé de nature.</strong> Un connecteur exigeant des identifiants ne se branche plus « faute de coffre » (501) mais <strong>faute d'identifiants rangés</strong> (409) : ils se déposent d'abord, par la connexion du logiciel, et le branchement les constate. Un jeton d'éditeur est une <strong>procuration</strong> : le débranchement l'efface et oublie les curseurs, tout en conservant les correspondances — sans elles, rebrancher recréerait des doublons chez l'éditeur.</p>
+<h4>Le premier connecteur — <code>connectors/shopify/</code></h4>
+<table>
+<thead>
+<tr>
+<th>Fichier</th>
+<th>Ce qu'il contient de propre à cet éditeur</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>api.js</code></td>
+<td>Chemins d'URL, <strong>version d'API épinglée</strong> (<code>2026-07</code>, revue avant le <strong>30/04/2027</strong>), en-tête de jeton, pagination par curseur opaque</td>
+</tr>
+<tr>
+<td><code>mapping.js</code></td>
+<td>Variantes <strong>aplaties</strong>, <code>inventory_item_id</code> comme identité, HTML nettoyé, prix décimal</td>
+</tr>
+<tr>
+<td><code>webhooks.js</code></td>
+<td>Noms d'en-têtes, sujets d'abonnement, deux schémas de signature (notification et redirection)</td>
+</tr>
+<tr>
+<td><code>index.js</code></td>
+<td>L'assemblage : descripteur d'autorisation, capacités, abonnements idempotents</td>
+</tr>
+</tbody>
+</table>
+<p><strong>Deux décisions de ce connecteur méritent d'être connues</strong>, parce qu'elles ne se devinent pas :</p>
 <ol>
-<li><code>users.role = 'driver'</code></li>
-<li><code>users.driver_online = 1</code></li>
-<li>Aucune mission en statut <code>accepted</code> | <code>picking_up</code> | <code>picked_up</code> | <code>delivering</code></li>
+<li><strong>L'identité externe d'un produit est son <code>inventory_item_id</code></strong>, pas la variante. C'est le seul identifiant présent dans <strong>tous</strong> les flux de cet éditeur ; choisir la variante aurait produit un catalogue parfait suivi de <strong>chaque</strong> notification de stock refusée en <code>unmapped_entity</code>.</li>
+<li><strong>Une vente Ma Zone n'est pas une commande Shopify.</strong> Elle est transmise comme un <strong>ajustement relatif de stock</strong>. Créer une commande entrerait dans la comptabilité d'un commerçant qui n'a rien demandé : numérotation fiscale, rapports de chiffre d'affaires, courriels de confirmation.</li>
 </ol>
-<p>Sinon <code>tryDispatchNewOrder()</code> retourne <code>null</code> et la commande reste en attente.</p>
+<p><strong>Le mode <code>pos</code> est exercé pour la première fois</strong>, et le compte est vérifié : une vente de 2 unités sur un stock de 10 laisse <strong>8</strong>, jamais 6. Ma Zone baisse <code>reserved</code>, l'éditeur baisse son stock physique, Ma Zone le recopie.</p>
+<h3>3.7 CDM — <code>src/lib/cdm/</code></h3>
+<p>Dictionnaire métier interne : entités, types, et <strong>propriété par attribut</strong> (<code>owner</code> | <code>mirror</code> | <code>calculated</code>). <strong>Aucun accès à la base</strong> (vérifié en CI) — c'est un vocabulaire, pas un stockage.</p>
+<p>Un attribut sans propriétaire déclaré <strong>empêche le démarrage</strong>. Deux tests comparent en permanence le CDM au schéma SQLite réel : un dictionnaire qui décrit une base qui n'existe plus est pire qu'aucun dictionnaire.</p>
+<h3>3.8 Organes antérieurs, inchangés</h3>
+<p><code>eventEngine/</code> (initiatives, diffusions, opportunités), <code>walletEngine/</code>, <code>identityEngine/</code>, <code>communicationEngine/</code>, <code>worldFactory/</code> et <code>lab/</code> (bac à sable, <strong>verrouillé en production</strong>) fonctionnent comme avant. L'Event Engine a fourni le patron de registre que les cinq autres ont suivi.</p>
 <hr />
-<h2 id="5-socketio">5. Socket.io</h2>
-<h3 id="51-authentification-et-rooms">5.1 Authentification et rooms</h3>
-<p>Fichier : <code>backend/src/socket/handlers.js</code></p>
-<p>À la connexion (JWT dans <code>handshake.auth.token</code>) :</p>
+<h2>4. Base de données — 45 tables</h2>
+<p><code>backend/src/db/index.js</code> crée le schéma et applique les migrations au démarrage. Chaque organe crée ses propres tables au premier <code>require</code>.</p>
+<h3>4.1 Tables métier historiques</h3>
+<p><code>users</code> · <code>stores</code> · <code>store_members</code> · <code>products</code> · <code>orders</code> · <code>missions</code> · <code>cart_items</code> · <code>promotions</code> · <code>conversations</code> · <code>messages</code> · <code>conversation_reads</code> · <code>client_addresses</code> · <code>store_favorites</code> · <code>driver_broadcast</code> · <code>driver_notifications</code> · <code>merchant_notifications</code> · <code>support_threads</code> · <code>support_messages</code> · <code>admin_users</code> · <code>demo_batches</code> · <code>demo_entities</code></p>
+<h3>4.2 Tables des organes récents</h3>
+<table>
+<thead>
+<tr>
+<th>Table</th>
+<th>Organe</th>
+<th>Contenu</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>stock_levels</code></td>
+<td>Inventory</td>
+<td><code>on_hand</code>, <code>reserved</code>, <code>safety_buffer</code>, <code>inventory_owner</code></td>
+</tr>
+<tr>
+<td><code>stock_movements</code></td>
+<td>Inventory</td>
+<td>Journal append-only de chaque mouvement, avec l'état résultant</td>
+</tr>
+<tr>
+<td><code>order_journal</code></td>
+<td>Orders</td>
+<td>Chaque décision de commande</td>
+</tr>
+<tr>
+<td><code>catalog_journal</code></td>
+<td>Catalog</td>
+<td>Chaque déclaration de produit</td>
+</tr>
+<tr>
+<td><code>orchestration_journal</code></td>
+<td>Orchestration</td>
+<td>Chaque pas de chaque intention (<code>run_id</code>, <code>step</code>, <code>status</code>)</td>
+</tr>
+<tr>
+<td><code>idempotency_keys</code></td>
+<td>Noyau</td>
+<td>« Déjà fait, voici le résultat »</td>
+</tr>
+<tr>
+<td><code>integration_installations</code></td>
+<td>Integration</td>
+<td>Connecteurs branchés par boutique</td>
+</tr>
+<tr>
+<td><code>external_bindings</code></td>
+<td>Integration</td>
+<td>Correspondances Ma Zone ↔ identifiants externes</td>
+</tr>
+<tr>
+<td><code>sync_conflicts</code></td>
+<td>Integration</td>
+<td>Refus opposés à une source externe, avec leur raison</td>
+</tr>
+<tr>
+<td><code>integration_outbox</code></td>
+<td>Integration</td>
+<td>File sortante (<code>pending</code> / <code>sent</code> / <code>dead</code>)</td>
+</tr>
+<tr>
+<td><code>integration_inbox</code></td>
+<td>Integration</td>
+<td>File entrante (<code>received</code> / <code>processed</code> / <code>rejected</code> / <code>dead</code>)</td>
+</tr>
+<tr>
+<td><code>integration_workers</code></td>
+<td>Integration</td>
+<td>Baux de worker (unicité)</td>
+</tr>
+<tr>
+<td><code>integration_secrets</code></td>
+<td>Integration</td>
+<td><strong>E8</strong> : identifiants tiers <strong>chiffrés</strong> (AES-256-GCM) + empreinte de la clé maîtresse</td>
+</tr>
+<tr>
+<td><code>integration_oauth_states</code></td>
+<td>Integration</td>
+<td><strong>E8</strong> : jetons d'état d'autorisation, à usage unique, durée de vie 10 min</td>
+</tr>
+<tr>
+<td><code>integration_cursors</code></td>
+<td>Integration</td>
+<td><strong>E8</strong> : où en était la dernière lecture, par boutique / connecteur / ressource</td>
+</tr>
+</tbody>
+</table>
+<p>Tables de l'Event Engine et des organes citoyens : <code>events</code> · <code>event_journal</code> · <code>event_diffusions</code> · <code>event_subscriptions</code> · <code>event_opportunity_inbox</code> · <code>digital_objects</code> · <code>digital_object_events</code> · <code>identity_events</code> · <code>identity_presentations</code>.</p>
+<h3>4.3 Statuts</h3>
+<p><strong>Commande</strong> — le graphe vit dans <code>src/lib/orders/lifecycle.js</code> (le vocabulaire reste dans <code>src/lib/orderStatus.js</code>). Il est <strong>déclaratif et fail-fast</strong> : une transition non déclarée est refusée. Avant l'étape 3, aucun graphe n'existait et <code>delivered → picking_up</code> était accepté — une commande livrée pouvait repartir en préparation.</p>
+<pre><code>placed ──► pending_driver ──► driver_assigned ──► picking_up ──► picked_up ──► delivering ──► delivered
+                  ▲                  │                 │
+                  └──────────────────┴─────────────────┘   retour en file si un livreur abandonne
+                                                            avant d'avoir récupéré le colis
+
+cancelled : atteignable depuis placed, pending_driver, driver_assigned, picking_up — PLUS APRÈS.
+</code></pre>
+<p>Deux arêtes méritent d'être connues. <strong><code>picking_up → pending_driver</code></strong> est le retour en file d'attente : sans elle, la commande resterait bloquée sur un livreur qui ne viendra jamais. Et <strong><code>picked_up</code> ferme l'annulation</strong> : le colis est sorti de la boutique, la commande ne peut plus qu'aboutir.</p>
+<p><strong>Alias legacy normalisés au démarrage</strong> : <code>pending</code>, <code>searching_driver</code>, <code>offered</code> → <code>pending_driver</code> ; <code>accepted</code>, <code>accepted_by_driver</code> → <code>driver_assigned</code>. Ne pas s'appuyer sur ces alias comme statuts stables.</p>
+<p><strong>Mission</strong> (<code>missions.status</code>) : <code>available</code> · <code>offered</code> · <code>accepted</code> · <code>picking_up</code> · <code>picked_up</code> · <code>delivering</code> · <code>delivered</code> · <code>cancelled</code>. Missions <strong>actives</strong> bloquant le dispatch : <code>accepted</code>, <code>picking_up</code>, <code>picked_up</code>, <code>delivering</code>.</p>
+<hr />
+<h2>5. Flux d'une commande</h2>
+<pre><code>CLIENT                    BACKEND                                LIVREUR
+  │                          │                                      │
+  │ POST /api/orders         │                                      │
+  ├────────────────────────►│ routes/orders.js (traduit)           │
+  │                          │   └─► orchestration.run('order.place')
+  │                          │         1. orders.create             │
+  │                          │            (transaction : commande,  │
+  │                          │             réservation de stock,    │
+  │                          │             journal)                 │
+  │                          │         2. dispatch.findDriver       │
+  │                          │         3. integration.pushSale      │
+  │                          │            (optionnelle, selon       │
+  │                          │             capacité de la boutique) │
+  │                          │                                      │
+  │                          │ APRÈS COMMIT — subscribers.js :      │
+  │◄── order:status_updated ─┤   sockets, notifications, chat       │
+COMMERÇANT ◄── order:new ────┤                                      │
+  │                          │ Socket mission:assigned ────────────►│
+  │                          │                                      │
+  │                          │      PATCH /api/missions/:id/status  │
+  │                          │◄─────────────────────────────────────┤
+  │                          │ Si delivered : dispatch de la file   │
+</code></pre>
+<p><strong>Deux garanties nouvelles, à ne pas défaire.</strong></p>
+<ol>
+<li><strong>Rien ne sort avant le commit.</strong> Sockets et notifications sont émis par des abonnés, après la transaction. Une transaction annulée ne laisse plus derrière elle une notification pour une commande qui n'existe pas.</li>
+<li><strong>La réservation de stock et la création de commande sont dans la même transaction.</strong> Deux ventes simultanées sur la dernière unité ne passent plus toutes les deux — c'est testé.</li>
+</ol>
+<p><strong>Ce que le client reçoit en plus :</strong> un champ <code>pending</code>. Il liste ce que Ma Zone n'a <strong>pas</strong> pu faire (typiquement : la vente n'a pas été poussée vers le logiciel du commerçant, faute de connecteur). Ce qui n'a pas pu être fait est dit, jamais tu.</p>
+<p><strong>Dispatch</strong> (<code>src/lib/dispatch.js</code>, <code>src/lib/dispatchOffer.js</code>) : un livreur est éligible si <code>role = 'driver'</code>, <code>driver_online = 1</code>, et aucune mission active. Sinon la commande reste en <code>pending_driver</code> (file d'attente).</p>
+<hr />
+<h2>6. Socket.io</h2>
+<p>Fichier : <code>src/socket/handlers.js</code>.</p>
 <table>
 <thead>
 <tr>
 <th>Room</th>
 <th>Qui rejoint</th>
-<th>Usage</th>
 </tr>
 </thead>
 <tbody>
 <tr>
 <td><code>user_{id}</code></td>
-<td>Tous les rôles</td>
-<td>Événements personnels (ex. <code>mission:assigned</code>)</td>
+<td>Tous, à la connexion</td>
 </tr>
 <tr>
-<td><code>merchant_{id}</code></td>
-<td>Commerçants</td>
-<td>Commandes boutique</td>
+<td><code>merchant_{id}</code> · <code>store_{storeId}</code></td>
+<td>Commerçants et membres de boutique</td>
 </tr>
 <tr>
 <td><code>drivers_available</code></td>
-<td>Livreurs en ligne</td>
-<td>Broadcast missions prises</td>
+<td>Livreurs <strong>en ligne uniquement</strong></td>
 </tr>
 <tr>
 <td><code>order_{orderId}</code></td>
-<td>Sur demande (<code>join:order</code>)</td>
-<td>Suivi commande</td>
+<td>Sur <code>join:order</code>, <strong>après contrôle d'accès</strong></td>
 </tr>
 <tr>
 <td><code>conv_{conversationId}</code></td>
-<td>Sur demande (<code>join:conversation</code>)</td>
-<td>Chat</td>
+<td>Sur <code>join:conversation</code>, <strong>après contrôle d'accès</strong></td>
 </tr>
 </tbody>
 </table>
-<h3 id="52-evenements-emis-par-le-client-mobile">5.2 Événements émis par le client mobile</h3>
+<blockquote>
+<p><strong>Correctif d'étape 1 :</strong> rejoindre une room de commande ou de conversation est désormais <strong>autorisé</strong> par <code>src/lib/access.js</code>. Avant, n'importe quel utilisateur authentifié pouvait rejoindre <code>order_{id}</code> et y lire la position du livreur et l'adresse de livraison. Un test le vérifie (<code>test/security/access.test.js</code>).</p>
+</blockquote>
+<p><strong>Les 24 événements émis par le serveur</strong>, relevés dans le code :</p>
 <table>
 <thead>
 <tr>
-<th>Événement</th>
-<th>Émetteur</th>
-<th>Action serveur</th>
+<th>Domaine</th>
+<th>Événements</th>
 </tr>
 </thead>
 <tbody>
 <tr>
-<td><code>join:order</code></td>
-<td>Client / commerçant / livreur</td>
-<td>Rejoint <code>order_{id}</code></td>
+<td>Commande</td>
+<td><code>order:new</code> · <code>order:status_updated</code> · <code>order:cancelled</code></td>
 </tr>
 <tr>
-<td><code>leave:order</code></td>
-<td>Idem</td>
-<td>Quitte la room</td>
+<td>Mission</td>
+<td><code>mission:offered</code> · <code>mission:assigned</code> · <code>mission:accepted</code> · <code>mission:status_updated</code> · <code>mission:taken</code> · <code>mission:cancelled</code></td>
 </tr>
 <tr>
-<td><code>join:conversation</code></td>
-<td>Chat</td>
-<td>Rejoint <code>conv_{id}</code></td>
+<td>Messagerie</td>
+<td><code>message:new</code> · <code>chat:typing</code> · <code>conversation:updated</code></td>
 </tr>
 <tr>
-<td><code>leave:conversation</code></td>
-<td>Chat</td>
-<td>Quitte la room</td>
+<td>Catalogue et stock</td>
+<td><code>product:created</code> · <code>product:updated</code> · <code>product:deleted</code> · <code>product:stock_updated</code> · <code>stock:reserved</code></td>
 </tr>
 <tr>
-<td><code>driver:online</code></td>
-<td>Livreur</td>
-<td><code>driver_online=1</code>, join <code>drivers_available</code>, dispatch file</td>
+<td>Boutique</td>
+<td><code>store:created</code> · <code>store:updated</code> · <code>store:closed_exceptionally</code></td>
 </tr>
 <tr>
-<td><code>driver:offline</code></td>
-<td>Livreur</td>
-<td><code>driver_online=0</code>, leave <code>drivers_available</code></td>
+<td>Promotions</td>
+<td><code>promotion:created</code> · <code>promotion:updated</code> · <code>promotion:deleted</code></td>
 </tr>
 <tr>
-<td><code>chat:typing</code></td>
-<td>Chat</td>
-<td>Relay vers la conversation</td>
+<td>Initiatives</td>
+<td><code>event:opportunity</code></td>
 </tr>
 </tbody>
 </table>
-<h3 id="53-evenements-emis-par-le-serveur">5.3 Événements émis par le serveur</h3>
-<table>
-<thead>
-<tr>
-<th>Événement</th>
-<th>Room cible</th>
-<th>Déclencheur</th>
-<th>Listeners mobile</th>
-</tr>
-</thead>
-<tbody>
-<tr>
-<td><code>order:new</code></td>
-<td><code>merchant_{id}</code></td>
-<td>Nouvelle commande</td>
-<td><code>DashboardScreen</code>, <code>MerchantOrdersScreen</code></td>
-</tr>
-<tr>
-<td><code>order:status_updated</code></td>
-<td><code>order_*</code>, <code>merchant_*</code>, <code>user_client</code></td>
-<td>Changement statut commande</td>
-<td>Client, commerçant, suivi</td>
-</tr>
-<tr>
-<td><code>order:cancelled</code></td>
-<td><code>order_*</code>, <code>merchant_*</code></td>
-<td>Annulation</td>
-<td>Client, commerçant</td>
-</tr>
-<tr>
-<td><code>mission:assigned</code></td>
-<td><code>user_{driverId}</code></td>
-<td>Attribution livreur</td>
-<td><strong><code>DriverContext</code></strong> → tiroir mission</td>
-</tr>
-<tr>
-<td><code>mission:accepted</code></td>
-<td><code>order_*</code>, <code>merchant_*</code></td>
-<td>Idem (notif client/commerçant)</td>
-<td>Client, commerçant</td>
-</tr>
-<tr>
-<td><code>mission:status_updated</code></td>
-<td><code>order_*</code>, <code>merchant_*</code>, <code>user_driver</code></td>
-<td>MAJ statut mission</td>
-<td>Suivi, commerçant</td>
-</tr>
-<tr>
-<td><code>mission:taken</code></td>
-<td><code>drivers_available</code></td>
-<td>Mission plus disponible</td>
-<td>(peu utilisé côté mobile)</td>
-</tr>
-<tr>
-<td><code>mission:cancelled</code></td>
-<td><code>user_{driverId}</code></td>
-<td>Annulation commande</td>
-<td><code>DriverContext</code></td>
-</tr>
-<tr>
-<td><code>message:new</code></td>
-<td><code>conv_*</code> ou <code>order_*</code></td>
-<td>Nouveau message</td>
-<td>Chat</td>
-</tr>
-<tr>
-<td><code>chat:typing</code></td>
-<td><code>conv_*</code></td>
-<td>Frappe en cours</td>
-<td>Chat</td>
-</tr>
-<tr>
-<td><code>product:stock_updated</code></td>
-<td>Broadcast global</td>
-<td>Stock modifié</td>
-<td>Client, commerçant</td>
-</tr>
-<tr>
-<td><code>promotion:*</code></td>
-<td>Broadcast global</td>
-<td>Promos</td>
-<td>Client, commerçant</td>
-</tr>
-</tbody>
-</table>
-<h3 id="54-listener-critique-livreur">5.4 Listener critique livreur</h3>
-<pre><code>Socket mission:assigned
-    → DriverContext.js (onAssigned)
-        → setActiveMission(mission)
-        → assignedHandlerRef → DriverHomeScreen.startActiveMission()
-            → fullscreen = true
-            → MissionDrawer expanded
-</code></pre>
-<p><strong>Pas de filtre de statut</strong> sur cet événement : toute mission assignée déclenche l'UI.</p>
+<p><code>product:stock_updated</code> porte désormais <strong><code>available</code> et <code>quantity</code></strong>, avec la même valeur (E7). Ajouter un champ est sans risque ; en renommer un aurait cassé les applications déjà installées. <code>quantity</code> disparaîtra avec la projection dont il est le reflet — date dans <code>backend/src/lib/sunset.js</code>, après la mort de <code>/api</code>.</p>
 <hr />
-<h2 id="6-api-rest-critique-commandes-livreur">6. API REST critique (commandes / livreur)</h2>
+<h2>7. API REST</h2>
+<p>Deux surfaces coexistent depuis E7, et c'est la dette principale de cette étape — <strong>bornée par une date inscrite dans le code</strong>.</p>
+<table>
+<thead>
+<tr>
+<th>Surface</th>
+<th>Rôle</th>
+<th>Fin de vie</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><strong><code>/api/v1</code></strong> (<code>src/routes/v1/</code>)</td>
+<td>Contrat public versionné : <strong>intentions</strong> et <strong>projections</strong>, décrit par <code>backend/openapi/openapi.yaml</code></td>
+<td>—</td>
+</tr>
+<tr>
+<td><code>/api</code> (18 fichiers de <code>src/routes/</code>)</td>
+<td>Surface historique, porte de tout ce qui n'a pas encore d'organe</td>
+<td><strong>31/01/2027</strong>, en-têtes <code>Deprecation</code> et <code>Sunset</code> sur chaque réponse</td>
+</tr>
+</tbody>
+</table>
+<h3>7.1 <code>/api/v1</code> — 19 opérations</h3>
+<table>
+<thead>
+<tr>
+<th>Domaine</th>
+<th>Opérations</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Intentions</td>
+<td><code>GET /intents</code> · <code>GET /intents/{id}</code> · <strong><code>POST /intents/{id}</code></strong> · <code>GET /intents/runs/{runId}</code></td>
+</tr>
+<tr>
+<td>Catalogue (client)</td>
+<td><code>GET /stores</code> · <code>GET /stores/{id}</code> · <code>GET /stores/{id}/products</code> · <code>GET /products/{id}</code></td>
+</tr>
+<tr>
+<td>Inventaire (boutique)</td>
+<td><code>GET /inventory?store_id=</code> · <code>GET /inventory/{productId}</code> · <strong><code>PATCH /inventory/{productId}</code></strong> · <code>GET /inventory/{productId}/movements</code></td>
+</tr>
+<tr>
+<td>Commandes</td>
+<td><code>GET /orders?store_id=</code> · <code>GET /orders/mine</code> · <code>GET /orders/{id}</code> · <code>GET /orders/{id}/journal</code></td>
+</tr>
+<tr>
+<td>Livraisons</td>
+<td><code>GET /deliveries/mine</code></td>
+</tr>
+<tr>
+<td>Intégrations</td>
+<td><code>GET /integrations</code> · <code>GET /integrations/{connectorId}/conflicts</code></td>
+</tr>
+</tbody>
+</table>
+<p><strong>Deux écritures seulement, et les deux sont justifiées.</strong> <code>POST /intents/{id}</code> pour toute action multi-organe ; <code>PATCH /inventory/{productId}</code> parce qu'un stock ne concerne qu'un organe (Loi 5). Une troisième porte est refusée par la CI.</p>
+<table>
+<thead>
+<tr>
+<th>Règle de la surface v1</th>
+<th>Mécanisme</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>Idempotency-Key</code> <strong>obligatoire</strong> sur une intention (<strong>400</strong> sans elle, 8 caractères minimum)</td>
+<td><code>routes/v1/intents.js</code> + test</td>
+</tr>
+<tr>
+<td>Aucune réponse client ne contient <code>on_hand</code>, <code>reserved</code>, <code>safety_buffer</code>, <code>inventory_owner</code></td>
+<td>Listes blanches dans <code>routes/v1/projections.js</code>, garde récursif qui <strong>échoue en 500</strong> plutôt que de laisser fuir, balayage de toutes les routes client en test, contrôle CI sur le code</td>
+</tr>
+<tr>
+<td><code>PATCH /inventory</code> déclare des valeurs <strong>cibles</strong>, jamais des deltas</td>
+<td>Rejeu sans danger, donc aucune clé exigée. Tient la promesse écrite dans <code>inventoryEngine.js</code> à E4</td>
+</tr>
+<tr>
+<td>Un tiers reçoit <strong>404</strong>, jamais 403</td>
+<td><code>lib/access.js</code>, partagé avec <code>/api</code> et les sockets</td>
+</tr>
+<tr>
+<td>Chaque réponse porte <code>MaZone-Api-Version: v1</code></td>
+<td><code>routes/v1/index.js</code></td>
+</tr>
+</tbody>
+</table>
+<h3>7.2 <code>/api</code> — surface historique</h3>
+<table>
+<thead>
+<tr>
+<th>Préfixe</th>
+<th>Contenu</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>/api/auth</code></td>
+<td>Inscription, connexion (rate limiting renforcé)</td>
+</tr>
+<tr>
+<td><code>/api/users</code> · <code>/api/stores</code> · <code>/api/products</code></td>
+<td>Identité, boutiques, catalogue et stock</td>
+</tr>
+<tr>
+<td><code>/api/orders</code></td>
+<td>Commandes, panier, annulation, journal, trace d'orchestration</td>
+</tr>
+<tr>
+<td><code>/api/intents</code></td>
+<td>Intentions (E5), <strong>clé d'idempotence optionnelle</strong> ici, contrairement à v1</td>
+</tr>
+<tr>
+<td><code>/api/integration</code></td>
+<td>« Mes logiciels » : branchement, <strong>connexion déléguée et retour d'autorisation (E8)</strong>, import CSV, export, réconciliation, conflits, lettres mortes, webhooks</td>
+</tr>
+<tr>
+<td><code>/api/missions</code> · <code>/api/drivers</code></td>
+<td>Livraison, disponibilité, revenus (commission <strong>5 %</strong>)</td>
+</tr>
+<tr>
+<td><code>/api/messages</code> · <code>/api/conversations</code> · <code>/api/communication</code></td>
+<td>Messagerie (<strong>trois piles</strong>, voir §10)</td>
+</tr>
+<tr>
+<td><code>/api/cart</code> · <code>/api/favorites</code> · <code>/api/promotions</code> · <code>/api/merchants</code></td>
+<td>Achat et commerce</td>
+</tr>
+<tr>
+<td><code>/api/wallet</code> · <code>/api/identity</code> · <code>/api/events</code></td>
+<td>Organes citoyens</td>
+</tr>
+<tr>
+<td><code>/api/admin</code></td>
+<td>Back-office, bac à sable, <strong>santé des files de synchronisation</strong></td>
+</tr>
+</tbody>
+</table>
+<p><strong>Routes utiles à connaître :</strong></p>
 <table>
 <thead>
 <tr>
 <th>Méthode</th>
 <th>Route</th>
 <th>Rôle</th>
-<th>Rôle métier</th>
 </tr>
 </thead>
 <tbody>
 <tr>
 <td>POST</td>
 <td><code>/api/orders</code></td>
-<td>client</td>
-<td>Créer commande + dispatch</td>
+<td>Client — passe par l'intention <code>order.place</code></td>
 </tr>
 <tr>
 <td>POST</td>
 <td><code>/api/orders/cart</code></td>
-<td>client</td>
-<td>Valider panier</td>
+<td>Client — panier, échec partiel possible</td>
+</tr>
+<tr>
+<td>GET</td>
+<td><code>/api/orders/:id/journal</code></td>
+<td>Biographie d'une commande</td>
+</tr>
+<tr>
+<td>GET</td>
+<td><code>/api/orders/:id/orchestration/:runId</code></td>
+<td>Trace d'une intention, pas à pas</td>
 </tr>
 <tr>
 <td>POST</td>
-<td><code>/api/orders/:id/cancel</code></td>
-<td>client</td>
-<td>Annuler</td>
+<td><code>/api/intents/:id</code></td>
+<td>Exécuter une intention déclarée</td>
 </tr>
 <tr>
 <td>GET</td>
-<td><code>/api/orders/mine</code></td>
-<td>client</td>
-<td>Historique</td>
-</tr>
-<tr>
-<td>GET</td>
-<td><code>/api/orders/merchant</code></td>
-<td>merchant</td>
-<td>Commandes boutique</td>
-</tr>
-<tr>
-<td>PUT</td>
-<td><code>/api/drivers/online</code></td>
-<td>driver</td>
-<td>En ligne / hors ligne + dispatch file</td>
-</tr>
-<tr>
-<td>GET</td>
-<td><code>/api/missions/mine</code></td>
-<td>driver</td>
-<td>Missions + <code>active</code></td>
-</tr>
-<tr>
-<td>PATCH</td>
-<td><code>/api/missions/:id/status</code></td>
-<td>driver</td>
-<td>Workflow livraison</td>
+<td><code>/api/integration/stores/:storeId</code></td>
+<td>État complet des logiciels d'une boutique, <strong>formulaire de connexion inclus</strong> — l'écran mobile ne connaît aucun éditeur</td>
 </tr>
 <tr>
 <td>POST</td>
-<td><code>/api/missions/:id/accept</code></td>
-<td>driver</td>
-<td>Acceptation manuelle (file legacy)</td>
+<td><code>/api/integration/stores/:storeId/connect/:connectorId</code></td>
+<td><strong>E8</strong> — commencer une connexion : renvoie une URL de consentement, ou branche directement</td>
+</tr>
+<tr>
+<td>GET</td>
+<td><code>/api/integration/oauth/:connectorId/callback</code></td>
+<td><strong>E8</strong> — retour du logiciel du commerçant. <strong>Sans jeton Ma Zone</strong> (c'est l'éditeur qui redirige un navigateur) : la preuve est le jeton d'état à usage unique. Répond une <strong>page HTML</strong>, pas du JSON</td>
+</tr>
+<tr>
+<td>POST</td>
+<td><code>/api/integration/stores/:storeId/reconcile</code></td>
+<td><strong>E8</strong> — « mon stock ne me paraît pas juste » : confronter Ma Zone et les logiciels</td>
+</tr>
+<tr>
+<td>DELETE</td>
+<td><code>/api/integration/stores/:storeId/connectors/:connectorId</code></td>
+<td><strong>Débrancher</strong> : suspend, efface les identifiants, oublie les curseurs. <code>?pause=1</code> suspend <strong>sans</strong> rendre la procuration</td>
+</tr>
+<tr>
+<td>POST</td>
+<td><code>/api/integration/stores/:storeId/import</code></td>
+<td>Importer un catalogue CSV</td>
+</tr>
+<tr>
+<td>GET</td>
+<td><code>/api/integration/stores/:storeId/export/sales</code></td>
+<td>Ventes à recopier en caisse (<code>?format=csv</code>)</td>
+</tr>
+<tr>
+<td>GET</td>
+<td><code>/api/integration/stores/:storeId/conflicts</code></td>
+<td>Ce que Ma Zone a refusé, et pourquoi</td>
+</tr>
+<tr>
+<td>GET</td>
+<td><code>/api/admin/integration/queues</code></td>
+<td>État des files + <strong>seuil Postgres</strong> (200 en attente)</td>
+</tr>
+<tr>
+<td>GET</td>
+<td><code>/api/admin/api-usage</code></td>
+<td><strong>E7</strong> : échéances de suppression + routes historiques encore appelées</td>
 </tr>
 </tbody>
 </table>
-<hr />
-<h2 id="7-mobile-structure-par-role">7. Mobile — structure par rôle</h2>
-<h3 id="client">Client</h3>
-<ul>
-<li>Tabs : Accueil, Panier, Commandes, Menu</li>
-<li>Écrans clés : <code>HomeScreen</code>, <code>OrderConfirmScreen</code>, <code>OrderTrackingScreen</code>, <code>ClientOrdersScreen</code></li>
-</ul>
-<h3 id="commercant">Commerçant</h3>
-<ul>
-<li>Tabs : Boutique, Commandes, Boîte de réception, Profil</li>
-<li>Écrans clés : <code>DashboardScreen</code>, <code>MerchantOrdersScreen</code></li>
-</ul>
-<h3 id="livreur">Livreur</h3>
-<ul>
-<li>Tabs : <strong>Accueil</strong>, <strong>Revenu</strong>, <strong>Boîte de réception</strong>, <strong>Menu</strong></li>
-<li>Écran principal : <code>DriverHomeScreen</code> (carte premium + bouton en ligne + <code>MissionDrawer</code>)</li>
-<li>Contexte : <code>DriverContext</code> (online, <code>activeMission</code>, socket)</li>
-<li>Carte : <code>DriverMap</code> → <code>PremiumMap.native.js</code> / <code>.web.js</code></li>
-</ul>
-<hr />
-<h2 id="8-fichiers-critiques">8. Fichiers critiques</h2>
-<h3 id="backend">Backend</h3>
+<h3>7.3 Ce qui va disparaître, et quand — <code>src/lib/sunset.js</code></h3>
+<p>Deux échéances sont <strong>inscrites dans le code</strong>, pas dans un document :</p>
 <table>
 <thead>
 <tr>
-<th>Fichier</th>
-<th>Responsabilité</th>
+<th>Ce qui meurt</th>
+<th>Date</th>
+<th>Remplacé par</th>
 </tr>
 </thead>
 <tbody>
 <tr>
-<td><code>backend/src/index.js</code></td>
-<td>Point d'entrée, montage routes, Socket.io</td>
+<td>Routes <code>/api</code> non versionnées</td>
+<td><strong>31/01/2027</strong></td>
+<td><code>/api/v1</code></td>
 </tr>
 <tr>
-<td><code>backend/src/db/index.js</code></td>
-<td>Schéma SQLite + migrations statuts au boot</td>
-</tr>
-<tr>
-<td><code>backend/src/lib/dispatch.js</code></td>
-<td><strong>Moteur d'attribution</strong> (cœur du flux commande)</td>
-</tr>
-<tr>
-<td><code>backend/src/lib/orderStatus.js</code></td>
-<td>Constantes et règles statuts commande</td>
-</tr>
-<tr>
-<td><code>backend/src/lib/orders.js</code></td>
-<td><code>getFullOrder()</code></td>
-</tr>
-<tr>
-<td><code>backend/src/lib/missions.js</code></td>
-<td>Liste missions disponibles (file)</td>
-</tr>
-<tr>
-<td><code>backend/src/routes/orders.js</code></td>
-<td>Création commande</td>
-</tr>
-<tr>
-<td><code>backend/src/routes/missions.js</code></td>
-<td>Workflow livreur, stats revenus</td>
-</tr>
-<tr>
-<td><code>backend/src/routes/drivers.js</code></td>
-<td>Online/offline, broadcast</td>
-</tr>
-<tr>
-<td><code>backend/src/socket/handlers.js</code></td>
-<td>Rooms, <code>driver:online</code>, join order/conv</td>
+<td>Projection <code>products.quantity</code></td>
+<td><strong>30/04/2027</strong></td>
+<td><code>available</code></td>
 </tr>
 </tbody>
 </table>
-<h3 id="mobile">Mobile</h3>
+<p>L'ordre est une contrainte : <code>products.quantity</code> alimente les écrans que sert <code>/api</code>, le supprimer avant afficherait « 0 en stock » sur des produits disponibles. Un test vérifie cet ordre, et <strong>échoue lorsqu'une échéance est dépassée</strong> — une date qui ne fait rien quand elle arrive n'est pas une date. La question « qui appelle encore cette route ? » se lit dans <code>GET /api/admin/api-usage</code> (compteurs en mémoire, par motif de route, remis à zéro au redémarrage).</p>
+<hr />
+<h2>8. Garde-fous automatiques</h2>
+<p>C'est la partie la plus récente et la plus utile à connaître avant de coder : <strong>plusieurs lois d'architecture sont opposables, pas seulement écrites.</strong></p>
+<h3>8.1 Tests — <code>backend/test/</code></h3>
+<p><strong>349 tests</strong> (<code>npm test</code> dans <code>backend/</code>), dont :</p>
+<table>
+<thead>
+<tr>
+<th>Fichier</th>
+<th>Couvre</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>flows/*.test.js</code></td>
+<td>Les 5 flux critiques (création, annulation, panier, offre, statuts mission) — <strong>tests de caractérisation</strong> écrits avant toute restructuration</td>
+</tr>
+<tr>
+<td><code>security/access.test.js</code></td>
+<td>Qui peut lire une commande, changer un statut, rejoindre une room</td>
+</tr>
+<tr>
+<td><code>kernel.test.js</code> · <code>orders.test.js</code> · <code>inventory.test.js</code></td>
+<td>Noyau et organes</td>
+</tr>
+<tr>
+<td><code>orchestration.test.js</code></td>
+<td>Intentions, compensation, idempotence, <strong>contrôles structurels de la Loi 16</strong></td>
+</tr>
+<tr>
+<td><code>integration.test.js</code></td>
+<td>Import de 500 articles puis vente, files, DLQ, conflits, worker unique, webhooks</td>
+</tr>
+<tr>
+<td><code>connector-conformance.test.js</code></td>
+<td><strong>E8 — le vrai livrable de l'étape.</strong> Énumère les connecteurs <strong>enregistrés</strong> et applique à chacun les mêmes exigences : déclaration cohérente, mode de connexion, aucun nom d'éditeur dans le vocabulaire du moteur, <strong>notification non signée refusée</strong>, <strong>signature d'une autre clé refusée</strong>, dialecte confiné. Le connecteur suivant hérite de sa suite de tests le jour où il s'enregistre</td>
+</tr>
+<tr>
+<td><code>shopify-connector.test.js</code></td>
+<td><strong>E8 — hors ligne</strong>, transport factice : connexion déléguée complète, jeton d'état à usage unique, <strong>zéro double décrément en mode <code>pos</code></strong>, <strong>30 minutes de panne sans blocage de vente</strong>, webhook non signé refusé, réversibilité du débranchement, <strong>échéance de la version d'API</strong></td>
+</tr>
+<tr>
+<td><code>cdm.test.js</code> · <code>cdm-schema-drift.test.js</code></td>
+<td>Cohérence du dictionnaire avec le schéma réel</td>
+</tr>
+<tr>
+<td><code>api-v1.test.js</code></td>
+<td><strong>Parité contrat ↔ routes réelles dans les deux sens</strong>, idempotence obligatoire, rejeu sans double vente, balayage anti-fuite de <code>on_hand</code>, accès, en-têtes de dépréciation, échéances de suppression</td>
+</tr>
+<tr>
+<td><code>openapi.test.js</code> · <code>env.test.js</code></td>
+<td>Le document pour lui-même (lois, CDM, écritures publiées) et le refus de démarrer sans secrets</td>
+</tr>
+</tbody>
+</table>
+<p>Le harnais (<code>test/helpers/testServer.js</code>) monte un vrai serveur sur une base temporaire et vide les tables entre chaque test. Les workers de synchronisation sont <strong>éteints</strong> en test : une boucle de fond rendrait les assertions non déterministes.</p>
+<h3>8.2 CI — <code>.github/workflows/ci.yml</code></h3>
+<p>Au-delà des tests, la CI refuse un code qui viole une loi :</p>
+<table>
+<thead>
+<tr>
+<th>Contrôle</th>
+<th>Refuse</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><strong>Loi 1</strong></td>
+<td>Un SDK tiers importé dans un organe</td>
+</tr>
+<tr>
+<td><strong>Loi 4</strong></td>
+<td>Un accès base dans le CDM</td>
+</tr>
+<tr>
+<td><strong>Loi 5</strong></td>
+<td>Une route d'organe qui décide · une règle métier dans un plan d'intention · <strong>une écriture dans <code>routes/v1/</code> hors de <code>intents.js</code> et <code>inventory.js</code></strong></td>
+</tr>
+<tr>
+<td><strong>Loi 11</strong></td>
+<td>Un second écrivain de <code>products.quantity</code></td>
+</tr>
+<tr>
+<td><strong>Loi 12</strong></td>
+<td><strong>Un fichier de surface client de <code>routes/v1/</code> qui nomme <code>on_hand</code> ou <code>safety_buffer</code></strong></td>
+</tr>
+<tr>
+<td><strong>Loi 16</strong></td>
+<td>Dans <code>lib/orchestration/</code> : un nom d'éditeur, un appel réseau, un jeton, un webhook, une traduction de format, un identifiant externe</td>
+</tr>
+<tr>
+<td><strong>Loi 17</strong></td>
+<td><strong>Un nom d'éditeur ailleurs que dans <code>connectors/&lt;éditeur&gt;/</code></strong> — partout dans <code>backend/src</code>, y compris dans le moteur d'intégration. La liste des éditeurs est <strong>déduite des dossiers de connecteurs</strong> : le prochain sera gardé sans que personne pense à l'ajouter</td>
+</tr>
+<tr>
+<td><strong>Loi 17</strong></td>
+<td>Un connecteur qui importe la base, un organe ou le coffre, ou qui appelle <code>fetch</code></td>
+</tr>
+<tr>
+<td><strong>E8</strong></td>
+<td><code>integration_secrets</code>, <code>createDecipheriv</code> ou <code>INTEGRATION_SECRET_KEY</code> hors du coffre : <strong>un seul fichier</strong> lit les procurations des commerçants</td>
+</tr>
+<tr>
+<td>—</td>
+<td>Un secret de développement historique réapparu en dur</td>
+</tr>
+</tbody>
+</table>
+<p>Les trois contrôles de l'étape 8 sont <strong>jouables en local</strong> avant de pousser — une règle qu'on découvre après un « push » est une règle qu'on contourne :</p>
+<pre><code class="language-bash">./scripts/check-loi-17.sh
+</code></pre>
+<hr />
+<h2>9. Mobile — bascule commencée, un écran migré, un écran nouveau</h2>
+<p><strong>Aucun fichier de <code>mobile/</code> n'avait été modifié par les étapes E0 à E6.</strong> E7 ouvre la bascule, <strong>derrière un drapeau, écran par écran</strong>, et <code>/api</code> reste la valeur par défaut : une application mobile ne se met pas à jour parce qu'un backend a été livré.</p>
+<table>
+<thead>
+<tr>
+<th>Élément</th>
+<th>État</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>mobile/src/config.js</code> → <code>FEATURES.stockV1</code></td>
+<td><code>false</code> par défaut · activation par <code>EXPO_PUBLIC_V1_STOCK=1</code></td>
+</tr>
+<tr>
+<td><code>mobile/src/api/v1.js</code></td>
+<td>Client de la surface versionnée, séparé de <code>api/index.js</code> pour que l'avancement de la migration se lise en une recherche</td>
+</tr>
+<tr>
+<td><code>ManageStockScreen</code> (commerçant)</td>
+<td><strong>Seul écran basculé.</strong> Rendu inchangé ; les nombres viennent de <code>/api/v1/inventory</code>, le bouton <code>+</code> déclare une <strong>cible</strong> de stock physique, et le commerçant voit enfin « X en rayon · Y promis »</td>
+</tr>
+<tr>
+<td><code>MesIntegrationsScreen</code> (commerçant)</td>
+<td><strong>E8 — « Mes logiciels »</strong>, module de la famille <em>Piloter</em> de l'Épée. <strong>Ne nomme aucun éditeur</strong> : il lit la description que le backend donne de chaque connecteur (mode de connexion, champs à demander, portées) et la dessine. Le collage de catalogue y figure <strong>au même niveau</strong> que les logiciels, et le journal de conflits est visible</td>
+</tr>
+</tbody>
+</table>
+<p><strong>Pourquoi l'écran des logiciels ne connaît aucun éditeur.</strong> C'est la condition pour que le prochain logiciel du marché n'ajoute <strong>pas une ligne</strong> au mobile — donc pour qu'il n'exige pas une nouvelle version de l'application dans les magasins. Un <code>if (connector.id === …)</code> dans cet écran transformerait chaque connecteur en livraison mobile.</p>
+<p><strong>Pourquoi le commerçant d'abord.</strong> C'est le seul rôle qui gagne quelque chose : la v1 sépare physique, promis et vendable, là où <code>/api</code> ne pouvait donner qu'un nombre et devait <strong>deviner</strong> ce que le commerçant voulait dire en le réenregistrant. Les écrans client ne gagneraient rien aujourd'hui — <code>available</code> leur arrive déjà sous le nom <code>quantity</code> — et migrer sans bénéfice serait du risque gratuit.</p>
+<p><strong>Écart assumé avec la roadmap :</strong> le critère « le mobile fonctionne sur <code>/api</code> et sur <code>/api/v1</code> avec les mêmes tests E2E » n'est <strong>pas</strong> vérifié mécaniquement — il n'existe aucun harnais de test mobile dans le projet. Les deux chemins sont éprouvés côté serveur ; le mobile l'est à la main.</p>
+<h3>Client</h3>
+<p>Tabs : Accueil, Panier, Commandes, Menu. Écrans clés : <code>HomeScreen</code>, <code>OrderConfirmScreen</code>, <code>OrderTrackingScreen</code>, <code>ClientOrdersScreen</code>.</p>
+<h3>Commerçant</h3>
+<p>Tabs : Boutique, Commandes, Boîte de réception, Profil. Écrans clés : <code>DashboardScreen</code>, <code>MerchantOrdersScreen</code>.</p>
+<h3>Livreur</h3>
+<p>Tabs : Accueil, Revenu, Boîte de réception, Menu. Écran principal <code>DriverHomeScreen</code> (carte + bouton en ligne + <code>MissionDrawer</code>), contexte <code>DriverContext</code> (listener <code>mission:assigned</code>), carte <code>PremiumMap.native.js</code> / <code>.web.js</code>.</p>
 <table>
 <thead>
 <tr>
@@ -842,86 +1125,188 @@ COMMERÇANT ◄── order:new ──────────│ notifyMerchant
 </tr>
 <tr>
 <td><code>mobile/src/context/DriverContext.js</code></td>
-<td><strong>État livreur</strong>, listener <code>mission:assigned</code></td>
-</tr>
-<tr>
-<td><code>mobile/src/screens/driver/DriverHomeScreen.js</code></td>
-<td>UI principale livreur, plein écran, tiroir</td>
+<td>État livreur, listener <code>mission:assigned</code></td>
 </tr>
 <tr>
 <td><code>mobile/src/components/driver/MissionDrawer.js</code></td>
-<td>Workflow course (slide confirm, chat, nav)</td>
-</tr>
-<tr>
-<td><code>mobile/src/components/maps/PremiumMap.native.js</code></td>
-<td>Carte interactive iOS/Android</td>
+<td>Workflow course</td>
 </tr>
 <tr>
 <td><code>mobile/src/config.js</code></td>
-<td>URLs API, labels statuts</td>
+<td>URLs API, labels de statuts</td>
 </tr>
 <tr>
 <td><code>mobile/src/api/index.js</code></td>
 <td>Client HTTP Axios</td>
 </tr>
-<tr>
-<td><code>mobile/src/navigation/index.js</code></td>
-<td>Navigation 3 rôles</td>
-</tr>
 </tbody>
 </table>
-<h3 id="fichiers-presents-mais-non-branches-au-flux-actuel">Fichiers présents mais non branchés au flux actuel</h3>
+<p><strong>Présents mais non branchés</strong> : <code>NewCourseOfferModal.js</code>, <code>MissionsScreen.js</code>, <code>ActiveMissionScreen.js</code>.</p>
+<hr />
+<h2>10. Dette technique connue</h2>
+<p>À jour, honnête, et à ne pas redécouvrir par surprise.</p>
 <table>
 <thead>
 <tr>
-<th>Fichier</th>
-<th>Note</th>
+<th>#</th>
+<th>Dette</th>
+<th>Position</th>
 </tr>
 </thead>
 <tbody>
 <tr>
-<td><code>mobile/src/components/driver/NewCourseOfferModal.js</code></td>
-<td>Popup OUI/NON — <strong>non utilisée</strong> (flux direct)</td>
+<td>1</td>
+<td><strong>Une commande = un produit</strong> (pas de table <code>order_items</code>). Un panier de N articles crée N commandes</td>
+<td><strong>La dette la plus lourde.</strong> Identifiée comme le choix le plus fragile de la roadmap. Correction non planifiée</td>
 </tr>
 <tr>
-<td><code>mobile/src/screens/driver/MissionsScreen.js</code></td>
-<td>Ancien écran missions</td>
+<td>2</td>
+<td><strong>Deux chemins d'écriture sur <code>products</code></strong> (Épée, organe Catalog)</td>
+<td>Bornée ; aucun des deux n'écrit <code>quantity</code></td>
 </tr>
 <tr>
-<td><code>mobile/src/screens/driver/ActiveMissionScreen.js</code></td>
-<td>Ancien écran mission active</td>
+<td>3</td>
+<td><strong>Un seul worker par file</strong> — point de défaillance et plafond de débit</td>
+<td>Assumé tant que la base est SQLite. <strong>Déclencheur chiffré : plus de 200 messages en attente de façon soutenue → discussion Postgres.</strong> Visible dans <code>/api/admin/integration/queues</code></td>
+</tr>
+<tr>
+<td>4</td>
+<td><strong>Messagerie en triple pile</strong> (<code>/api/messages</code>, <code>/api/conversations</code>, <code>/api/communication</code>)</td>
+<td><strong>Volontairement absente de <code>/api/v1</code></strong> : trois formes concurrentes rendent la question « laquelle publier ? » sans réponse. À trancher avant la fin de vie de <code>/api</code></td>
+</tr>
+<tr>
+<td>5</td>
+<td>~~<code>external_bindings</code> sans connecteur réel~~</td>
+<td><strong>Payée (E8)</strong> : la table est exercée par un logiciel réel. Elle a révélé un manque — une correspondance créée par une lecture de catalogue n'a pas d'établissement, alors qu'une notification de stock en porte un — traité par <code>bindings.resolveForOutlet</code> (repli sur la correspondance sans établissement)</td>
+</tr>
+<tr>
+<td>6</td>
+<td><strong>File d'attente silencieuse</strong> : livreur hors ligne ou occupé → la commande reste <code>pending_driver</code> sans erreur visible côté client</td>
+<td>Comportement d'origine, non corrigé</td>
+</tr>
+<tr>
+<td>7</td>
+<td><strong>Mode <code>pos</code> éprouvé contre un logiciel factice, pas contre une vraie boutique</strong></td>
+<td><strong>Partiellement payée (E8)</strong> : le compte « 10 − 2 = 8 » est vérifié de bout en bout, panne de 30 minutes comprise. Reste à confronter à une boutique réelle : quotas d'appel réels, latence de notification, établissements multiples</td>
+</tr>
+<tr>
+<td>8</td>
+<td><strong>Mission fantôme</strong> : une mission <code>accepted</code> en base bloque <code>findAvailableDriver()</code> même quand l'interface livreur paraît libre (tiroir fermé)</td>
+<td>Comportement d'origine, non corrigé. Vérifier la base avant de conclure à un bug de dispatch</td>
+</tr>
+<tr>
+<td>9</td>
+<td><strong>Réseau mobile</strong> : <code>mobile/src/config.js</code> utilise <code>localhost</code> / <code>10.0.2.2</code> ; un téléphone physique exige <code>EXPO_PUBLIC_API_URL</code></td>
+<td>Inchangé</td>
+</tr>
+<tr>
+<td>10</td>
+<td><strong>Deux API en parallèle</strong> pendant plusieurs mois, donc deux formes de réponse à maintenir</td>
+<td><strong>Bornée</strong> : date de mort dans <code>lib/sunset.js</code>, en-têtes <code>Sunset</code>, compteur d'usage par route, test qui échoue à l'échéance</td>
+</tr>
+<tr>
+<td>11</td>
+<td><strong>Compteurs d'usage en mémoire</strong> : un redémarrage les remet à zéro</td>
+<td>Assumé — une écriture SQLite par requête pour de la télémétrie serait un mauvais échange sur une base à un seul écrivain. Répond quand même à « cette route est-elle encore appelée ? »</td>
+</tr>
+<tr>
+<td>12</td>
+<td><strong><code>PATCH /api/v1/inventory</code> : dernier écrivain gagne</strong> si deux membres d'une équipe modifient le même produit en même temps (l'API historique, en deltas, additionnait)</td>
+<td>Compromis choisi : le réessai réseau est bien plus fréquent que la saisie simultanée, et l'écran affiche toujours la valeur retenue par le serveur</td>
+</tr>
+<tr>
+<td>13</td>
+<td><strong>Livraison, panier, messagerie, portefeuille, identité absents de <code>/api/v1</code></strong></td>
+<td>Volontaire : on ne versionne que ce qui est passé derrière un organe. Publier une forme qu'on sait devoir refaire, c'est s'interdire de la refaire</td>
+</tr>
+<tr>
+<td>14</td>
+<td><strong>La clé maîtresse du coffre ne se remplace pas encore sans casse</strong> : la changer rend illisibles tous les jetons rangés, et chaque commerçant doit reconnecter</td>
+<td>Borné et <strong>dit</strong> : une empreinte de clé est stockée à côté de chaque secret, donc le message est « reconnectez votre logiciel », pas une erreur de déchiffrement. Un vrai roulement (déchiffrer avec l'ancienne, rechiffrer avec la nouvelle) reste à écrire</td>
+</tr>
+<tr>
+<td>15</td>
+<td><strong>Aucun budget d'appels par éditeur</strong> : le moteur respecte un <code>Retry-After</code> reçu mais n'anticipe pas un quota</td>
+<td>Suffisant à un connecteur et à des volumes de démarrage ; deviendra faux avec plusieurs boutiques actives sur le même éditeur. Le point d'ajout est unique (<code>integration/http.js</code>), ce qui est la raison d'exister de ce fichier</td>
+</tr>
+<tr>
+<td>16</td>
+<td><strong>Le rafraîchissement de jeton n'est exercé par aucun logiciel réel</strong> : le premier connecteur délivre un jeton sans expiration</td>
+<td>La mécanique est écrite et générique, mais <strong>non éprouvée</strong>. À ne pas croire acquise au branchement d'un éditeur qui, lui, fait expirer ses jetons</td>
+</tr>
+<tr>
+<td>17</td>
+<td><strong>Une vente Ma Zone n'apparaît pas comme une commande chez l'éditeur</strong>, seulement comme un mouvement de stock</td>
+<td>Choix assumé (§3.6) : ne pas polluer la comptabilité d'un commerçant. Conséquence : son chiffre d'affaires Ma Zone se lit dans Ma Zone, pas dans son logiciel. À rediscuter si un commerçant demande l'inverse — ce serait alors une <strong>capacité déclarée</strong>, pas un changement du cœur</td>
+</tr>
+<tr>
+<td>18</td>
+<td><strong>La version d'API du premier connecteur est épinglée à <code>2026-07</code> et doit être revue avant le 30/04/2027</strong></td>
+<td>Un test <strong>échoue</strong> à l'approche de l'échéance. Le mécanisme est propre à ce connecteur : chaque éditeur a son propre rythme de dépréciation, et le cœur n'a pas à connaître ces calendriers</td>
+</tr>
+<tr>
+<td>19</td>
+<td><strong>L'écran « Mes logiciels » n'est couvert par aucun test</strong></td>
+<td>Même écart que E7 : il n'existe aucun harnais de test mobile. Le backend qui le nourrit est testé ; l'écran est éprouvé à la main</td>
 </tr>
 </tbody>
 </table>
 <hr />
-<h2 id="9-points-dattention-connus-etat-reel">9. Points d'attention connus (état réel)</h2>
-<ol>
-<li>
-<p><strong>File d'attente silencieuse</strong> : si le livreur est hors ligne (<code>driver_online=0</code>) ou a une mission active non terminée, les nouvelles commandes restent en <code>pending_driver</code> sans erreur visible côté client.</p>
-</li>
-<li>
-<p><strong>Mission fantôme</strong> : une mission <code>accepted</code> en base bloque <code>findAvailableDriver()</code> même si l'UI livreur semble « libre » (ex. tiroir fermé via bouton Maison).</p>
-</li>
-<li>
-<p><strong>Migrations au boot</strong> : chaque démarrage backend normalise les statuts legacy ; ne pas s'appuyer sur <code>searching_driver</code> / <code>offered</code> comme statuts stables.</p>
-</li>
-<li>
-<p><strong>Commission livreur</strong> : 5 % du <code>total_price</code> (calculée dans <code>missionToBroadcast</code> et <code>/api/missions/stats</code>).</p>
-</li>
-<li>
-<p><strong>Réseau mobile</strong> : <code>mobile/src/config.js</code> utilise <code>localhost</code> (iOS Simulator) ou <code>10.0.2.2</code> (Android Emulator) ; téléphone physique nécessite <code>EXPO_PUBLIC_API_URL</code>.</p>
-</li>
-</ol>
-<hr />
-<h2 id="10-demarrage-local">10. Démarrage local</h2>
+<h2>11. Démarrage local</h2>
 <pre><code class="language-bash"># Terminal 1 — API
-cd backend &amp;&amp; node src/index.js
-# → http://localhost:4000
+cd backend &amp;&amp; npm start          # → http://localhost:4000
 
 # Terminal 2 — Mobile
-cd mobile &amp;&amp; npm run ios
-# → Expo :4000/8081
+cd mobile &amp;&amp; npm run ios         # Expo
+
+# Tests (avant tout commit)
+cd backend &amp;&amp; npm test
+
+# Sauvegarde de la base
+cd backend &amp;&amp; npm run backup
 </code></pre>
-<p>Base de données : <code>backend/data/mazone.db</code> (créée automatiquement).</p>
+<pre><code class="language-bash"># Contrôles d'architecture jouables en local (étape 8)
+./scripts/check-loi-17.sh
+</code></pre>
+<p><strong>Variables d'environnement.</strong> En production, l'absence de <code>JWT_SECRET</code> ou <code>ADMIN_JWT_SECRET</code> <strong>fait échouer le démarrage</strong> — c'est délibéré, et testé. En développement, <code>backend/src/config/env.js</code> <strong>génère</strong> des secrets aléatoires et les conserve dans <code>backend/data/.dev-secrets.json</code> (gitignoré) : stables entre deux redémarrages, donc les sessions survivent, sans qu'aucun secret ne soit committé. Les deux secrets de développement historiques — publics, donc compromis — ne peuvent plus réapparaître : la CI le vérifie.</p>
+<p>Base de données : <code>backend/data/mazone.db</code> (créée automatiquement). <code>MAZONE_DB_PATH</code> permet d'en ouvrir une autre — c'est ce que fait chaque fichier de test, sur une base jetable qui lui est propre.</p>
+<p><strong>Variables des intégrations (E8), toutes documentées dans <code>backend/.env.example</code></strong> :</p>
+<table>
+<thead>
+<tr>
+<th>Variable</th>
+<th>Absente ⇒</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>INTEGRATION_SECRET_KEY</code> (32 octets base64)</td>
+<td>Le démarrage réussit ; c'est le <strong>branchement</strong> d'un logiciel exigeant des identifiants qui refuse. Une instance sans aucun logiciel à connecter n'a pas de raison de refuser de démarrer — mais <strong>ne pas perdre cette clé</strong> (dette 14)</td>
+</tr>
+<tr>
+<td><code>PUBLIC_BASE_URL</code></td>
+<td>Les connexions déléguées refusent de commencer, <strong>en nommant la variable</strong>. Elle n'est jamais déduite de <code>Host</code> ni de <code>X-Forwarded-Host</code> : une URL de redirection choisie par l'appelant est un vol de jeton par redirection</td>
+</tr>
+<tr>
+<td><code>INTEGRATION_&lt;CONNECTEUR&gt;_CLIENT_ID</code> / <code>_CLIENT_SECRET</code></td>
+<td>Le connecteur concerné refuse la connexion. Le <strong>nom est dérivé de l'identifiant du connecteur</strong> : ajouter un éditeur ne touche aucune ligne de configuration</td>
+</tr>
+</tbody>
+</table>
+<hr />
+<h2>12. Tenir ce document à jour</h2>
+<p>À la fin de chaque étape de la roadmap, mettre à jour <strong>ce fichier</strong> en même temps que le code :</p>
+<ol>
+<li>Les sections <strong>2, 3 et 4</strong> si des organes ou des tables apparaissent.</li>
+<li>La section <strong>7</strong> si des routes apparaissent.</li>
+<li>La section <strong>8</strong> si des tests ou des contrôles CI apparaissent.</li>
+<li>La section <strong>10</strong> — dette <strong>ajoutée</strong> comme dette <strong>résolue</strong>. Une dette effacée sans être payée est un mensonge qui coûte plus cher que la dette.</li>
+<li><strong>Régénérer les versions lisibles</strong>, sinon le HTML et le PDF racontent l'architecture du mois dernier :</li>
+</ol>
+<pre><code class="language-bash">python3 scripts/generate-plan-ux-pdf.py CURRENT_ARCHITECTURE
+</code></pre>
+<p>Le récit des décisions va dans <code>FICHE_DISCUSSION/FD-001-chantier-fondation-api-logiciels-commerciaux.md</code>, pas ici. Ce document dit <strong>ce qui est</strong>, jamais pourquoi on l'a décidé.</p>
+<hr />
+<p><em>Mis à jour le 25/07/2026 après l'étape 8 (famille de connecteurs, Shopify comme premier cas d'application, Loi 17). Étapes E0 → E8 livrées, 349 tests au vert.</em></p>
 </body>
 </html>

@@ -9,7 +9,7 @@
 const jwt = require('jsonwebtoken');
 const db = require('../db');
 
-const ADMIN_JWT_SECRET = process.env.ADMIN_JWT_SECRET || 'mazone-admin-secret-dev-2024';
+const { adminJwtSecret: ADMIN_JWT_SECRET } = require('../config/env');
 
 function signAdminToken(admin) {
   return jwt.sign(
