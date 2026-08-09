@@ -1,0 +1,94 @@
+{
+  "id": "glass-menu-selecion-lanternes-v7-copie-rau5",
+  "material": "glass",
+  "name": "Glass menu selecion lanternes V7 copie",
+  "params": {
+    "aberration": {
+      "active": true,
+      "bordsSeuls": true,
+      "dynamique": 0,
+      "intensite": 1.47,
+      "largeur": 12,
+      "opacite": 1,
+      "orientation": 79,
+      "separation": 11.5
+    },
+    "animation": {
+      "active": true,
+      "amplitude": 0.42,
+      "derivAberration": 0.15,
+      "derivReflet": 0.14,
+      "levitation": 5.5,
+      "oscillation": 1.2,
+      "respiration": 0.032,
+      "vitesse": 0.68
+    },
+    "contours": {
+      "couleur": "#ff4000",
+      "epaisseur": 0,
+      "lumiereBord": 0.07,
+      "lumiereBordLargeur": 0.5,
+      "opacite": 0,
+      "portionEclairee": 0.2,
+      "tirets": 0
+    },
+    "depoli": {
+      "diffusion": 0.12,
+      "intensite": 1.14,
+      "qualite": 4,
+      "rayon": 6
+    },
+    "lumiere": {
+      "couleur": "#ff6600",
+      "diffusion": 0.4,
+      "halo": 0.12,
+      "intensite": 0.43,
+      "interaction": 0.38,
+      "lumiereExterne": 0.12,
+      "lumiereInterne": 0.1,
+      "temperature": 1
+    },
+    "matiere": {
+      "bruit": 0,
+      "bruitEchelle": 4,
+      "couleur": "#ff7b00",
+      "epaisseur": 0.67,
+      "opaciteVerre": 0.05,
+      "rayon": 23,
+      "rugosite": 0.54,
+      "texture": 0,
+      "transparence": 1
+    },
+    "ombres": {
+      "externeCouleur": "#000000",
+      "externeDirection": 90,
+      "externeDistance": 14,
+      "externeFlou": 26,
+      "externeOpacite": 1,
+      "interneDirection": 270,
+      "interneDistance": 8,
+      "interneFlou": 18,
+      "interneOpacite": 0.22
+    },
+    "reflets": {
+      "angle": 90,
+      "couleur": "#ff5005",
+      "durete": 1,
+      "intensite": 0.46,
+      "largeur": 0.265,
+      "opacite": 0.19,
+      "position": [
+        0.81,
+        0.94
+      ]
+    },
+    "refraction": {
+      "bordsSeuls": true,
+      "douceur": 0,
+      "intensite": 60,
+      "largeur": 8,
+      "type": 2
+    }
+  },
+  "updatedAt": "2026-08-07T18:21:43.622Z"
+}

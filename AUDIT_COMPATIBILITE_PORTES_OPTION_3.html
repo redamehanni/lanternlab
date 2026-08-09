@@ -1,0 +1,314 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Audit de compatibilité — Option 3 (Portes scellées)</title>
+<style>
+  @page { margin: 16mm 14mm; }
+  body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Helvetica, Arial, sans-serif; font-size: 10.5pt; line-height: 1.45; color: #1a1a1a; max-width: 100%; }
+  h1 { font-size: 20pt; border-bottom: 2px solid #0f2d5c; padding-bottom: 8px; color: #0f2d5c; page-break-after: avoid; }
+  h2 { font-size: 14pt; margin-top: 22px; color: #0f2d5c; border-bottom: 1px solid #e5e7eb; padding-bottom: 4px; page-break-after: avoid; }
+  h3 { font-size: 11.5pt; margin-top: 14px; color: #1a4a8a; page-break-after: avoid; }
+  table { border-collapse: collapse; width: 100%; margin: 10px 0; font-size: 9pt; page-break-inside: avoid; }
+  th, td { border: 1px solid #d1d5db; padding: 5px 7px; text-align: left; vertical-align: top; }
+  th { background: #f3f4f6; font-weight: 600; }
+  code { background: #f3f4f6; padding: 1px 4px; border-radius: 3px; font-size: 8.5pt; }
+  pre { background: #f8fafc; border: 1px solid #e5e7eb; border-radius: 6px; padding: 10px; overflow-x: auto; font-size: 8pt; line-height: 1.35; white-space: pre-wrap; word-break: break-word; page-break-inside: avoid; }
+  pre code { background: none; padding: 0; }
+  blockquote { border-left: 4px solid #0f2d5c; margin: 10px 0; padding: 6px 14px; background: #f0f4f8; color: #1e3a5f; }
+  hr { border: none; border-top: 1px solid #e5e7eb; margin: 18px 0; }
+  ul, ol { padding-left: 22px; }
+  li { margin-bottom: 3px; }
+  p { margin: 8px 0; }
+  .pdf-note { display: none; }
+  @media screen {
+    .pdf-note { display: block; background: #eff6ff; border: 1px solid #bfdbfe; border-radius: 8px; padding: 12px 16px; margin-bottom: 24px; color: #1e3a8a; }
+  }
+</style>
+</head>
+<body>
+<div class="pdf-note">
+  <strong>Lecture dans Cursor / navigateur :</strong> ce fichier HTML est la version lisible du plan.
+  Pour le PDF, ouvrez <code>AUDIT_COMPATIBILITE_PORTES_OPTION_3.pdf</code> depuis le Finder (clic droit → Ouvrir avec Aperçu)
+  ou double-cliquez le fichier <code>Ouvrir_*_PDF.command</code> correspondant à la racine du projet.
+</div>
+<h1>Audit de compatibilité — Option 3 (Portes scellées)</h1>
+<table>
+<thead>
+<tr>
+<th></th>
+<th></th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><strong>Date</strong></td>
+<td>2026-08-04</td>
+</tr>
+<tr>
+<td><strong>Statut</strong></td>
+<td>Document d’analyse — <strong>pas encore de GO code</strong></td>
+</tr>
+<tr>
+<td><strong>Décision produit</strong></td>
+<td>Option 3 : conserver la grille Accueil ; seule la Porte Lanternes est ouverte ; les 5 autres sont visibles mais scellées</td>
+</tr>
+<tr>
+<td><strong>Priorité</strong></td>
+<td>Préserver l’architecture existante ; couche de présentation minimale</td>
+</tr>
+</tbody>
+</table>
+<hr />
+<h2>Verdict</h2>
+<p><strong>Oui : l’option 3 permet de conserver l’intégralité de l’architecture existante sans refonte</strong>, si elle est limitée à une <strong>couche de présentation + garde d’accès</strong> sur la surface Deuxième Âme.</p>
+<p>Ce n’est <strong>pas</strong> une nouvelle architecture de « univers indépendants ». C’est un <strong>verrouillage public</strong> de portes dont le code (écrans, routes, organes, APIs) reste en place exactement comme aujourd’hui.</p>
+<h3>Schéma — seule la surface est touchée</h3>
+<pre><code>SURFACE (seule zone touchée)
+  Accueil (grille PORTES)
+       │
+       ▼
+  porte.status ?
+       ├── open (lanternes)  →  Écran Lanterns  →  APIs / Event Engine
+       └── sealed            →  Carte mystère (pas de navigate)
+
+INCHANGÉ
+  Event Engine · Wallet · Identity · /api/events ·
+  Écrans Events / Participer / Quartier / … (restent enregistrés) ·
+  Épée commerçant · Première Âme · Messages / Wallet / Panier
+</code></pre>
+<hr />
+<h2>Pourquoi c’est compatible</h2>
+<p>Aujourd’hui, les Portes sont <strong>déjà</strong> une notion de surface uniquement (<code>mobile/src/data/deuxiemeAme.js</code>) :</p>
+<blockquote>
+<p><em>« Les portes sont une notion de SURFACE. L’Event Engine ne les connaît pas. »</em></p>
+</blockquote>
+<table>
+<thead>
+<tr>
+<th>Couche</th>
+<th>État actuel</th>
+<th>Impact Option 3</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Event Engine, types <code>lanterne</code>, OV, Mode Réception</td>
+<td>Organes / tables / APIs</td>
+<td><strong>Aucun</strong></td>
+</tr>
+<tr>
+<td>Wallet, Identity, orchestration</td>
+<td>Inchangés</td>
+<td><strong>Aucun</strong></td>
+</tr>
+<tr>
+<td>Routes <code>/api/events</code>, discover, murmurs</td>
+<td>Inchangées</td>
+<td><strong>Aucun</strong> (le backend peut continuer à servir ; c’est le mobile qui n’ouvre pas)</td>
+</tr>
+<tr>
+<td>Écrans <code>EventsScreen</code>, <code>ParticiperScreen</code>, etc.</td>
+<td>Enregistrés dans le stack</td>
+<td><strong>Conservés</strong> — prêts pour l’ouverture future</td>
+</tr>
+<tr>
+<td><code>DeuxiemeAmeHomeStack</code> routes</td>
+<td>Déclarées dans <code>navigation/index.js</code></td>
+<td><strong>Conservées</strong></td>
+</tr>
+<tr>
+<td>Première Âme, Messages, Wallet, Panier</td>
+<td>Partagés</td>
+<td><strong>Aucun</strong></td>
+</tr>
+<tr>
+<td>Épée commerçant (créer des événements)</td>
+<td>Indépendant</td>
+<td><strong>Aucun</strong> — le commerçant continue ; le citoyen V1 n’entre pas par la Porte Événements</td>
+</tr>
+</tbody>
+</table>
+<p>Le flux actuel d’ouverture est déjà centralisé dans <code>DeuxiemeAmeHomeScreen.js</code> :</p>
+<pre><code class="language-javascript">function openPorte(porte) {
+  navigation.navigate(porte.route);
+}
+</code></pre>
+<p>Le point de contrôle naturel est <strong>là</strong> (+ la carte <code>PorteCard</code>), pas dans les organes.</p>
+<hr />
+<h2>Ce qui n’est PAS rendu obsolète</h2>
+<p>Rien de l’investissement E0–E8 / Deuxième Âme v1 ne devient mort :</p>
+<ul>
+<li>Les 5 écrans « fermés » restent du <strong>code vivant</strong>, branchés au navigateur, testables (Lab / Bac à Sable), prêts à un <code>status: 'open'</code>.</li>
+<li>Les illustrations <code>portes.*</code> dans le registry restent.</li>
+<li><code>PARTICIPATION_MODES</code>, Event Engine, billetterie, scan Lanterne : inchangés.</li>
+<li>Ouvrir une Porte plus tard = <strong>changer un flag de surface</strong> (+ éventuellement copy/illustration), pas une migration.</li>
+</ul>
+<hr />
+<h2>Points de friction explicites (pas des refontes, mais à traiter)</h2>
+<p>Ce ne sont <strong>pas</strong> des incompatibilités d’architecture. Ce sont des <strong>fuites de surface</strong> ou des <strong>tensions de message</strong> si on ne les traite pas dans la même couche présentation.</p>
+<h3>1. Révélation du contenu (contrainte produit vs cartes actuelles)</h3>
+<p>Aujourd’hui <code>PorteCard</code> affiche <code>label</code> + <code>description</code> en clair (« Les Événements — Découvrez tout ce qui se passe… »).</p>
+<p>Si les Portes scellées gardent ce texte, <strong>on contredit</strong> « elles ne révèlent ni leur contenu ni leur fonctionnement ».</p>
+<p><strong>Résolution sans refonte :</strong> pour <code>status !== 'open'</code>, la carte affiche une <strong>présentation mystère</strong> (silhouette, numéro de Porte, teaser non descriptif) tout en gardant en interne <code>id</code>, <code>route</code>, illustrations réelles pour le jour J. Les labels/descriptions actuels restent dans le fichier de déclaration — utilisés seulement quand la Porte est ouverte.</p>
+<h3>2. Contournements hors grille (accès sans passer par une Porte)</h3>
+<p>Même si <code>openPorte</code> refuse, le citoyen peut encore atteindre du contenu « Événements / Surprise » via :</p>
+<table>
+<thead>
+<tr>
+<th>Contournement</th>
+<th>Fichier</th>
+<th>Risque</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Suggestions IA → <code>Events</code> / <code>Surprise</code></td>
+<td><code>INTENT_SUGGESTIONS</code> dans <code>deuxiemeAme.js</code></td>
+<td>Contourne le sceau</td>
+</tr>
+<tr>
+<td>Murmurs → <code>EventDetail</code></td>
+<td><code>DeuxiemeAmeHomeScreen.js</code></td>
+<td>Montre le contenu d’initiatives hors Porte Lanternes</td>
+</tr>
+<tr>
+<td>Stats hero (<code>events</code> count)</td>
+<td>même écran</td>
+<td>Signale qu’il y a une vie « événements »</td>
+</tr>
+<tr>
+<td>Navigation directe si un deep link vise <code>Events</code></td>
+<td>stack déjà enregistré</td>
+<td>Contournement possible</td>
+</tr>
+</tbody>
+</table>
+<p><strong>Résolution sans refonte :</strong> même couche surface — désactiver / rerouter les suggestions vers des portes scellées ; décider explicitement si Murmurs / OV restent (ce ne sont <strong>pas</strong> des Portes) ou s’ils ne montrent que des lanternes en V1. <strong>Décision produit requise</strong> sur Murmurs/OV (voir ci-dessous).</p>
+<h3>3. Ne pas réutiliser le pattern « Coming Soon » de l’Épée</h3>
+<p><code>moduleRegistry.js</code> (Épée) utilise <code>comingSoon: true</code> + libellé « Bientôt ». Vous l’avez exclu explicitement.</p>
+<p><strong>Résolution :</strong> vocabulaire distinct — <code>status: 'open' | 'sealed'</code>, UX mystère, <strong>jamais</strong> « Coming Soon » / « Bientôt » sur les Portes.</p>
+<h3>4. Tension documentaire (FD-000), pas technique</h3>
+<p>FD-000 présente les 6 Portes comme face Deuxième Âme <strong>accessible</strong>. Option 3 ne casse pas le code ; elle change le <strong>périmètre public V1</strong>.</p>
+<p><strong>Résolution :</strong> amender FD (brouillon) : <em>architecture des 6 Portes intacte ; accès public V1 = Porte Lanternes seule ; les autres sont scellées en surface.</em></p>
+<h3>5. Sous-titre Accueil actuel</h3>
+<p>« Six façons d’entrer dans la vie du quartier » + tuiles toutes cliquables = message inverse de la vision.</p>
+<p><strong>Résolution :</strong> copy Accueil du type « 6 Portes · 1 ouverte » (formulation exacte à valider) — pure présentation.</p>
+<hr />
+<h2>Ce qui serait incompatible / à ne PAS faire</h2>
+<table>
+<thead>
+<tr>
+<th>Anti-pattern</th>
+<th>Pourquoi</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Encoder les Portes dans Event Engine / CDM</td>
+<td>Violerait « surface compose, organe décide » et forcerait une refonte</td>
+</tr>
+<tr>
+<td>Supprimer écrans / routes / APIs des 5 Portes</td>
+<td>Rendrait obsolète l’investissement et compliquerait la réouverture</td>
+</tr>
+<tr>
+<td>Remplacer la grille par un nouveau shell « Programme »</td>
+<td>Option 2 — refonte navigation inutile pour votre contrainte</td>
+</tr>
+<tr>
+<td>Bloquer côté backend <code>GET /api/events</code> pour les non-lanternes</td>
+<td>Casserait commerçant, Lab, murmures, et mélangerait surface et organe</td>
+</tr>
+<tr>
+<td>Renommer les <code>id</code> internes (<code>evenements</code> → <code>porte_2</code>)</td>
+<td>Cascades inutiles ; le mystère est <strong>présentation</strong>, pas identité code</td>
+</tr>
+</tbody>
+</table>
+<hr />
+<h2>Architecture recommandée (la moins intrusive)</h2>
+<p><strong>Une seule addition conceptuelle : un statut de Porte dans le registre surface existant.</strong></p>
+<pre><code>PORTES[] dans deuxiemeAme.js
+  + status: 'open' | 'sealed'   // lanternes = open ; les 5 autres = sealed
+  + (optionnel) sealedLabel / sealedHint pour la carte mystère
+</code></pre>
+<p><strong>Comportement :</strong></p>
+<ol>
+<li>Accueil lit <code>PORTES</code> comme aujourd’hui.</li>
+<li><code>PorteCard</code> : si <code>sealed</code> → rendu mystère + press = intrigue (toast / micro-narration), <strong>pas</strong> <code>navigate</code>.</li>
+<li><code>openPorte</code> : refuse si <code>sealed</code> (filet de sécurité).</li>
+<li>Contournements surface (<code>INTENT_SUGGESTIONS</code>, éventuellement murmurs) alignés sur le même statut.</li>
+<li>Jour d’ouverture d’une Porte : <code>status: 'open'</code> (+ copy réelle) — <strong>zéro</strong> changement d’organe.</li>
+</ol>
+<p>Pattern proche de l’Épée (<code>enabled</code>) mais <strong>sémantique différente</strong> (scellé / mystère, pas « bientôt »).</p>
+<h3>Périmètre de fichiers touchés (quand le GO code sera donné)</h3>
+<ul>
+<li><code>mobile/src/data/deuxiemeAme.js</code> — statut + textes scellés</li>
+<li><code>mobile/src/components/deuxiemeAme/PorteCard.js</code> — rendu mystère</li>
+<li><code>mobile/src/screens/deuxiemeAme/DeuxiemeAmeHomeScreen.js</code> — garde <code>openPorte</code> + copy en-tête + suggestions</li>
+<li>Fiche discussion (FD) pour acter le périmètre public V1</li>
+</ul>
+<p><strong>Hors périmètre :</strong> backend, Event Engine, Wallet, navigation stack registrations, Première Âme, Épée.</p>
+<hr />
+<h2>Décision produit restante (avant code)</h2>
+<p><strong>Murmurs du quartier + Mode Réception + Opportunités Volantes</strong> : ce ne sont pas des Portes, mais ils exposent déjà des initiatives hors Lanternes.</p>
+<table>
+<thead>
+<tr>
+<th>Option</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><strong>A (strict)</strong></td>
+<td>En V1 public, ne montrer que des contenus liés aux lanternes (ou masquer temporairement la section Murmurs).</td>
+</tr>
+<tr>
+<td><strong>B (souple)</strong></td>
+<td>Laisser Murmurs / OV / Réception actifs comme « tissu du quartier », le sceau ne portant <strong>que</strong> sur les 5 tuiles Portes.</td>
+</tr>
+</tbody>
+</table>
+<p>Recommandation architecte : <strong>B</strong>, sauf si le lancement exige une discipline narrative totale — A est plus cohérent avec « une seule Porte ouverte », mais touche plus de surface (pas d’organe).</p>
+<hr />
+<h2>Todos avant / au GO</h2>
+<ol>
+<li>Trancher Murmurs / OV / Réception : <strong>A</strong> vs <strong>B</strong></li>
+<li>Spécifier <code>status: open | sealed</code> + UX mystère <code>PorteCard</code> (sans Coming Soon)</li>
+<li>Amendement FD : architecture 6 Portes intacte, accès public V1 = Lanternes seule</li>
+<li>À GO code : <code>deuxiemeAme.js</code> + <code>PorteCard</code> + <code>HomeScreen</code> + suggestions — <strong>zéro backend</strong></li>
+</ol>
+<hr />
+<h2>Conclusion</h2>
+<table>
+<thead>
+<tr>
+<th>Question</th>
+<th>Réponse</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Option 3 force-t-elle une refonte ?</td>
+<td><strong>Non</strong></td>
+</tr>
+<tr>
+<td>Rend-elle obsolète moteurs / APIs / données / routes internes ?</td>
+<td><strong>Non</strong>, si on n’y touche pas</td>
+</tr>
+<tr>
+<td>Y a-t-il des points incompatibles ?</td>
+<td><strong>Aucun structurel</strong> ; seulement des <strong>fuites de surface</strong> et une <strong>tension de copy/révélation</strong> à traiter dans la même couche</td>
+</tr>
+<tr>
+<td>Investissement préservé ?</td>
+<td><strong>Oui</strong> — les 5 Portes restent du code prêt à ouvrir</td>
+</tr>
+</tbody>
+</table>
+<p>Prochaine étape quand vous validerez : figer la décision Murmurs (A/B), puis implémentation minimale surface-only — <strong>sans coder tant que le GO n’est pas donné</strong>.</p>
+</body>
+</html>

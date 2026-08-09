@@ -422,7 +422,14 @@ function DeuxiemeAmeHomeStack() {
       <Stack.Screen name="DeuxiemeAmeHome" component={DeuxiemeAmeHomeScreen} options={{ headerShown: false }} />
       <Stack.Screen name="Events" component={EventsScreen} options={{ title: 'Les Événements' }} />
       <Stack.Screen name="EventDetail" component={EventDetailScreen} options={{ title: 'Initiative' }} />
-      <Stack.Screen name="Lanterns" component={LanternsScreen} options={{ title: 'Les Lanternes' }} />
+      <Stack.Screen
+        name="Lanterns"
+        component={LanternsScreen}
+        options={{
+          headerShown: false,
+          contentStyle: { backgroundColor: '#000000' },
+        }}
+      />
       <Stack.Screen name="LanternScan" component={LanternScanScreen} options={{ headerShown: false, presentation: 'fullScreenModal', animation: 'slide_from_bottom' }} />
       <Stack.Screen name="Participer" component={ParticiperScreen} options={{ title: 'Participer' }} />
       <Stack.Screen name="CreateEvent" component={CreateEventScreen} options={{ title: 'Créer une initiative' }} />

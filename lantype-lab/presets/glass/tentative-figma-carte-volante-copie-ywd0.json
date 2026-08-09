@@ -1,0 +1,101 @@
+{
+  "id": "tentative-figma-carte-volante-copie-ywd0",
+  "material": "glass",
+  "name": "quitter l'atelier",
+  "params": {
+    "aberration": {
+      "active": true,
+      "bordsSeuls": true,
+      "dynamique": 0,
+      "intensite": 3,
+      "largeur": 6,
+      "opacite": 1,
+      "orientation": 189,
+      "separation": 16.4
+    },
+    "animation": {
+      "active": true,
+      "amplitude": 0.65,
+      "derivAberration": 0.02,
+      "derivReflet": 0.25,
+      "levitation": 7.5,
+      "oscillation": 0,
+      "respiration": 0,
+      "vitesse": 0.43
+    },
+    "contours": {
+      "areteDirection": 0,
+      "areteIntensite": 0.34,
+      "couleur": "#ffce1f",
+      "epaisseur": 0,
+      "irregularite": 1,
+      "lumiereBord": 0,
+      "lumiereBordLargeur": 0.5,
+      "opacite": 1,
+      "portionEclairee": 0.49,
+      "tirets": 0
+    },
+    "depoli": {
+      "diffusion": 0.12,
+      "intensite": 1.14,
+      "qualite": 4,
+      "rayon": 6
+    },
+    "lumiere": {
+      "couleur": "#ff0000",
+      "diffusion": 0.28,
+      "directionExterne": 183,
+      "halo": 0.19,
+      "haloParticules": 1,
+      "haloType": 1,
+      "intensite": 1.68,
+      "interaction": 0.69,
+      "lumiereExterne": 0.05,
+      "lumiereInterne": 0.09,
+      "ouvertureExterne": 0.83,
+      "temperature": 1
+    },
+    "matiere": {
+      "bruit": 0,
+      "bruitEchelle": 4,
+      "couleur": "#e5b7a4",
+      "epaisseur": 0,
+      "opaciteVerre": 0,
+      "rayon": 17,
+      "rugosite": 0,
+      "texture": 0,
+      "transparence": 1
+    },
+    "ombres": {
+      "externeCouleur": "#000000",
+      "externeDirection": 11,
+      "externeDistance": 52,
+      "externeFlou": 21,
+      "externeOpacite": 0.82,
+      "interneDirection": 180,
+      "interneDistance": 3.5,
+      "interneFlou": 41,
+      "interneOpacite": 0.61
+    },
+    "reflets": {
+      "angle": 24,
+      "couleur": "#ff5005",
+      "durete": 1,
+      "intensite": 0.41,
+      "largeur": 0.41,
+      "opacite": 0,
+      "position": [
+        0,
+        0.84
+      ]
+    },
+    "refraction": {
+      "bordsSeuls": true,
+      "douceur": 1,
+      "intensite": 60,
+      "largeur": 5,
+      "type": 0
+    }
+  },
+  "updatedAt": "2026-08-08T09:21:14.984Z"
+}

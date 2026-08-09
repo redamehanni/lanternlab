@@ -1,0 +1,367 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="utf-8" />
+<title>Lantern Engine — Analyse d’architecture</title>
+<style>
+  @page { size: A4; margin: 18mm 16mm; }
+  :root {
+    --ink: #1a1520;
+    --muted: #5c5366;
+    --line: #d8d0c4;
+    --accent: #b45309;
+    --bg: #faf7f2;
+    --card: #ffffff;
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0;
+    font-family: "Iowan Old Style", "Palatino Linotype", Palatino, Georgia, serif;
+    color: var(--ink);
+    background: var(--bg);
+    font-size: 11pt;
+    line-height: 1.45;
+  }
+  .page {
+    max-width: 720px;
+    margin: 0 auto;
+    padding: 28px 8px 48px;
+  }
+  header.doc-head {
+    border-bottom: 2px solid var(--ink);
+    padding-bottom: 14px;
+    margin-bottom: 22px;
+  }
+  .eyebrow {
+    font-family: "IBM Plex Sans", "Helvetica Neue", Arial, sans-serif;
+    font-size: 10px;
+    letter-spacing: 0.14em;
+    text-transform: uppercase;
+    color: var(--accent);
+    margin: 0 0 8px;
+  }
+  h1 {
+    font-size: 26pt;
+    line-height: 1.15;
+    margin: 0 0 8px;
+    font-weight: 700;
+  }
+  .subtitle {
+    margin: 0;
+    color: var(--muted);
+    font-size: 11pt;
+  }
+  .meta {
+    margin-top: 12px;
+    font-family: "IBM Plex Sans", "Helvetica Neue", Arial, sans-serif;
+    font-size: 9.5pt;
+    color: var(--muted);
+  }
+  h2 {
+    font-size: 14pt;
+    margin: 28px 0 10px;
+    padding-top: 6px;
+    border-top: 1px solid var(--line);
+    page-break-after: avoid;
+  }
+  h3 {
+    font-size: 12pt;
+    margin: 18px 0 8px;
+    page-break-after: avoid;
+  }
+  p { margin: 0 0 10px; }
+  ul, ol { margin: 0 0 12px; padding-left: 1.25em; }
+  li { margin-bottom: 4px; }
+  strong { font-weight: 700; }
+  code {
+    font-family: "IBM Plex Mono", Menlo, Consolas, monospace;
+    font-size: 9.5pt;
+    background: #efe9df;
+    padding: 1px 5px;
+    border-radius: 3px;
+  }
+  table {
+    width: 100%;
+    border-collapse: collapse;
+    margin: 10px 0 16px;
+    font-size: 9.5pt;
+    font-family: "IBM Plex Sans", "Helvetica Neue", Arial, sans-serif;
+    page-break-inside: avoid;
+  }
+  th, td {
+    border: 1px solid var(--line);
+    padding: 7px 8px;
+    text-align: left;
+    vertical-align: top;
+  }
+  th {
+    background: #efe9df;
+    font-weight: 600;
+  }
+  .callout {
+    background: var(--card);
+    border: 1px solid var(--line);
+    border-left: 4px solid var(--accent);
+    padding: 12px 14px;
+    margin: 12px 0 16px;
+    page-break-inside: avoid;
+  }
+  .flow {
+    font-family: "IBM Plex Sans", "Helvetica Neue", Arial, sans-serif;
+    font-size: 10pt;
+    background: #efe9df;
+    padding: 12px 14px;
+    margin: 10px 0 16px;
+    border-radius: 4px;
+    page-break-inside: avoid;
+  }
+  .flow .arrow { color: var(--accent); font-weight: 700; }
+  .diagram {
+    font-family: "IBM Plex Mono", Menlo, Consolas, monospace;
+    font-size: 8.5pt;
+    line-height: 1.35;
+    background: #1a1520;
+    color: #f3ead2;
+    padding: 14px 16px;
+    margin: 10px 0 16px;
+    white-space: pre;
+    overflow: hidden;
+    page-break-inside: avoid;
+  }
+  .verdict {
+    background: #1a1520;
+    color: #f3ead2;
+    padding: 16px 18px;
+    margin: 18px 0;
+    page-break-inside: avoid;
+  }
+  .verdict h2 {
+    border: none;
+    color: #e8a830;
+    margin-top: 0;
+    padding-top: 0;
+  }
+  .verdict p { color: #f3ead2; }
+  footer {
+    margin-top: 32px;
+    padding-top: 10px;
+    border-top: 1px solid var(--line);
+    font-family: "IBM Plex Sans", "Helvetica Neue", Arial, sans-serif;
+    font-size: 9pt;
+    color: var(--muted);
+  }
+  @media print {
+    body { background: white; }
+    .page { padding: 0; max-width: none; }
+    a { color: inherit; text-decoration: none; }
+  }
+</style>
+</head>
+<body>
+<div class="page">
+  <header class="doc-head">
+    <p class="eyebrow">Ma Zone · Deuxième Âme · Document d’analyse</p>
+    <h1>Lantern Engine — Analyse d’architecture</h1>
+    <p class="subtitle">Moteur ARG data-driven pour des centaines de Lanternes, administrable sans développement.</p>
+    <p class="meta">
+      Date : 9 août 2026 · Statut : analyse (pré-implémentation) · Destinataires : Reda / Adam<br />
+      Alignement : FD-000 (surface compose, organe décide) · Ne confond pas Event Engine « QR→badge » et aventure ARG
+    </p>
+  </header>
+
+  <h2>1. Constat d’existant (ce qui ne doit pas être confondu)</h2>
+  <p>Aujourd’hui dans le dépôt :</p>
+  <ul>
+    <li><strong>Porte Lanternes</strong> = surface Deuxième Âme (<code>mobile/src/data/deuxiemeAme.js</code>, FD-004) — seule Porte <code>open</code>.</li>
+    <li><strong>Event Engine <code>type: lanterne</code></strong> = événement découvrable QR → journal + badge Wallet. Ce n’est <strong>pas</strong> une aventure ARG.</li>
+    <li><strong>LanternsScreen</strong> = scène visuelle Lantype (DA), scan orphelin.</li>
+    <li><strong>Aucun</strong> modèle ARG, Atelier, Item Média, équipe Lanterne, ni Lantern Lab.</li>
+  </ul>
+  <div class="callout">
+    <strong>Décision d’architecture retenue :</strong> créer un <strong>nouvel organe</strong> <code>Lantern Engine</code>, distinct de l’Event Engine. L’Event Engine peut rester un canal d’entrée (balise / découverte publique) ou être branché plus tard comme déclencheur QR générique — jamais comme stockage de l’aventure.
+  </div>
+  <p>Alignement FD-000 : <em>surface compose, organe décide</em> ; Material Lab / Lantype = présentation verre uniquement — <strong>interdit</strong> d’y mettre du métier Lanterne.</p>
+
+  <div class="diagram">Surface mobile                    Organes
+─────────────                    ───────
+Portes Accueil
+      │
+Écran sélection ───────────────► Lantern Engine
+      │                                │
+Porte Rouge                            ├── Communication
+      │                                ├── Wallet
+Atelier (shell fixe)                   ├── Identity
+                                       └── Event Engine (balise optionnelle)</div>
+
+  <h2>2. Modèle mental : définition vs runtime</h2>
+  <p>Séparer <strong>deux plans</strong> dès le jour 1 (sinon explosion à N = 100+) :</p>
+  <table>
+    <thead>
+      <tr><th>Plan</th><th>Contenu</th><th>Qui écrit</th><th>Qui lit</th></tr>
+    </thead>
+    <tbody>
+      <tr>
+        <td><strong>Definition</strong> (publiée)</td>
+        <td>Histoire, médias, triggers, horaires, corrigé, rewards</td>
+        <td>Lantern Lab → API publish</td>
+        <td>Clients (snapshot versionné)</td>
+      </tr>
+      <tr>
+        <td><strong>Runtime</strong> (joueur / équipe)</td>
+        <td>Progression, médias débloqués, appels manqués, team</td>
+        <td>Mobile + moteur</td>
+        <td>Joueur / équipe</td>
+      </tr>
+    </tbody>
+  </table>
+  <p><strong>Règle d’or :</strong> aucune branche <code>if (lanternId === 'pont-neuf')</code> dans le code. Tout comportement = évaluation de règles déclaratives + état runtime.</p>
+
+  <h3>Abstractions recommandées (noyau générique)</h3>
+  <ol>
+    <li><code>LanternDefinition</code> — document versionné (<code>id</code>, <code>kind: main|bonus</code>, <code>version</code>, <code>status: draft|published|archived</code>).</li>
+    <li><code>MediaContent</code> — payload neutre (<code>video|audio|image|text|rich</code>, URI, durée…).</li>
+    <li><code>MediaItem</code> — représentation immersive (<code>skin: vhs|dictaphone|letter|…</code>) + ref Content + politique (<code>imposed|displayed|unlockable</code>) + lifespan.</li>
+    <li><code>Trigger</code> — règle déclarative (<code>type</code>, <code>params</code>, <code>effects[]</code>).</li>
+    <li><code>Effect</code> — mutation runtime (<code>unlockMedia</code>, <code>ringPhone</code>, <code>setFlag</code>, <code>advanceStep</code>, <code>grantReward</code>…).</li>
+    <li><code>SchedulePolicy</code> — temps (<code>once</code>, <code>daily</code>, <code>dateRange</code>, timezone, <code>missPolicy</code>).</li>
+    <li><code>AtelierLayout</code> — slots de cartes verre : shell fixe, contenu injecté.</li>
+    <li><code>PermanentObject</code> — téléphone, radio… = players + ports de déclenchement.</li>
+    <li><code>CorrectedSheet</code> — fiche post-aventure, gated par <code>completed</code>.</li>
+    <li><code>TeamSession</code> — équipe liée à une instance (chat via Communication).</li>
+  </ol>
+
+  <h2>3. Parcours utilisateur (contrat de navigation)</h2>
+  <div class="flow">
+    Deuxième Âme
+    <span class="arrow">→</span> Univers Lanternes
+    <span class="arrow">→</span> Sélection (en cours | terminées)
+    <span class="arrow">→</span> Transition
+    <span class="arrow">→</span> Porte Rouge (code)
+    <span class="arrow">→</span> Atelier
+  </div>
+  <ul>
+    <li><strong>En cours / disponible</strong> : résumé + rewards → démarre instance runtime → Porte.</li>
+    <li><strong>Terminée</strong> : jamais rejouable ; ouvre le <strong>corrigé</strong> (pas la Porte).</li>
+    <li>Listes UI distinctes : <strong>principales</strong> vs <strong>bonus</strong> (filtre sur <code>kind</code>, pas deux moteurs).</li>
+  </ul>
+  <p>Porte Rouge = gate d’accès Atelier (code hashé serveur, rate-limit). L’Atelier = une seule scène shell ; les cartes verre (Material Lab sync) sont la surface du tableau de bord.</p>
+
+  <h2>4. Items Média &amp; états — modèle robuste</h2>
+  <div class="diagram">MediaContent  →  MediaItem (skin + policy)  →  PlayerMediaState</div>
+  <ul>
+    <li><strong>Imposé</strong> : Atelier en <code>lockNavigation</code> jusqu’à <code>media.completed</code>.</li>
+    <li><strong>Affiché</strong> : visible dès <code>atelier.entered</code>.</li>
+    <li><strong>Déblocable</strong> : invisible jusqu’à Effect <code>unlockMedia</code> ; section « Découverts ».</li>
+    <li><strong>Lifespan</strong> : illimité ou borné (durée / date / trigger) — horloge serveur + sync.</li>
+  </ul>
+  <p>Piège à éviter : coupler skin et fichier dans un seul blob — empêche la réutilisation et casse le Lab.</p>
+
+  <h2>5. Déclencheurs — faisabilité technique</h2>
+  <table>
+    <thead>
+      <tr><th>Trigger</th><th>Faisable ?</th><th>Architecture</th><th>Limites</th></tr>
+    </thead>
+    <tbody>
+      <tr>
+        <td><strong>QR</strong></td>
+        <td>Oui (déjà partiel)</td>
+        <td>Token signé → API triggers → Effects</td>
+        <td>Anti-rejeu, tokens rotatifs</td>
+      </tr>
+      <tr>
+        <td><strong>NFC</strong></td>
+        <td>Oui (plus tard)</td>
+        <td>Même contrat que QR (<code>beaconId</code>)</td>
+        <td>iOS limité ; fallback QR obligatoire</td>
+      </tr>
+      <tr>
+        <td><strong>GPS</strong></td>
+        <td>Oui avec nuances</td>
+        <td>Zone + <code>expo-location</code> + validation Haversine serveur</td>
+        <td>Background fragile ; drift urbain</td>
+      </tr>
+      <tr>
+        <td><strong>Heure / appels</strong></td>
+        <td>Oui</td>
+        <td><code>SchedulePolicy</code> + job serveur + push</td>
+        <td>Fuseau ; miss selon politique</td>
+      </tr>
+      <tr>
+        <td><strong>Radio géo</strong></td>
+        <td>Oui en simulation</td>
+        <td>Catalog <code>frequency + zoneId → MediaContent</code></td>
+        <td>Pas de vraie FM</td>
+      </tr>
+    </tbody>
+  </table>
+  <p><strong>GPS « assez fiable » pour ARG urbain</strong> si : enter + confirmation UX ; validation serveur ; hysteresis ; unlocks critiques en QR/NFC primaire, GPS secondaire.</p>
+  <p><strong>Radio</strong> : ne pas viser le broadcast Hertz. Objet permanent Tuner + table de fréquences versionnée. Le GPS choisit la ligne active.</p>
+  <p><strong>Appels</strong> : objet téléphone + <code>CallCue</code> (schedule + audio + <code>missPolicy</code>). Sonnerie si Atelier ouvert ; sinon push optionnelle.</p>
+
+  <h2>6. Joueurs, équipes, carte</h2>
+  <ul>
+    <li><strong>Joueur</strong> : user Ma Zone + <code>LanternProfile</code>.</li>
+    <li><strong>Équipe</strong> : avant start → créer ou réutiliser dernière équipe → <code>TeamSession</code>.</li>
+    <li><strong>Chat</strong> : réutiliser l’organe Communication avec lifecycle <code>lantern_team</code> (pas un 2ᵉ chat).</li>
+    <li><strong>Carte V1</strong> : partage volontaire de last known position — pas de tracking temps réel.</li>
+  </ul>
+
+  <h2>7. Lantern Lab (outil admin)</h2>
+  <p>Produit data-only (module admin) pour concepteurs non développeurs :</p>
+  <ul>
+    <li>CRUD Definition + publish (version bump immutable).</li>
+    <li>Éditeurs : médias → Content ; binding Item ; graphe Triggers→Effects ; schedules ; code Porte ; corrigé ; kind ; statut.</li>
+    <li><strong>Vue globale</strong> : graphe + timeline des schedules.</li>
+    <li>Preview dry-run du runtime.</li>
+  </ul>
+  <p>Publier = snapshot versionné consommable par le mobile. Jamais de hot-patch de logique.</p>
+
+  <h2>8. Points faibles &amp; risques à l’échelle</h2>
+  <ol>
+    <li>Surcharger l’Event Engine avec l’ARG → dette. <em>Mitigé par organe dédié.</em></li>
+    <li>État runtime client-only → triche / désync. <em>Vérité serveur.</em></li>
+    <li>Médias lourds sans CDN → coût. <em>Lazy download + TTL.</em></li>
+    <li>Triggers temporels sans job → appels aléatoirement « perdus ». <em>Scheduler + missPolicy.</em></li>
+    <li>GPS comme unique gate → frustration. <em>Fallback balise pour nœuds critiques.</em></li>
+    <li>Explosion de skins dans le code. <em>Catalogue assets versionné.</em></li>
+    <li>Équipes / chat sans confinement. <em>Lifecycle dédié + archive.</em></li>
+    <li>Corrigé / spoiler trop tôt. <em>Endpoint gated.</em></li>
+    <li>Non-rejouabilité molle. <em>Run unique terminal.</em></li>
+    <li>Lab sans validation. <em>JSON Schema + lint graphe.</em></li>
+  </ol>
+
+  <h2>9. Améliorations qui renforcent sans changer la vision</h2>
+  <ul>
+    <li>Event sourcing léger (<code>lantern_journal</code> append-only) pour audit et idempotence.</li>
+    <li>Feature flags de Definition (<code>gps</code>, <code>nfc</code>, <code>radio</code>) pour dégradation device.</li>
+    <li>Deux listes UI = un seul query <code>kind</code> + <code>runtime.status</code>.</li>
+    <li>Porte Rouge : hash + rate limit ; option code d’équipe plus tard.</li>
+    <li>Atelier : contrat <code>CardSlot</code> ; cartes verre Lantype = pure présentation.</li>
+    <li>Compat balise existante via Effect <code>importDiscoverBadge</code> sans fusionner les modèles.</li>
+  </ul>
+
+  <h2>10. Découpage de livraison recommandé</h2>
+  <ol>
+    <li><strong>E0</strong> — Modèle Definition + Runtime + schéma + tests organe (aucune UI aventure).</li>
+    <li><strong>E1</strong> — Shell : sélection main/bonus → Porte Rouge → Atelier + média imposé.</li>
+    <li><strong>E2</strong> — Items Média (3 états + lifespan) + téléphone (appels schedule).</li>
+    <li><strong>E3</strong> — Triggers QR (+ NFC stub) + GPS enter confirmé.</li>
+    <li><strong>E4</strong> — Équipes + chat <code>lantern_team</code> + carte last-known.</li>
+    <li><strong>E5</strong> — Radio tuner géo-simulé.</li>
+    <li><strong>E6</strong> — Corrigé + non-rejouabilité.</li>
+    <li><strong>E7</strong> — Lantern Lab (publish + graphe + lint) — <strong>bloqueur culturel</strong> : plus aucune Lanterne créée en code.</li>
+  </ol>
+
+  <div class="verdict">
+    <h2>11. Verdict</h2>
+    <p>La vision est <strong>cohérente et tenable</strong> si on la traite comme un <strong>moteur data-driven</strong> (Definition / Runtime / Triggers / Effects / MediaContent ≠ Item), pas comme une collection d’écrans spéciaux.</p>
+    <p>Les zones délicates ne sont pas conceptuelles mais <strong>opérationnelles</strong> : GPS en fond, schedules fiables, anti-triche serveur, catalogue de skins, et discipline absolue « zéro logique par Lanterne dans le code ».</p>
+    <p>Le Lantern Lab n’est pas un nice-to-have : c’est la <strong>condition de passage à l’échelle</strong> vers des centaines d’aventures.</p>
+  </div>
+
+  <footer>
+    Ma Zone — Analyse Lantern Engine · Document généré pour lecture / partage · Ne remplace pas une fiche FD validée
+  </footer>
+</div>
+</body>
+</html>

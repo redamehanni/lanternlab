@@ -1,0 +1,467 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>LANTYP Material Lab — Plan d'étude</title>
+<style>
+  @page { margin: 16mm 14mm; }
+  body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Helvetica, Arial, sans-serif; font-size: 10.5pt; line-height: 1.45; color: #1a1a1a; max-width: 100%; }
+  h1 { font-size: 20pt; border-bottom: 2px solid #0f2d5c; padding-bottom: 8px; color: #0f2d5c; page-break-after: avoid; }
+  h2 { font-size: 14pt; margin-top: 22px; color: #0f2d5c; border-bottom: 1px solid #e5e7eb; padding-bottom: 4px; page-break-after: avoid; }
+  h3 { font-size: 11.5pt; margin-top: 14px; color: #1a4a8a; page-break-after: avoid; }
+  table { border-collapse: collapse; width: 100%; margin: 10px 0; font-size: 9pt; page-break-inside: avoid; }
+  th, td { border: 1px solid #d1d5db; padding: 5px 7px; text-align: left; vertical-align: top; }
+  th { background: #f3f4f6; font-weight: 600; }
+  code { background: #f3f4f6; padding: 1px 4px; border-radius: 3px; font-size: 8.5pt; }
+  pre { background: #f8fafc; border: 1px solid #e5e7eb; border-radius: 6px; padding: 10px; overflow-x: auto; font-size: 8pt; line-height: 1.35; white-space: pre-wrap; word-break: break-word; page-break-inside: avoid; }
+  pre code { background: none; padding: 0; }
+  blockquote { border-left: 4px solid #0f2d5c; margin: 10px 0; padding: 6px 14px; background: #f0f4f8; color: #1e3a5f; }
+  hr { border: none; border-top: 1px solid #e5e7eb; margin: 18px 0; }
+  ul, ol { padding-left: 22px; }
+  li { margin-bottom: 3px; }
+  p { margin: 8px 0; }
+  .pdf-note { display: none; }
+  @media screen {
+    .pdf-note { display: block; background: #eff6ff; border: 1px solid #bfdbfe; border-radius: 8px; padding: 12px 16px; margin-bottom: 24px; color: #1e3a8a; }
+  }
+</style>
+</head>
+<body>
+<div class="pdf-note">
+  <strong>Lecture dans Cursor / navigateur :</strong> ce fichier HTML est la version lisible du plan.
+  Pour le PDF, ouvrez <code>PLAN_LANTYP_MATERIAL_LAB.pdf</code> depuis le Finder (clic droit → Ouvrir avec Aperçu)
+  ou double-cliquez le fichier <code>Ouvrir_*_PDF.command</code> correspondant à la racine du projet.
+</div>
+<h1>LANTYP Material Lab — Plan d'étude</h1>
+<p><strong>Document :</strong> plan de conception<br />
+<strong>Date :</strong> 6 août 2026<br />
+<strong>Statut :</strong> en attente de validation (pas de développement avant le go)<br />
+<strong>Auteur :</strong> Reda Mehanni + Cursor  </p>
+<hr />
+<h2>1. Contexte et décision</h2>
+<h3>1.1 Pourquoi arrêter la méthode actuelle</h3>
+<p>Aujourd'hui, chaque modification de matériau (verre, lumière, aberration chromatique, blur…) impose :</p>
+<ul>
+<li>modifier du code ;</li>
+<li>recompiler ;</li>
+<li>corriger des bugs ;</li>
+<li>relancer ;</li>
+<li>recommencer.</li>
+</ul>
+<p>Cette boucle ne convient pas à un directeur artistique qui doit <strong>créer des matériaux</strong>, pas déboguer du GPU.</p>
+<h3>1.2 Décision proposée</h3>
+<p>Mettre temporairement en pause le développement de l'application principale sur le calage du verre, et créer un <strong>projet séparé</strong> :</p>
+<p><strong>LANTYP Material Lab</strong></p>
+<ul>
+<li>Aucune logique métier Ma Zone.</li>
+<li>Aucune API.</li>
+<li>Aucune navigation.</li>
+<li>Aucun écran des Lanternes.</li>
+<li>Uniquement un espace de création de matériaux.</li>
+</ul>
+<p>Le labo devient la <strong>source officielle</strong> de tous les matériaux LANTYP. L'app mobile ne fait qu'<strong>importer les presets validés</strong>.</p>
+<h3>1.3 Choix actés pour ce plan</h3>
+<table>
+<thead>
+<tr>
+<th>Sujet</th>
+<th>Choix</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Plateforme</td>
+<td>Application web indépendante (Vite + React + Skia/CanvasKit)</td>
+</tr>
+<tr>
+<td>Presets</td>
+<td>Fichiers JSON écrits directement dans le dépôt (versionnés Git)</td>
+</tr>
+<tr>
+<td>Moteur graphique</td>
+<td>Même Skia que l'app mobile (<code>canvaskit-wasm</code> 0.41.0)</td>
+</tr>
+<tr>
+<td>Shader</td>
+<td>SkSL unique, partagé labo ↔ app</td>
+</tr>
+</tbody>
+</table>
+<hr />
+<h2>2. Objectif du laboratoire</h2>
+<p>Créer une <strong>carte de verre</strong> au centre de l'écran, sur un <strong>fond image librement remplaçable</strong>, pour tester les réactions du matériau sur différents arrière-plans.</p>
+<p><strong>Exigences d'usage :</strong></p>
+<ul>
+<li>Toutes les modifications visibles <strong>instantanément</strong>.</li>
+<li>Aucune recompilation.</li>
+<li>Aucun redémarrage.</li>
+<li>Travail <strong>uniquement avec des curseurs</strong> (et contrôles visuels associés).</li>
+</ul>
+<p><strong>Philosophie :</strong></p>
+<p>Expérimenter comme dans un logiciel de création graphique : déplacer un curseur, voir le résultat, comparer plusieurs versions, sauvegarder celles qui plaisent.</p>
+<hr />
+<h2>3. Paramètres à contrôler (cahier des charges DA)</h2>
+<h3>3.1 Matière</h3>
+<ul>
+<li>transparence</li>
+<li>opacité du verre</li>
+<li>couleur éventuelle du verre</li>
+<li>épaisseur perçue</li>
+<li>rayon des coins</li>
+<li>texture interne</li>
+<li>micro-bruit (noise)</li>
+<li>rugosité</li>
+</ul>
+<h3>3.2 Dépoli</h3>
+<ul>
+<li>intensité du blur</li>
+<li>rayon du blur</li>
+<li>qualité du blur</li>
+<li>diffusion de la lumière</li>
+</ul>
+<h3>3.3 Réfraction</h3>
+<p>Contrôle de la déformation du fond observé à travers le verre :</p>
+<ul>
+<li>intensité de la réfraction</li>
+<li>largeur de la zone de réfraction</li>
+<li>uniquement sur les bords ou sur toute la surface</li>
+<li>douceur de la transition</li>
+<li>type de déformation (linéaire, organique, ondulée…)</li>
+</ul>
+<h3>3.4 Aberration chromatique</h3>
+<ul>
+<li>intensité</li>
+<li>largeur</li>
+<li>uniquement sur les bords</li>
+<li>distance de séparation RGB</li>
+<li>orientation</li>
+<li>opacité</li>
+<li>comportement dynamique</li>
+<li>activation / désactivation de l'effet</li>
+</ul>
+<h3>3.5 Reflets</h3>
+<ul>
+<li>intensité</li>
+<li>largeur</li>
+<li>position</li>
+<li>angle</li>
+<li>dureté</li>
+<li>couleur</li>
+<li>opacité</li>
+<li>déplacement du reflet en direct</li>
+</ul>
+<h3>3.6 Lumière</h3>
+<ul>
+<li>intensité</li>
+<li>couleur</li>
+<li>température</li>
+<li>diffusion</li>
+<li>halo</li>
+<li>lumière interne</li>
+<li>lumière venant de l'extérieur</li>
+<li>interaction entre la lumière et le verre</li>
+</ul>
+<h3>3.7 Ombres</h3>
+<ul>
+<li>opacité</li>
+<li>flou</li>
+<li>distance</li>
+<li>direction</li>
+<li>ombre externe</li>
+<li>ombre interne</li>
+</ul>
+<h3>3.8 Contours</h3>
+<ul>
+<li>épaisseur</li>
+<li>couleur</li>
+<li>opacité</li>
+<li>lumière uniquement sur certaines parties</li>
+<li>contour continu ou discontinu</li>
+</ul>
+<h3>3.9 Animation (onglet dédié)</h3>
+<ul>
+<li>légère lévitation</li>
+<li>vitesse</li>
+<li>amplitude</li>
+<li>respiration</li>
+<li>micro oscillation</li>
+<li>déplacement automatique des reflets</li>
+<li>déplacement automatique de l'aberration chromatique</li>
+</ul>
+<p>Résultat visible immédiatement.</p>
+<h3>3.10 Presets</h3>
+<ul>
+<li>enregistrer un preset</li>
+<li>charger un preset</li>
+<li>dupliquer un preset</li>
+<li>supprimer un preset</li>
+<li>comparer deux presets côte à côte</li>
+</ul>
+<p>Exemples : Glass V1, Glass V2, Glass V3…</p>
+<h3>3.11 Export</h3>
+<p>Bouton <strong>Exporter</strong> → génération automatique d'un fichier JSON contenant tous les paramètres.</p>
+<p>Exemple :</p>
+<pre><code class="language-json">{
+  &quot;glass&quot;: {
+    &quot;opacity&quot;: 0.12,
+    &quot;blur&quot;: 18,
+    &quot;refraction&quot;: 0.7,
+    &quot;chromaticAberration&quot;: {
+      &quot;enabled&quot;: true,
+      &quot;strength&quot;: 0.35,
+      &quot;width&quot;: 10
+    },
+    &quot;reflection&quot;: {
+      &quot;intensity&quot;: 0.28
+    },
+    &quot;shadow&quot;: {
+      &quot;blur&quot;: 24
+    }
+  }
+}
+</code></pre>
+<p>L'application principale charge ensuite ce preset — le labo reste la source officielle.</p>
+<h3>3.12 Vision à terme</h3>
+<p>Le labo est conçu dès aujourd'hui pour accueillir de futurs éditeurs de matériaux :</p>
+<ul>
+<li>verre</li>
+<li>lumière</li>
+<li>métal</li>
+<li>bois</li>
+<li>papier</li>
+<li>eau</li>
+<li>fumée</li>
+<li>particules</li>
+<li>effets lumineux</li>
+</ul>
+<hr />
+<h2>4. Architecture proposée</h2>
+<h3>4.1 Principe directeur</h3>
+<p>Le labo <strong>fabrique</strong> les matériaux. L'app mobile <strong>consomme</strong> les presets.</p>
+<pre><code>Curseurs du labo
+    → preset JSON versionné dans Git
+    → npm run sync:mobile
+    → LanterneGlassCard lit le preset
+
+Shader SkSL unique
+    → rendu labo (CanvasKit / navigateur)
+    → rendu app (Skia / iOS Metal)
+</code></pre>
+<p>Le shader SkSL est écrit <strong>une seule fois</strong>. Aucune réécriture, aucune traduction entre web et mobile.</p>
+<h3>4.2 Emplacement dans le dépôt</h3>
+<p>Nouveau dossier racine : <strong><code>lantype-lab/</code></strong></p>
+<p>Autonome, sur le modèle de <code>admin-web/</code>, mais :</p>
+<ul>
+<li>port <strong>5175</strong> (5174 = admin-web, 8081 = Metro mobile)</li>
+<li>aucune dépendance au backend Ma Zone</li>
+</ul>
+<h3>4.3 Stack technique</h3>
+<table>
+<thead>
+<tr>
+<th>Couche</th>
+<th>Technologie</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>UI</td>
+<td>Vite + React + TypeScript</td>
+</tr>
+<tr>
+<td>Rendu</td>
+<td>CanvasKit WASM (Skia web)</td>
+</tr>
+<tr>
+<td>Version CanvasKit</td>
+<td><strong>0.41.0</strong> (alignée sur <code>@shopify/react-native-skia</code> 2.6.2 mobile)</td>
+</tr>
+<tr>
+<td>Shader</td>
+<td>SkSL paramétré (RuntimeEffect)</td>
+</tr>
+<tr>
+<td>Presets</td>
+<td>JSON dans <code>lantype-lab/presets/glass/</code></td>
+</tr>
+<tr>
+<td>Fonds test</td>
+<td>Images dans <code>lantype-lab/backgrounds/</code></td>
+</tr>
+<tr>
+<td>Écriture disque</td>
+<td>Plugin Vite (routes dev locales)</td>
+</tr>
+</tbody>
+</table>
+<h3>4.4 Contrat matériau (extensibilité)</h3>
+<p>Toute l'interface est <strong>générée</strong> à partir d'un schéma de paramètres. Ajouter le métal ou le bois plus tard = un module + une ligne de registre, <strong>sans réécrire l'UI</strong>.</p>
+<pre><code class="language-ts">export type MaterialModule = {
+  id: 'glass';
+  label: 'Verre';
+  schema: ParamGroup[];           // pilote panneaux et curseurs
+  buildShader(p: Params): string;  // source SkSL
+  buildUniforms(p: Params, t: number): Uniforms;
+};
+</code></pre>
+<p>Types de contrôles : curseur, couleur, interrupteur, liste déroulante, cadran d'angle.</p>
+<h3>4.5 Shader verre paramétré</h3>
+<p>Le SkSL actuel (<code>LanterneGlassCard.js</code>) contient des constantes figées (<code>blurBg(coord, 14.0)</code>, <code>tintStr = 0.65</code>). Il sera réécrit en version <strong>pilotée par uniforms</strong>, organisée en neuf groupes = neuf onglets du labo.</p>
+<p>Environ <strong>50 paramètres</strong> au total.</p>
+<p><strong>Contrainte SkSL importante :</strong> le nombre d'échantillons d'une boucle de blur doit être une <strong>constante de compilation</strong>. Le curseur « qualité du blur » régénère donc le shader source et le recompile (~quelques ms, imperceptible). Tous les autres curseurs passent par des uniforms → <strong>instantanés</strong>.</p>
+<h3>4.6 Presets versionnés Git</h3>
+<p>Plugin Vite en développement :</p>
+<ul>
+<li>lister / lire / enregistrer / renommer / dupliquer / supprimer</li>
+<li>écriture dans <code>lantype-lab/presets/glass/*.json</code></li>
+<li>JSON indenté, clés ordonnées → diffs Git lisibles</li>
+</ul>
+<p>Forme cible d'un preset :</p>
+<pre><code class="language-json">{
+  &quot;id&quot;: &quot;glass-v1&quot;,
+  &quot;name&quot;: &quot;Glass V1&quot;,
+  &quot;material&quot;: &quot;glass&quot;,
+  &quot;params&quot;: {
+    &quot;matiere&quot;: { &quot;opacity&quot;: 0.12, &quot;tint&quot;: &quot;#0A0602&quot;, &quot;radius&quot;: 16 },
+    &quot;depoli&quot;: { &quot;blur&quot;: 18, &quot;quality&quot;: 3 },
+    &quot;refraction&quot;: { &quot;strength&quot;: 0.7, &quot;edgeOnly&quot;: true },
+    &quot;aberration&quot;: { &quot;enabled&quot;: true, &quot;strength&quot;: 0.35, &quot;width&quot;: 10 }
+  }
+}
+</code></pre>
+<p><strong>Comparaison A/B :</strong> deux cartes côte à côte, chacune avec son preset, même fond.</p>
+<p><strong>Fonds :</strong> glisser-déposer → <code>lantype-lab/backgrounds/</code>.</p>
+<h3>4.7 Passerelle vers l'app mobile</h3>
+<p>Script <code>npm run sync:mobile</code> :</p>
+<ul>
+<li>copie le preset validé + shader généré vers <code>mobile/src/theme/materials/glass/</code></li>
+<li><code>LanterneGlassCard.js</code> lit le preset (plus de valeurs en dur)</li>
+</ul>
+<p><strong>Pourquoi copie et pas lien direct ?</strong> Metro (bundler mobile) devient fragile quand il surveille des fichiers hors de <code>mobile/</code> — incident récent du 6 août 2026.</p>
+<p><strong>Prod :</strong> rien du labo n'entre en production. Seuls JSON + shader généré traversent → données DA. Conforme FD-000 (sandbox / labo interdit en prod).</p>
+<h3>4.8 Limites connues</h3>
+<table>
+<thead>
+<tr>
+<th>Point</th>
+<th>Détail</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Même Skia, GPU différent</td>
+<td>WebGL (navigateur) vs Metal (iOS)</td>
+</tr>
+<tr>
+<td>Rendu</td>
+<td>Très proche, pas garanti pixel-perfect</td>
+</tr>
+<tr>
+<td>Couleurs</td>
+<td>Légères différences possibles</td>
+</tr>
+<tr>
+<td>Validation finale</td>
+<td>Une passe simulateur iOS <strong>à la fin</strong>, pas en boucle</td>
+</tr>
+</tbody>
+</table>
+<hr />
+<h2>5. Ce que le labo ne contient PAS</h2>
+<ul>
+<li>Logique métier Ma Zone (Lanternes, scan, statuts, API)</li>
+<li>Navigation React Navigation</li>
+<li>Backend / SQLite / JWT</li>
+<li>Écrans Deuxième Âme</li>
+<li>Déploiement production</li>
+</ul>
+<hr />
+<h2>6. Gouvernance projet</h2>
+<ol>
+<li><code>git pull origin main</code> avant tout chantier.</li>
+<li>Brouillon <strong><code>FICHE_DISCUSSION/FD-005-lantyp-material-lab.md</code></strong> depuis <code>_TEMPLATE.md</code>.</li>
+<li>Validation humaine Reda + Adam.</li>
+<li>Commit + entrée dans <code>FICHE_DISCUSSION/INDEX.md</code>.</li>
+<li>Puis seulement : développement du labo.</li>
+</ol>
+<hr />
+<h2>7. Plan de livraison (phases)</h2>
+<h3>Phase 0 — Gouvernance</h3>
+<ul>
+<li>Rédiger FD-005 (brouillon)</li>
+<li>Validation humaine</li>
+</ul>
+<h3>Phase 1 — Fondations (MVP labo)</h3>
+<ul>
+<li>Créer <code>lantype-lab/</code> : Vite + React + TS, port 5175</li>
+<li>Épingler <code>canvaskit-wasm@0.41.0</code></li>
+<li>Moteur CanvasKit : stage, fond ImageShader, carte rounded-rect</li>
+<li>Contrat <code>MaterialModule</code> + UI générique par schéma</li>
+<li>Onglets Matière + Dépoli + Aberration (premier shader paramétré)</li>
+<li>1 preset par défaut + sauvegarde JSON sur disque</li>
+</ul>
+<p><strong>Livrable Phase 1 :</strong> curseurs visibles, carte qui réagit en direct, 1 preset enregistrable.</p>
+<h3>Phase 2 — Complétude verre</h3>
+<ul>
+<li>Onglets Réfraction, Reflets, Lumière, Ombres, Contours</li>
+<li>Onglet Animation (temps, lévitation, respiration)</li>
+<li>Comparaison A/B</li>
+<li>Fonds remplaçables (drag &amp; drop)</li>
+<li>Bibliothèque presets (CRUD complet)</li>
+</ul>
+<p><strong>Livrable Phase 2 :</strong> cahier des charges DA couvert, workflow preset complet.</p>
+<h3>Phase 3 — Passerelle app</h3>
+<ul>
+<li>Bouton Exporter + <code>npm run sync:mobile</code></li>
+<li><code>LanterneGlassCard.js</code> lit preset + shader générés</li>
+<li>Validation rendu simulateur iOS (1 passe finale)</li>
+</ul>
+<p><strong>Livrable Phase 3 :</strong> un matériau créé dans le labo visible dans l'app sans toucher au code.</p>
+<hr />
+<h2>8. Checklist de validation (pour le go)</h2>
+<p>Cocher avant de lancer le développement :</p>
+<ul>
+<li>[ ] Le principe « labo = source officielle, app = consommateur » est validé</li>
+<li>[ ] Le choix web + CanvasKit 0.41.0 est validé</li>
+<li>[ ] Les presets JSON dans Git (pas export manuel) sont validés</li>
+<li>[ ] La pause calage verre dans l'app est acceptée</li>
+<li>[ ] FD-005 rédigée et validée</li>
+<li>[ ] Phase 1 seule suffit pour un premier go, ou go direct Phases 1–3</li>
+</ul>
+<hr />
+<h2>9. Références techniques existantes</h2>
+<table>
+<thead>
+<tr>
+<th>Fichier</th>
+<th>Rôle</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>mobile/src/components/deuxiemeAme/LanterneGlassCard.js</code></td>
+<td>Shader SkSL actuel (base à paramétrer)</td>
+</tr>
+<tr>
+<td><code>mobile/src/theme/lantype.js</code></td>
+<td>Tokens LANTYPE</td>
+</tr>
+<tr>
+<td><code>CHANTIER/lantype/BASE_LANTYPE_GLASS.md</code></td>
+<td>Contrat verre actuel</td>
+</tr>
+<tr>
+<td><code>admin-web/vite.config.js</code></td>
+<td>Modèle projet Vite autonome</td>
+</tr>
+<tr>
+<td><code>FICHE_DISCUSSION/FD-000-…md</code></td>
+<td>Règles sandbox / prod</td>
+</tr>
+</tbody>
+</table>
+<hr />
+<p><em>Document généré pour étude — en attente de validation avant implémentation.</em></p>
+</body>
+</html>

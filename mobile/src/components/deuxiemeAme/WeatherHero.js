@@ -25,6 +25,9 @@ export default function WeatherHero({
   const illu = getIllustration(illustrationKey);
   const events = stats?.events ?? 0;
   const lanterns = stats?.lanterns ?? 0;
+  // Accès public V1 : la surface peut masquer le signal « événements » pour ne
+  // pas trahir une Porte scellée. Les Murmurs, eux, restent un canal non filtré.
+  const showEvents = stats?.showEvents !== false;
 
   return (
     <View style={styles.scene}>
@@ -64,11 +67,13 @@ export default function WeatherHero({
         </View>
 
         <View style={styles.statsRow}>
-          <StatPill
-            icon="calendar-outline"
-            value={loading ? '…' : String(events)}
-            label={events > 1 ? 'événements en cours' : 'événement en cours'}
-          />
+          {showEvents ? (
+            <StatPill
+              icon="calendar-outline"
+              value={loading ? '…' : String(events)}
+              label={events > 1 ? 'événements en cours' : 'événement en cours'}
+            />
+          ) : null}
           <StatPill
             icon="sparkles-outline"
             value={loading ? '…' : String(lanterns)}

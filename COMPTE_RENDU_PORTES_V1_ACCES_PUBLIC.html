@@ -1,0 +1,274 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Compte rendu — Implémentation Portes V1 (accès public)</title>
+<style>
+  @page { margin: 16mm 14mm; }
+  body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Helvetica, Arial, sans-serif; font-size: 10.5pt; line-height: 1.45; color: #1a1a1a; max-width: 100%; }
+  h1 { font-size: 20pt; border-bottom: 2px solid #0f2d5c; padding-bottom: 8px; color: #0f2d5c; page-break-after: avoid; }
+  h2 { font-size: 14pt; margin-top: 22px; color: #0f2d5c; border-bottom: 1px solid #e5e7eb; padding-bottom: 4px; page-break-after: avoid; }
+  h3 { font-size: 11.5pt; margin-top: 14px; color: #1a4a8a; page-break-after: avoid; }
+  table { border-collapse: collapse; width: 100%; margin: 10px 0; font-size: 9pt; page-break-inside: avoid; }
+  th, td { border: 1px solid #d1d5db; padding: 5px 7px; text-align: left; vertical-align: top; }
+  th { background: #f3f4f6; font-weight: 600; }
+  code { background: #f3f4f6; padding: 1px 4px; border-radius: 3px; font-size: 8.5pt; }
+  pre { background: #f8fafc; border: 1px solid #e5e7eb; border-radius: 6px; padding: 10px; overflow-x: auto; font-size: 8pt; line-height: 1.35; white-space: pre-wrap; word-break: break-word; page-break-inside: avoid; }
+  pre code { background: none; padding: 0; }
+  blockquote { border-left: 4px solid #0f2d5c; margin: 10px 0; padding: 6px 14px; background: #f0f4f8; color: #1e3a5f; }
+  hr { border: none; border-top: 1px solid #e5e7eb; margin: 18px 0; }
+  ul, ol { padding-left: 22px; }
+  li { margin-bottom: 3px; }
+  p { margin: 8px 0; }
+  .pdf-note { display: none; }
+  @media screen {
+    .pdf-note { display: block; background: #eff6ff; border: 1px solid #bfdbfe; border-radius: 8px; padding: 12px 16px; margin-bottom: 24px; color: #1e3a8a; }
+  }
+</style>
+</head>
+<body>
+<div class="pdf-note">
+  <strong>Lecture dans Cursor / navigateur :</strong> ce fichier HTML est la version lisible du plan.
+  Pour le PDF, ouvrez <code>COMPTE_RENDU_PORTES_V1_ACCES_PUBLIC.pdf</code> depuis le Finder (clic droit → Ouvrir avec Aperçu)
+  ou double-cliquez le fichier <code>Ouvrir_*_PDF.command</code> correspondant à la racine du projet.
+</div>
+<h1>Compte rendu — Implémentation Portes V1 (accès public)</h1>
+<table>
+<thead>
+<tr>
+<th></th>
+<th></th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><strong>Date</strong></td>
+<td>2026-08-04</td>
+</tr>
+<tr>
+<td><strong>Statut</strong></td>
+<td>Livré (surface mobile) — pas encore committé sauf demande</td>
+</tr>
+<tr>
+<td><strong>GO</strong></td>
+<td>Reda — plan <em>Portes surface seal</em> + audit Option 3</td>
+</tr>
+<tr>
+<td><strong>Références</strong></td>
+<td><code>AUDIT_COMPATIBILITE_PORTES_OPTION_3.md</code> · <code>FICHE_DISCUSSION/FD-004-…</code> · <code>CHANTIER/portes-v1/JOURNAL_MODIFICATIONS.md</code></td>
+</tr>
+</tbody>
+</table>
+<hr />
+<h2>1. Objectif atteint</h2>
+<p>Conserver l’accueil Deuxième Âme comme point d’entrée, tout en faisant comprendre que Ma Zone est un <strong>programme à plusieurs Portes</strong>.</p>
+<ul>
+<li><strong>Une seule Porte ouverte :</strong> Les Lanternes</li>
+<li><strong>Cinq Portes visibles mais scellées</strong> — intrigantes, sans révéler leur contenu</li>
+<li><strong>Aucune refonte</strong> des moteurs, APIs, organes ou modèles de données</li>
+</ul>
+<hr />
+<h2>2. Principe architectural respecté</h2>
+<blockquote>
+<p>Les Portes sont un mécanisme de présentation et d’accès public. Elles ne définissent pas l’architecture interne de l’application.</p>
+</blockquote>
+<table>
+<thead>
+<tr>
+<th>Couche</th>
+<th>Impact</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Event Engine, Wallet, Identity</td>
+<td><strong>Aucun</strong></td>
+</tr>
+<tr>
+<td>Backend / APIs</td>
+<td><strong>Aucun</strong></td>
+</tr>
+<tr>
+<td>Murmurs</td>
+<td><strong>Aucun filtre</strong> — canal, contenu = données réelles</td>
+</tr>
+<tr>
+<td>Surface Accueil (mobile)</td>
+<td><strong>Seule zone modifiée</strong></td>
+</tr>
+</tbody>
+</table>
+<hr />
+<h2>3. Comportement utilisateur V1</h2>
+<h3>Grille des Portes</h3>
+<table>
+<thead>
+<tr>
+<th>Porte (id interne)</th>
+<th>Affichage public</th>
+<th>Accès</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>lanternes</code></td>
+<td>Label + description + illustration</td>
+<td>Navigation vers <code>Lanterns</code></td>
+</tr>
+<tr>
+<td><code>evenements</code></td>
+<td>« Porte II » + teaser mystère + cadenas</td>
+<td>Toast d’intrigue — <strong>pas</strong> de navigation</td>
+</tr>
+<tr>
+<td><code>participer</code></td>
+<td>« Porte III »</td>
+<td>Idem</td>
+</tr>
+<tr>
+<td><code>quartier</code></td>
+<td>« Porte IV »</td>
+<td>Idem</td>
+</tr>
+<tr>
+<td><code>adresses</code></td>
+<td>« Porte V »</td>
+<td>Idem</td>
+</tr>
+<tr>
+<td><code>surprise</code></td>
+<td>« Porte VI »</td>
+<td>Idem</td>
+</tr>
+</tbody>
+</table>
+<h3>En-tête Accueil</h3>
+<p>Texte du type : <strong>« 6 Portes · 1 ouverte — Les Lanternes ne sont que le premier chapitre »</strong></p>
+<h3>Contournements bouchés (surface)</h3>
+<ul>
+<li>Tap sur une Porte scellée → toast (<code>sealedHint</code>), pas de <code>navigate</code></li>
+<li>Suggestions IA vers <code>Events</code> / <code>Surprise</code> → même refus tant que la Porte est scellée</li>
+<li>Hero : compteur « événements » masqué (<code>showEvents: false</code>) pour ne pas trahir une Porte fermée</li>
+</ul>
+<h3>Murmurs</h3>
+<p><strong>Non filtrés.</strong> Section et API inchangées. Si seule l’activité Lanternes existe dans les données, les murmures en parleront naturellement.</p>
+<hr />
+<h2>4. Fichiers modifiés</h2>
+<table>
+<thead>
+<tr>
+<th>Fichier</th>
+<th>Ce qui a changé</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>mobile/src/data/deuxiemeAme.js</code></td>
+<td><code>status: 'open' \| 'sealed'</code>, <code>sealedLabel</code> / <code>sealedHint</code>, helpers <code>isPorteOpen</code>, <code>porteByRoute</code>, <code>openPortesCount</code>, commentaire de principe</td>
+</tr>
+<tr>
+<td><code>mobile/src/components/deuxiemeAme/PorteCard.js</code></td>
+<td>Rendu mystère si sealed (cadenas, pas d’illustration / description métier)</td>
+</tr>
+<tr>
+<td><code>mobile/src/screens/deuxiemeAme/DeuxiemeAmeHomeScreen.js</code></td>
+<td>Garde <code>openPorte</code>, suggestions alignées, copy Portes, hero sans signal événements</td>
+</tr>
+<tr>
+<td><code>mobile/src/components/deuxiemeAme/WeatherHero.js</code></td>
+<td>Pill « événements » conditionnel (<code>stats.showEvents !== false</code>)</td>
+</tr>
+<tr>
+<td><code>FICHE_DISCUSSION/INDEX.md</code></td>
+<td>Entrée FD-004 + note du 04/08</td>
+</tr>
+</tbody>
+</table>
+<hr />
+<h2>5. Fichiers créés</h2>
+<table>
+<thead>
+<tr>
+<th>Fichier</th>
+<th>Rôle</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>FICHE_DISCUSSION/FD-004-portes-couche-presentation-acces-public-v1.md</code></td>
+<td>Fiche Cursor — principe + périmètre public V1</td>
+</tr>
+<tr>
+<td><code>CHANTIER/portes-v1/JOURNAL_MODIFICATIONS.md</code></td>
+<td>Journal détaillé du chantier</td>
+</tr>
+<tr>
+<td><code>COMPTE_RENDU_PORTES_V1_ACCES_PUBLIC.md</code></td>
+<td>Ce document (source du PDF)</td>
+</tr>
+</tbody>
+</table>
+<hr />
+<h2>6. Volontairement non touché</h2>
+<ul>
+<li>Tout le dossier <code>backend/</code></li>
+<li>Event Engine, Wallet, Identity</li>
+<li>Enregistrement des écrans dans le navigateur (les routes scellées restent vivantes)</li>
+<li>Première Âme, Épée commerçant</li>
+<li><code>MurmursScreen</code> et APIs murmures</li>
+</ul>
+<hr />
+<h2>7. Comment ouvrir une Porte plus tard</h2>
+<p>Dans <code>mobile/src/data/deuxiemeAme.js</code>, sur l’entrée concernée :</p>
+<ol>
+<li>Passer <code>status</code> à <code>PORTE_STATUS.OPEN</code></li>
+<li>Le rendu reprend automatiquement <code>label</code> / <code>description</code> / illustration</li>
+<li>Si Porte Événements : remettre <code>showEvents: true</code> (ou retirer le flag) dans le calcul des stats de l’accueil</li>
+</ol>
+<p><strong>Aucune migration backend.</strong></p>
+<hr />
+<h2>8. Hors périmètre (signalé, non implémenté)</h2>
+<ol>
+<li>Garde centralisée sur deep links / navigation programmatique vers écrans scellés</li>
+<li>Override Lab pour tester les Portes scellées</li>
+<li>Affinage direction artistique des textes et visuels mystère</li>
+</ol>
+<hr />
+<h2>9. Décisions produit actées</h2>
+<table>
+<thead>
+<tr>
+<th>Décision</th>
+<th>Statut</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Option 3 — grille Accueil conservée</td>
+<td>Validée</td>
+</tr>
+<tr>
+<td>Lanternes seule ouverte au lancement</td>
+<td>Validée</td>
+</tr>
+<tr>
+<td>Murmurs = canal, pas de filtre Porte</td>
+<td>Validée</td>
+</tr>
+<tr>
+<td>Vocabulaire <code>open</code> / <code>sealed</code> (pas « Coming Soon »)</td>
+<td>Validée</td>
+</tr>
+<tr>
+<td>Couche surface uniquement</td>
+<td>Validée</td>
+</tr>
+</tbody>
+</table>
+<hr />
+<h2>10. Conclusion</h2>
+<p>L’implémentation est <strong>fidèle au plan validé</strong> : couche de présentation et d’accès public, investissement architectural préservé, ouverture progressive d’une Porte = un flag de surface.</p>
+<p><em>Document généré le 04/08/2026 — Cursor Reda.</em></p>
+</body>
+</html>

@@ -1,0 +1,94 @@
+{
+  "id": "glass-menu-selecion-lanternes-v2-copie-xzhr",
+  "name": "Glass menu selecion lanternes V3",
+  "material": "glass",
+  "exportedAt": "2026-08-07T11:30:21.581Z",
+  "params": {
+    "aberration": {
+      "active": true,
+      "bordsSeuls": true,
+      "dynamique": 0,
+      "intensite": 1.47,
+      "largeur": 12,
+      "opacite": 1,
+      "orientation": 79,
+      "separation": 11.5
+    },
+    "animation": {
+      "active": true,
+      "amplitude": 0.42,
+      "derivAberration": 1,
+      "derivReflet": 0.25,
+      "levitation": 5.5,
+      "oscillation": 2.6,
+      "respiration": 0.032,
+      "vitesse": 1.07
+    },
+    "contours": {
+      "couleur": "#ff4000",
+      "epaisseur": 0,
+      "lumiereBord": 0.07,
+      "lumiereBordLargeur": 0.5,
+      "opacite": 0,
+      "portionEclairee": 0.2,
+      "tirets": 0
+    },
+    "depoli": {
+      "diffusion": 0.12,
+      "intensite": 1.14,
+      "qualite": 4,
+      "rayon": 6
+    },
+    "lumiere": {
+      "couleur": "#ff6600",
+      "diffusion": 0.4,
+      "halo": 0.18,
+      "intensite": 0.9,
+      "interaction": 0.42,
+      "lumiereExterne": 0,
+      "lumiereInterne": 0.1,
+      "temperature": 1
+    },
+    "matiere": {
+      "bruit": 0,
+      "bruitEchelle": 4,
+      "couleur": "#ffffff",
+      "epaisseur": 0,
+      "opaciteVerre": 0,
+      "rayon": 33,
+      "rugosite": 1,
+      "texture": 0,
+      "transparence": 1
+    },
+    "ombres": {
+      "externeCouleur": "#000000",
+      "externeDirection": 90,
+      "externeDistance": 14,
+      "externeFlou": 26,
+      "externeOpacite": 1,
+      "interneDirection": 270,
+      "interneDistance": 8,
+      "interneFlou": 18,
+      "interneOpacite": 0.22
+    },
+    "reflets": {
+      "angle": 24,
+      "couleur": "#ff5005",
+      "durete": 1,
+      "intensite": 0.41,
+      "largeur": 0.41,
+      "opacite": 0.6,
+      "position": [
+        1,
+        0.61
+      ]
+    },
+    "refraction": {
+      "bordsSeuls": true,
+      "douceur": 0,
+      "intensite": 60,
+      "largeur": 8,
+      "type": 1
+    }
+  }
+}

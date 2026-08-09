@@ -1,14 +1,24 @@
 /**
  * Deuxième Âme — Déclaration des 6 portes.
  *
- * PRINCIPE : les portes sont une notion de SURFACE. L'Event Engine ne les connaît
- * pas ; il expose des projections (listDiscoverable / listMurmurs). Une porte =
- * une intention de découverte + une destination. Ajouter/renommer une porte se
- * fait ici, sans toucher à l'organe.
+ * PRINCIPE (V1 public — Portes scellées) :
+ * Les Portes sont un mécanisme de PRÉSENTATION et d'ACCÈS PUBLIC.
+ * Elles ne définissent PAS l'architecture interne de l'application.
+ * L'Event Engine, le Wallet, l'Identity et les Murmurs ne connaissent
+ * aucune Porte. Ouvrir une Porte = passer `status` à `'open'` ici —
+ * aucune migration d'organe.
  *
+ * Une porte = intention de découverte + destination (+ statut d'accès).
  * `illustrationKey` pointe vers le registry d'illustrations (jamais d'asset en dur).
- * `route` cible un écran du DeuxiemeAmeHomeStack. L'ordre du tableau = l'ordre d'affichage.
+ * `route` cible un écran du DeuxiemeAmeHomeStack (écrans conservés même si sealed).
+ * L'ordre du tableau = l'ordre d'affichage.
  */
+
+export const PORTE_STATUS = {
+  OPEN: 'open',
+  SEALED: 'sealed',
+};
+
 export const PORTES = [
   {
     id: 'lanternes',
@@ -20,6 +30,7 @@ export const PORTES = [
     color: '#8B6FAE',
     soft: '#F0EAF6',
     route: 'Lanterns',
+    status: PORTE_STATUS.OPEN,
   },
   {
     id: 'evenements',
@@ -31,6 +42,9 @@ export const PORTES = [
     color: '#C4785A',
     soft: '#F8EBE4',
     route: 'Events',
+    status: PORTE_STATUS.SEALED,
+    sealedLabel: 'Porte II',
+    sealedHint: 'Encore scellée. Les Lanternes ne sont que le premier chapitre.',
   },
   {
     id: 'participer',
@@ -42,6 +56,9 @@ export const PORTES = [
     color: '#5F8F78',
     soft: '#E8F2EC',
     route: 'Participer',
+    status: PORTE_STATUS.SEALED,
+    sealedLabel: 'Porte III',
+    sealedHint: 'Encore scellée. D\u2019autres façons d\u2019entrer dans le quartier viendront.',
   },
   {
     id: 'quartier',
@@ -53,6 +70,9 @@ export const PORTES = [
     color: '#6A92A8',
     soft: '#E8F0F4',
     route: 'DecouvrirQuartier',
+    status: PORTE_STATUS.SEALED,
+    sealedLabel: 'Porte IV',
+    sealedHint: 'Encore scellée. Le programme est plus vaste que ce qui est déjà ouvert.',
   },
   {
     id: 'adresses',
@@ -64,6 +84,9 @@ export const PORTES = [
     color: '#B86B6B',
     soft: '#F6EAEA',
     route: 'MesAdresses',
+    status: PORTE_STATUS.SEALED,
+    sealedLabel: 'Porte V',
+    sealedHint: 'Encore scellée. Une entrée de plus, pour plus tard.',
   },
   {
     id: 'surprise',
@@ -75,8 +98,24 @@ export const PORTES = [
     color: '#7A7FB8',
     soft: '#EEEDF6',
     route: 'Surprise',
+    status: PORTE_STATUS.SEALED,
+    sealedLabel: 'Porte VI',
+    sealedHint: 'Encore scellée. Laissez le mystère faire son travail.',
   },
 ];
+
+export function isPorteOpen(porte) {
+  return porte?.status === PORTE_STATUS.OPEN;
+}
+
+export function porteByRoute(route) {
+  if (!route) return null;
+  return PORTES.find((p) => p.route === route) || null;
+}
+
+export function openPortesCount() {
+  return PORTES.filter(isPorteOpen).length;
+}
 
 /**
  * Formes de participation à la vie locale.
@@ -86,6 +125,9 @@ export const PORTES = [
  * participation (rejoindre, aider, contribuer, répondre à un besoin, missions…).
  * On les déclare ici : ajouter une forme = une entrée, sans refonte. Les formes
  * non encore adossées à un organe sont honnêtement marquées « Bientôt ».
+ *
+ * NOTE V1 : la Porte Participer est scellée en surface ; ce registre reste intact
+ * pour le jour d'ouverture — aucun filtrage métier ici.
  */
 export const PARTICIPATION_MODES = [
   {
@@ -142,7 +184,10 @@ export const PARTICIPATION_MODES = [
 /**
  * Suggestions de la barre d'intention. `route` (optionnel) branche la puce sur
  * une projection Event Engine (première version) ; sans `route`, la puce relève
- * de l'assistant (état « Bientôt » tant que l'organe IA n'existe pas).
+ * de l'assistant.
+ *
+ * Si `route` cible une Porte scellée, l'accueil refuse la navigation (couche
+ * d'accès public) — le contenu métier n'est pas modifié.
  */
 export const INTENT_SUGGESTIONS = [
   { id: 'calme', label: 'Trouve-moi un endroit calme' },

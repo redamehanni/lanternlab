@@ -11,6 +11,7 @@ Registre central. **Mettre à jour à chaque nouvelle fiche validée.**
 | FD-001 | Chantier Fondation API compatible avec les logiciels commerciaux | **brouillon** (amendé Reda 25/07 — résultats E0 → E8) | 2026-07-24 | Adam + amendements Reda — validation Adam | [FD-001-chantier-fondation-api-logiciels-commerciaux.md](./FD-001-chantier-fondation-api-logiciels-commerciaux.md) |
 | FD-002 | Mise à jour Cursor Adam — chantier Organe d'Orchestration (E0 → E8) | **brouillon** | 2026-07-26 | Reda (pour AdamY76) — **LECTURE PRIORITAIRE ADAM** | [FD-002-mise-a-jour-cursor-adam-chantier-orchestration-e0-e8.md](./FD-002-mise-a-jour-cursor-adam-chantier-orchestration-e0-e8.md) |
 | FD-003 | Conformité réglementaire et sécurité applicative — ce qui manque pour être inattaquable | **brouillon** | 2026-07-26 | Adam (AdamY76) — **À LIRE AVANT TOUTE MISE EN PRODUCTION** · audit détaillé = [DOSSIER-COMPLET](../CHANTIER/conformite-reglementaire/DOSSIER-COMPLET-conformite-reglementaire.md) | [FD-003-conformite-reglementaire-securite-applicative.md](./FD-003-conformite-reglementaire-securite-applicative.md) |
+| FD-004 | Portes — couche de présentation et d'accès public (V1) | **brouillon** | 2026-08-04 | Reda (Cursor) — principe : Portes ≠ architecture interne | [FD-004-portes-couche-presentation-acces-public-v1.md](./FD-004-portes-couche-presentation-acces-public-v1.md) |
 
 ---
 
@@ -20,14 +21,16 @@ Registre central. **Mettre à jour à chaque nouvelle fiche validée.**
 2. Ce **`INDEX.md`** avant chaque chantier
 3. **`FD-002`** — **Cursor Adam : lire en priorité** pour tout ce qui a été livré en code (E0 → E8, lois 16–17, famille de connecteurs)
 4. **`FD-003`** — **obligatoire avant tout chantier touchant l'authentification, les données personnelles, les téléversements ou une mise en production**
-5. **`FD-001`** si chantier Fondation API / interop / stock / connecteurs — **§14 en priorité avant d'ajouter un connecteur** (ce dont il hérite, ce qu'il ne doit pas refaire)
-6. **`ROADMAP_ORGANE_ORCHESTRATION_MAZONE.md`** (racine) — **document maître du chantier** : lois d'architecture (dont la **Loi 17**, confinement du dialecte), 8 étapes, audit critique
-7. Docs techniques liées (non-FD) :
+5. **`FD-004`** — si chantier Accueil Deuxième Âme / Portes / accès public V1 (Lanternes seule ouverte)
+6. **`FD-001`** si chantier Fondation API / interop / stock / connecteurs — **§14 en priorité avant d'ajouter un connecteur** (ce dont il hérite, ce qu'il ne doit pas refaire)
+7. **`ROADMAP_ORGANE_ORCHESTRATION_MAZONE.md`** (racine) — **document maître du chantier** : lois d'architecture (dont la **Loi 17**, confinement du dialecte), 8 étapes, audit critique
+8. Docs techniques liées (non-FD) :
    - [`Cartographie_Metier_V1.md`](./Cartographie_Metier_V1.md)
    - [`Plan_Conception_API_Compatible_Logiciels_Commerciaux_V1.md`](./Plan_Conception_API_Compatible_Logiciels_Commerciaux_V1.md) — **annexe technique** de la roadmap Orchestration depuis le 25/07 (CDM détaillé, matrice de conflits, contrat connecteur, contraintes SQLite, tranches A–F)
 
 ## Notes
 
+- **2026-08-04 — Portes V1 (accès public) :** grille Accueil conservée ; seule **Lanternes** est `open` ; les 5 autres sont `sealed` (présentation mystère, pas « Coming Soon »). **Murmurs = canal**, aucun filtre Porte. Couche surface uniquement — voir [FD-004](./FD-004-portes-couche-presentation-acces-public-v1.md) et `CHANTIER/portes-v1/JOURNAL_MODIFICATIONS.md`.
 - **2026-07-24 soir :** plan Fondation API aligné FD-000 (séquençage A–E, modes `mazone`/`pos`, Phase 0 avant D). Voir FD-001 §9.
 - **2026-07-25, fin de journée :** **étapes E0 → E7 livrées.** Le contrat public `/api/v1` existe (19 opérations, `openapi.yaml` vérifiée dans les deux sens contre les routes réelles), la fin de vie de `/api` est **inscrite dans le code** (`backend/src/lib/sunset.js`, 31/01/2027), et un premier écran mobile commerçant est basculé derrière un drapeau. État réel du code : `CURRENT_ARCHITECTURE.md`. Récit et écarts : FD-001 §9 et §13.
 - **2026-07-26 — audit de conformité :** audit complet du dépôt croisant cinq référentiels (Guide RGPD du développeur CNIL, **OWASP ASVS 5.0.0 — 345 exigences**, OWASP Cheat Sheets, ANSSI, LCEN/consommation/DSA). Livrables dans `CHANTIER/conformite-reglementaire/` (dont `06-ASVS-5.0.md` + CSV en `references/`) et gabarits dans `docs/legal/`. **FD-003** (brouillon) : lecture obligatoire avant prod. Conclusion : douze écarts bloquants, dont quatre exploitables aujourd'hui — messagerie sans ACL, téléversements non filtrés, aucune politique de mot de passe, sessions irrévocables.

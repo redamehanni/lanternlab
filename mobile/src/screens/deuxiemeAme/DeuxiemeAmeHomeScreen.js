@@ -15,7 +15,9 @@ import AiIntentBar from '../../components/deuxiemeAme/AiIntentBar';
 import PorteCard from '../../components/deuxiemeAme/PorteCard';
 import MurmurCard from '../../components/deuxiemeAme/MurmurCard';
 import FadeIn from '../../components/ui/FadeIn';
-import { PORTES } from '../../data/deuxiemeAme';
+import {
+  PORTES, isPorteOpen, porteByRoute, openPortesCount,
+} from '../../data/deuxiemeAme';
 import { getIllustration } from '../../illustrations/registry';
 import { AME, MOTION } from '../../theme';
 
@@ -55,7 +57,10 @@ export default function DeuxiemeAmeHomeScreen({ navigation }) {
       ]);
       const events = discRes.data.events || [];
       const lanterns = events.filter((e) => e.capabilities?.isLantern);
-      setStats({ events: events.length - lanterns.length, lanterns: lanterns.length });
+      // Signal hero : Lanternes seulement — ne pas afficher le compteur
+      // « événements » tant que cette Porte est scellée (couche d'accès public).
+      // Les murmures ci-dessous restent NON filtrés : canal, pas Porte.
+      setStats({ lanterns: lanterns.length, showEvents: false });
       setMurmurs((murmRes.data.events || []).slice(0, 8));
       setSubscriptions(recRes.data.subscriptions || []);
     } finally {
@@ -67,12 +72,24 @@ export default function DeuxiemeAmeHomeScreen({ navigation }) {
   useFocusEffect(useCallback(() => { load(); refreshUnread(); }, [load, refreshUnread]));
 
   function openPorte(porte) {
+    if (!isPorteOpen(porte)) {
+      toast(porte.sealedHint || 'Cette Porte est encore scellée.');
+      return;
+    }
     navigation.navigate(porte.route);
   }
 
   function onSuggestion(s) {
-    if (s.route) navigation.navigate(s.route);
-    else toast('L\u2019assistant du quartier arrive bientôt');
+    if (s.route) {
+      const porte = porteByRoute(s.route);
+      if (porte && !isPorteOpen(porte)) {
+        toast(porte.sealedHint || 'Cette Porte est encore scellée.');
+        return;
+      }
+      navigation.navigate(s.route);
+      return;
+    }
+    toast('L\u2019assistant du quartier arrive bientôt');
   }
 
   async function toggleReception() {
@@ -128,8 +145,11 @@ export default function DeuxiemeAmeHomeScreen({ navigation }) {
         </FadeIn>
 
         <FadeIn delay={180} style={styles.portesHead}>
-          <Text style={styles.portesTitle}>Les portes d{"\u2019"}entrée</Text>
-          <Text style={styles.portesSub}>Six façons d{"\u2019"}entrer dans la vie du quartier</Text>
+          <Text style={styles.portesTitle}>Les Portes</Text>
+          <Text style={styles.portesSub}>
+            {PORTES.length} Portes · {openPortesCount()} ouverte
+            {openPortesCount() > 1 ? 's' : ''} — Les Lanternes ne sont que le premier chapitre
+          </Text>
         </FadeIn>
 
         <View style={styles.grid}>

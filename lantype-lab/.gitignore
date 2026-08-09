@@ -1,0 +1,8 @@
+node_modules
+dist
+.env
+.env.local
+*.log
+
+# Runtime CanvasKit copie depuis node_modules par scripts/copy-canvaskit.mjs
+public/canvaskit.wasm

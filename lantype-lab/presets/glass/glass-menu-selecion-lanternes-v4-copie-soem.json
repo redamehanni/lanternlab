@@ -1,0 +1,94 @@
+{
+  "id": "glass-menu-selecion-lanternes-v4-copie-soem",
+  "material": "glass",
+  "name": "Glass menu selecion lanternes V5",
+  "params": {
+    "aberration": {
+      "active": true,
+      "bordsSeuls": true,
+      "dynamique": 0.14,
+      "intensite": 1.29,
+      "largeur": 45,
+      "opacite": 1,
+      "orientation": 79,
+      "separation": 12.1
+    },
+    "animation": {
+      "active": true,
+      "amplitude": 0.28,
+      "derivAberration": 0.17,
+      "derivReflet": 0.25,
+      "levitation": 0,
+      "oscillation": 2.6,
+      "respiration": 0.066,
+      "vitesse": 0.94
+    },
+    "contours": {
+      "couleur": "#ff4000",
+      "epaisseur": 0,
+      "lumiereBord": 0,
+      "lumiereBordLargeur": 0.5,
+      "opacite": 0,
+      "portionEclairee": 0,
+      "tirets": 0
+    },
+    "depoli": {
+      "diffusion": 0,
+      "intensite": 0.93,
+      "qualite": 4,
+      "rayon": 6
+    },
+    "lumiere": {
+      "couleur": "#ff6600",
+      "diffusion": 0.4,
+      "halo": 0.31,
+      "intensite": 0.39,
+      "interaction": 0.19,
+      "lumiereExterne": 0.06,
+      "lumiereInterne": 0.05,
+      "temperature": 1
+    },
+    "matiere": {
+      "bruit": 0.295,
+      "bruitEchelle": 400,
+      "couleur": "#660000",
+      "epaisseur": 0.29,
+      "opaciteVerre": 0.14,
+      "rayon": 16,
+      "rugosite": 0.59,
+      "texture": 0,
+      "transparence": 1
+    },
+    "ombres": {
+      "externeCouleur": "#000000",
+      "externeDirection": 90,
+      "externeDistance": 14,
+      "externeFlou": 26,
+      "externeOpacite": 1,
+      "interneDirection": 270,
+      "interneDistance": 8,
+      "interneFlou": 18,
+      "interneOpacite": 0.22
+    },
+    "reflets": {
+      "angle": 24,
+      "couleur": "#ff5005",
+      "durete": 1,
+      "intensite": 0.07,
+      "largeur": 0.05,
+      "opacite": 0.31,
+      "position": [
+        1,
+        0.61
+      ]
+    },
+    "refraction": {
+      "bordsSeuls": true,
+      "douceur": 0,
+      "intensite": 35,
+      "largeur": 12,
+      "type": 1
+    }
+  },
+  "updatedAt": "2026-08-07T13:40:44.430Z"
+}

@@ -130,13 +130,43 @@ export function AppProvider({ children }) {
         const savedToken = await appStorage.getItem('token');
         const savedUser  = await appStorage.getItem('user');
         if (savedToken && savedUser) {
-          // Valider le JWT auprès de l'organe avant d'ouvrir la session :
-          // sinon l'UI croit être connectée alors que Mode Réception / sockets échouent.
-          const meRes = await fetch(`${API_URL}/api/users/me`, {
-            headers: { Authorization: `Bearer ${savedToken}` },
-          });
+          // Valider le JWT auprès de l'organe avant d'ouvrir la session.
+          // En cas d'erreur RÉSEAU : on garde la session locale (pas de logout).
+          // On ne purge que sur 401 / jeton refusé.
+          const ctrl = new AbortController();
+          const abortTimer = setTimeout(() => ctrl.abort(), 8000);
+          let meRes;
+          try {
+            meRes = await fetch(`${API_URL}/api/users/me`, {
+              headers: { Authorization: `Bearer ${savedToken}` },
+              signal: ctrl.signal,
+            });
+          } catch (netErr) {
+            console.warn('[Session] Réseau indisponible — session locale conservée', netErr?.message || netErr);
+            let localUser = null;
+            try {
+              localUser = JSON.parse(savedUser);
+            } catch {
+              localUser = null;
+            }
+            setToken(savedToken);
+            setUser(localUser);
+            if (localUser) connectSocket(savedToken, localUser);
+            const savedSoul = await appStorage.getItem('activeSoul');
+            if (savedSoul === 'second' || savedSoul === 'first') setActiveSoul(savedSoul);
+            return;
+          } finally {
+            clearTimeout(abortTimer);
+          }
           if (!meRes.ok) {
-            await appStorage.clear();
+            if (meRes.status === 401 || meRes.status === 403) {
+              await appStorage.clear();
+            } else {
+              // Autre erreur HTTP : garder la session locale
+              setToken(savedToken);
+              setUser(JSON.parse(savedUser));
+              connectSocket(savedToken, JSON.parse(savedUser));
+            }
             return;
           }
           const meData = await meRes.json();
@@ -150,7 +180,7 @@ export function AppProvider({ children }) {
         if (savedSoul === 'second' || savedSoul === 'first') setActiveSoul(savedSoul);
       } catch (e) {
         console.warn('Erreur restauration session', e);
-        await appStorage.clear().catch(() => {});
+        // Ne plus purger le storage ici : un fail réseau ne doit pas déconnecter.
       } finally {
         setLoading(false);
       }
