@@ -1,0 +1,132 @@
+{
+  "id": "lantern_golden_appel_20h17",
+  "slug": "appel-20h17",
+  "kind": "main",
+  "engineSchemaVersion": 1,
+  "contentVersion": 1,
+  "status": "draft",
+  "timezone": "Europe/Paris",
+  "title": "Golden Test — Appel 20h17",
+  "mediaItems": [
+    {
+      "id": "note_batisseur",
+      "label": "Note du Bâtisseur",
+      "skin": "letter",
+      "contentId": "content_note_batisseur",
+      "policy": "displayed"
+    },
+    {
+      "id": "cassette",
+      "label": "Cassette",
+      "skin": "cassette",
+      "contentId": "content_cassette",
+      "policy": "unlockable"
+    }
+  ],
+  "mediaContents": [
+    { "id": "audio_appel_20h17", "kind": "audio", "label": "Appel 20h17" }
+  ],
+  "variables": [
+    {
+      "id": "appel_20h17_deja_recu",
+      "label": "Appel 20h17 déjà reçu",
+      "valueType": "boolean",
+      "defaultValue": false,
+      "scope": "run"
+    },
+    {
+      "id": "phone_call_01_missed",
+      "label": "Appel 20h17 manqué",
+      "valueType": "boolean",
+      "defaultValue": false,
+      "scope": "run"
+    }
+  ],
+  "zones": [
+    {
+      "id": "bureau",
+      "label": "Bureau",
+      "kind": "circle",
+      "center": { "lat": 48.8606, "lng": 2.3376 },
+      "radiusM": 80
+    }
+  ],
+  "rules": [
+    {
+      "id": "rule_appel_20h17",
+      "title": "Appel téléphone 20h17 au Bureau",
+      "enabled": true,
+      "priority": 200,
+      "listen": ["time.schedule"],
+      "condition": {
+        "op": "and",
+        "children": [
+          { "type": "event.payloadEquals", "key": "scheduleId", "value": "appel_20h17" },
+          { "type": "media.consumed", "mediaItemId": "cassette" },
+          { "type": "geo.inZone", "zoneId": "bureau" },
+          { "type": "time.equalsMinute", "at": "20:17", "timezone": "Europe/Paris" },
+          { "type": "var.equals", "varId": "appel_20h17_deja_recu", "value": false }
+        ]
+      },
+      "actions": [
+        {
+          "id": "act_ring_phone",
+          "type": "device.ringPhone",
+          "params": { "deviceId": "phone", "label": "Appel 20h17" }
+        },
+        {
+          "id": "act_play_appel",
+          "type": "media.play",
+          "params": { "mediaContentId": "audio_appel_20h17", "label": "Appel_20h17" },
+          "delayMs": 800,
+          "waitFor": "media_end"
+        },
+        {
+          "id": "act_mark_received",
+          "type": "var.set",
+          "params": { "varId": "appel_20h17_deja_recu", "value": true }
+        }
+      ],
+      "occurrence": {
+        "kind": "once_per_run",
+        "missPolicy": "expire",
+        "schedule": {
+          "mode": "once",
+          "timezone": "Europe/Paris",
+          "at": "20:17",
+          "missPolicy": "expire"
+        }
+      }
+    },
+    {
+      "id": "rule_appel_20h17_miss_flag",
+      "title": "Marquer appel 20h17 manqué",
+      "enabled": true,
+      "priority": 50,
+      "listen": ["time.schedule"],
+      "condition": {
+        "op": "and",
+        "children": [
+          { "type": "event.payloadEquals", "key": "scheduleId", "value": "appel_20h17" },
+          { "type": "time.equalsMinute", "at": "20:17", "timezone": "Europe/Paris" },
+          { "type": "var.equals", "varId": "appel_20h17_deja_recu", "value": false },
+          {
+            "op": "not",
+            "child": { "type": "geo.inZone", "zoneId": "bureau" }
+          }
+        ]
+      },
+      "actions": [
+        {
+          "id": "act_mark_missed",
+          "type": "var.set",
+          "params": { "varId": "phone_call_01_missed", "value": true }
+        }
+      ],
+      "occurrence": {
+        "kind": "once_per_run",
+        "missPolicy": "expire"
+      }
+    }
+  ]
+}

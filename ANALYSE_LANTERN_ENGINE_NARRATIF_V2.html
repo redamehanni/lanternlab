@@ -1,0 +1,537 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="utf-8" />
+<title>Lantern Engine — Analyse narrative V2</title>
+<style>
+  @page { size: A4; margin: 16mm 14mm; }
+  :root {
+    --ink: #1a1520;
+    --muted: #5c5366;
+    --line: #d8d0c4;
+    --accent: #b45309;
+    --bg: #faf7f2;
+    --card: #ffffff;
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0;
+    font-family: "Iowan Old Style", "Palatino Linotype", Palatino, Georgia, serif;
+    color: var(--ink);
+    background: var(--bg);
+    font-size: 10.5pt;
+    line-height: 1.42;
+  }
+  .page {
+    max-width: 720px;
+    margin: 0 auto;
+    padding: 24px 8px 40px;
+  }
+  header.doc-head {
+    border-bottom: 2px solid var(--ink);
+    padding-bottom: 12px;
+    margin-bottom: 18px;
+  }
+  .eyebrow {
+    font-family: "IBM Plex Sans", "Helvetica Neue", Arial, sans-serif;
+    font-size: 10px;
+    letter-spacing: 0.14em;
+    text-transform: uppercase;
+    color: var(--accent);
+    margin: 0 0 8px;
+  }
+  h1 {
+    font-size: 22pt;
+    line-height: 1.15;
+    margin: 0 0 8px;
+    font-weight: 700;
+  }
+  .subtitle {
+    margin: 0;
+    color: var(--muted);
+    font-size: 10.5pt;
+  }
+  .meta {
+    margin-top: 10px;
+    font-family: "IBM Plex Sans", "Helvetica Neue", Arial, sans-serif;
+    font-size: 9pt;
+    color: var(--muted);
+  }
+  h2 {
+    font-size: 13pt;
+    margin: 22px 0 8px;
+    padding-top: 6px;
+    border-top: 1px solid var(--line);
+    page-break-after: avoid;
+  }
+  h3 {
+    font-size: 11pt;
+    margin: 14px 0 6px;
+    page-break-after: avoid;
+  }
+  p { margin: 0 0 8px; }
+  ul, ol { margin: 0 0 10px; padding-left: 1.2em; }
+  li { margin-bottom: 3px; }
+  strong { font-weight: 700; }
+  code {
+    font-family: "IBM Plex Mono", Menlo, Consolas, monospace;
+    font-size: 8.5pt;
+    background: #efe9df;
+    padding: 1px 4px;
+    border-radius: 3px;
+  }
+  table {
+    width: 100%;
+    border-collapse: collapse;
+    margin: 8px 0 12px;
+    font-size: 8.5pt;
+    font-family: "IBM Plex Sans", "Helvetica Neue", Arial, sans-serif;
+    page-break-inside: avoid;
+  }
+  th, td {
+    border: 1px solid var(--line);
+    padding: 5px 6px;
+    text-align: left;
+    vertical-align: top;
+  }
+  th { background: #efe9df; font-weight: 600; }
+  .callout {
+    background: var(--card);
+    border: 1px solid var(--line);
+    border-left: 4px solid var(--accent);
+    padding: 10px 12px;
+    margin: 10px 0 12px;
+    page-break-inside: avoid;
+  }
+  .flow {
+    font-family: "IBM Plex Sans", "Helvetica Neue", Arial, sans-serif;
+    font-size: 9.5pt;
+    background: #efe9df;
+    padding: 10px 12px;
+    margin: 8px 0 12px;
+    border-radius: 4px;
+    page-break-inside: avoid;
+  }
+  .flow .arrow { color: var(--accent); font-weight: 700; }
+  .diagram {
+    font-family: "IBM Plex Mono", Menlo, Consolas, monospace;
+    font-size: 7.8pt;
+    line-height: 1.32;
+    background: #1a1520;
+    color: #f3ead2;
+    padding: 12px 14px;
+    margin: 8px 0 12px;
+    white-space: pre;
+    overflow: hidden;
+    page-break-inside: avoid;
+  }
+  .verdict {
+    background: #1a1520;
+    color: #f3ead2;
+    padding: 14px 16px;
+    margin: 16px 0;
+    page-break-inside: avoid;
+  }
+  .verdict h2 {
+    border: none;
+    color: #e8a830;
+    margin-top: 0;
+    padding-top: 0;
+  }
+  .verdict p { color: #f3ead2; }
+  footer {
+    margin-top: 24px;
+    padding-top: 8px;
+    border-top: 1px solid var(--line);
+    font-family: "IBM Plex Sans", "Helvetica Neue", Arial, sans-serif;
+    font-size: 8.5pt;
+    color: var(--muted);
+  }
+  @media print {
+    body { background: white; }
+    .page { padding: 0; max-width: none; }
+  }
+</style>
+</head>
+<body>
+<div class="page">
+  <header class="doc-head">
+    <p class="eyebrow">Ma Zone · Deuxième Âme · Document d’analyse V2</p>
+    <h1>Lantern Engine narratif &amp; Lantern Lab</h1>
+    <p class="subtitle">De Trigger → Effect à un moteur de logique narrative générique — atelier du Bâtisseur.</p>
+    <p class="meta">
+      Date : 9 août 2026 · Statut : analyse (pré-implémentation) · Destinataires : Reda / Adam<br />
+      Complète : <code>ANALYSE_ARCHITECTURE_LANTERN_ENGINE</code> · Conserve Definition / Runtime · MediaContent ≠ MediaItem<br />
+      Principe : aucune branche <code>if (lanternId === …)</code> — une Lanterne = données versionnées, pas du code.
+    </p>
+  </header>
+
+  <h2>1. Verdict</h2>
+  <p>Les fondations de l’analyse du 9 août restent valides : organe <strong>Lantern Engine</strong> distinct de l’Event Engine, séparation Definition / Runtime, MediaContent ≠ MediaItem, Atelier shell, objets permanents, Porte Rouge, SchedulePolicy, bridge badge.</p>
+  <p>La limite Trigger → Effect ne suffit plus. On introduit une couche <strong>Story / State Engine</strong> dont l’unité d’exécution est la <strong>Rule</strong> :</p>
+  <div class="flow">
+    Événement / Trigger
+    <span class="arrow">→</span> mise à jour d’état
+    <span class="arrow">→</span> évaluation des conditions (AND / OR / NOT)
+    <span class="arrow">→</span> exécution d’actions ordonnées
+  </div>
+  <div class="callout">
+    <strong>Décisions figées pour validation :</strong>
+    Lab = app web <code>lantern-lab/</code> (≠ Material Lab <code>lantype-lab/</code>) ;
+    évaluation <strong>serveur-autoritaire</strong> ;
+    <strong>Rule</strong> = vérité logique ;
+    Arbre de Situation = projection éditable + layout (pas un second moteur) ;
+    scopes d’état : <code>player</code> | <code>team</code> | <code>run</code>.
+  </div>
+
+  <h2>2. Ce qui change vs l’analyse V1</h2>
+  <table>
+    <thead>
+      <tr><th>Avant (V1)</th><th>Après (V2 narratif)</th></tr>
+    </thead>
+    <tbody>
+      <tr>
+        <td><code>Trigger { type, params, effects[] }</code></td>
+        <td>Trigger <strong>émet un Event</strong> — ne porte plus les effets</td>
+      </tr>
+      <tr>
+        <td><code>Effect</code></td>
+        <td>Généralisé en <strong>Action</strong> (catalogue extensible)</td>
+      </tr>
+      <tr>
+        <td>—</td>
+        <td><strong>ConditionExpr</strong> (AST) entre Event et Actions</td>
+      </tr>
+      <tr>
+        <td>Flags ad hoc (<code>setFlag</code>)</td>
+        <td><strong>Variables déclarées</strong> dans la Definition</td>
+      </tr>
+      <tr>
+        <td>Graphe Triggers → Effects</td>
+        <td><strong>Rules</strong> + vues Lab (Arbre, Timeline, Carte, Médias, Simulateur, Audit)</td>
+      </tr>
+    </tbody>
+  </table>
+  <p>Compatibilité : une ancienne paire Trigger → Effect = Rule avec <code>condition: { op: 'true' }</code> et <code>actions = effects</code>.</p>
+
+  <div class="diagram">LANTERN DEFINITION (versionnée)
+        │
+        ▼
+ STORY / STATE ENGINE
+   ├── TRIGGERS ──► Events
+   ├── VARIABLES / STATE
+   └── RULES
+         │  listen + ConditionExpr + Actions[]
+         ▼
+   MEDIA · ATELIER · WORLD (GPS / temps / beacons)
+
+LANTERN LAB
+  Éditeur · Arbre · Timeline · Carte · Médias · Simulateur · Audit</div>
+
+  <h2>3. Exemple central — Talkie Magellan</h2>
+  <p>Item Média « Talkie-Walkie » découvert rue Magellan. Même événement, expériences différentes selon zone + fenêtre horaire. Le moteur ne connaît ni Monsieur X, ni Monsieur Y, ni Madame V — uniquement des briques génériques.</p>
+  <table>
+    <thead>
+      <tr><th>Rule</th><th>Conditions (ET)</th><th>Actions</th></tr>
+    </thead>
+    <tbody>
+      <tr>
+        <td>A</td>
+        <td>Talkie découvert · zone 11e|13e · 17h00–17h15</td>
+        <td>Sonner talkie → audio Monsieur X</td>
+      </tr>
+      <tr>
+        <td>B</td>
+        <td>Talkie découvert · zone 1er|3e · 17h00–17h15</td>
+        <td>Sonner talkie → audio Monsieur Y</td>
+      </tr>
+      <tr>
+        <td>C</td>
+        <td>Talkie découvert · zone 7e|17e · 17h00–17h15</td>
+        <td>Sonner talkie → audio Madame V</td>
+      </tr>
+    </tbody>
+  </table>
+  <p>Implémentation données : <strong>3 Rules</strong> avec le même <code>listen: ['media.discovered']</code>, conditions de zones différentes, actions audio différentes. Si le modèle ne peut pas exprimer Magellan sans code spécifique, l’architecture est refusée.</p>
+
+  <h2>4. Modèle Condition</h2>
+  <h3>4.1 AST</h3>
+  <div class="diagram">ConditionExpr =
+  | { op: 'true' }
+  | { op: 'and', children: ConditionExpr[] }   // ET
+  | { op: 'or',  children: ConditionExpr[] }   // OU
+  | { op: 'not', child: ConditionExpr }        // NON
+  | Predicate                                   // feuille</div>
+  <p>Groupes imbriqués = nesting naturel. Exemple Magellan (11e / 13e) :</p>
+  <div class="diagram">{
+  "op": "and",
+  "children": [
+    { "type": "media.discovered", "mediaItemId": "talkie_magellan" },
+    { "type": "geo.inAnyZone", "zoneIds": ["arr_11", "arr_13"] },
+    { "type": "time.inWindow", "start": "17:00", "end": "17:15",
+      "timezone": "Europe/Paris" }
+  ]
+}</div>
+  <h3>4.2 Catalogue Predicates v1 (registre Open/Closed)</h3>
+  <table>
+    <thead><tr><th>Famille</th><th>Types</th></tr></thead>
+    <tbody>
+      <tr><td>Médias</td><td><code>media.discovered</code>, <code>consumed</code>, <code>visible</code>, <code>unlocked</code></td></tr>
+      <tr><td>Progression</td><td><code>step.equals</code>, <code>step.gte</code>, <code>step.lt</code></td></tr>
+      <tr><td>Variables</td><td><code>var.equals</code>, <code>var.truthy</code>, <code>var.compare</code></td></tr>
+      <tr><td>Choix</td><td><code>choice.equals</code></td></tr>
+      <tr><td>Geo</td><td><code>geo.inZone</code>, <code>geo.inAnyZone</code>, <code>geo.outsideZone</code></td></tr>
+      <tr><td>Temps</td><td><code>time.inWindow</code>, <code>time.equalsMinute</code>, <code>date.on</code>, <code>date.inRange</code>, <code>weekday.in</code></td></tr>
+      <tr><td>Beacons</td><td><code>beacon.scanned</code>, <code>beacon.scannedOnce</code></td></tr>
+      <tr><td>Objets / équipe</td><td><code>object.stateEquals</code>, <code>team.varEquals</code>, <code>team.sizeGte</code></td></tr>
+      <tr><td>Événements</td><td><code>event.occurred</code>, <code>event.missed</code>, <code>occurrence.count</code></td></tr>
+    </tbody>
+  </table>
+  <p>Nouveau predicate = nouveau <code>type</code> + handler + entrée Lab. Type inconnu : lint erreur à l’édition ; fail-safe <code>false</code> en runtime + journal.</p>
+
+  <h2>5. Modèle Action</h2>
+  <div class="diagram">Action = {
+  id, type, params,
+  delayMs?,                          // « sonner puis audio »
+  waitFor?: 'none' | 'ui_ack' | 'media_end'
+}</div>
+  <p>Une Rule porte <code>actions[]</code> ordonnées, exécutées en série. <code>Effect</code> (V1) = alias documentaire de <code>Action</code>.</p>
+  <table>
+    <thead><tr><th>Famille</th><th>Types v1</th></tr></thead>
+    <tbody>
+      <tr><td>Médias</td><td><code>media.unlock</code>, <code>showItem</code>, <code>hideItem</code>, <code>play</code>, <code>openCard</code>, <code>closeCard</code></td></tr>
+      <tr><td>Devices</td><td><code>device.ringPhone</code>, <code>device.ringTalkie</code>, <code>device.playRadio</code></td></tr>
+      <tr><td>UX</td><td><code>ui.notify</code>, <code>ui.message</code>, <code>ui.openCorrectedSheet</code></td></tr>
+      <tr><td>État</td><td><code>var.set</code>, <code>var.increment</code>, <code>step.set</code>, <code>step.advance</code>, <code>object.setState</code>, <code>choice.record</code></td></tr>
+      <tr><td>Flux</td><td><code>event.emit</code>, <code>sequence.start</code>, <code>rule.disable</code>, <code>rule.enable</code></td></tr>
+      <tr><td>Monde</td><td><code>reward.grant</code>, <code>badge.importDiscover</code> (bridge Event Engine)</td></tr>
+    </tbody>
+  </table>
+  <p>Action inconnue → skip + warning journal (jamais de crash joueur). Params validés par JSON Schema par type.</p>
+
+  <h2>6. Modèle Variable</h2>
+  <div class="diagram">VariableDef = {
+  id, label,
+  valueType: 'boolean' | 'number' | 'string' | 'enum',
+  enumValues?, defaultValue,
+  scope: 'player' | 'team' | 'run'
+}</div>
+  <p>Valeurs dans <code>RuntimeState.vars</code>. Structures système adressables en predicates (pas des variables Lab) : <code>mediaStates</code>, <code>step</code>, <code>choices</code>, <code>objectStates</code>, <code>occurrenceLedger</code>, <code>beaconsScanned</code>.</p>
+  <p><strong>Recommandation Lab :</strong> predicates système pour les médias ; variables pour les flags narratifs (<code>appel_20h17_deja_recu</code>, <code>choice_02</code>).</p>
+
+  <h2>7. Modèle Trigger &amp; Event</h2>
+  <p>Trigger = détecteur. Il n’embarque plus les effets.</p>
+  <table>
+    <thead><tr><th>Famille</th><th>Types</th></tr></thead>
+    <tbody>
+      <tr><td>Médias</td><td><code>media.discovered</code>, <code>media.consumed</code>, <code>media.opened</code></td></tr>
+      <tr><td>Beacons</td><td><code>beacon.qr</code>, <code>beacon.nfc</code></td></tr>
+      <tr><td>Geo</td><td><code>geo.enter</code>, <code>geo.exit</code>, <code>geo.heartbeat</code></td></tr>
+      <tr><td>Temps</td><td><code>time.schedule</code></td></tr>
+      <tr><td>État</td><td><code>step.changed</code>, <code>var.changed</code>, <code>choice.made</code>, <code>object.interacted</code></td></tr>
+      <tr><td>Run</td><td><code>run.started</code>, <code>porte.unlocked</code>, <code>manual.simulate</code> (Lab)</td></tr>
+    </tbody>
+  </table>
+  <div class="diagram">LanternEvent = {
+  type, at (ISO UTC), actorId, teamId?,
+  payload, source: 'mobile' | 'scheduler' | 'lab_sim' | 'system'
+}</div>
+
+  <h2>8. Rule &amp; moteur d’évaluation</h2>
+  <div class="diagram">Rule = {
+  id, title, enabled, priority,
+  situationId?,          // grouping Arbre
+  listen: string[],      // event types candidats
+  condition: ConditionExpr,
+  actions: Action[],
+  occurrence: OccurrencePolicy
+}</div>
+  <h3>8.1 Boucle</h3>
+  <div class="diagram">handleEvent(event, def, runtime):
+  1. INTRINSIC_UPDATE (media, beacon, geo, journal)
+  2. CANDIDATES = rules enabled ∩ listen ∩ occurrence OK
+  3. Sort priority desc, id asc
+  4. Pour chaque candidate :
+       si eval(condition, Context) → mark + executeActions
+  5. RECURSE events émis (depthMax ≈ 8, ruleFireBudget)
+  6. Persist runtime + ActionPlan → mobile</div>
+  <p><code>EvalContext = { definition, runtime, event, now, lat, lng, resolvedZones[] }</code> — <strong>identique</strong> en production et en simulateur. Déterminisme : mêmes entrées → mêmes Actions. Timezone par défaut <code>Europe/Paris</code>.</p>
+
+  <h2>9. AND / OR / NOT</h2>
+  <ul>
+    <li><code>and</code> : tous vrais (enfants vides = true)</li>
+    <li><code>or</code> : au moins un vrai (enfants vides = false)</li>
+    <li><code>not</code> : inverse</li>
+    <li>Short-circuit autorisé ; le simulateur journalise chaque feuille (✓ / ✗)</li>
+  </ul>
+  <p>Pas de DSL texte obligatoire. Le Lab édite l’AST via groupes + briques.</p>
+
+  <h2>10. Temps, GPS, QR / NFC, unique / récurrent</h2>
+  <h3>10.1 SchedulePolicy</h3>
+  <div class="diagram">SchedulePolicy = {
+  mode: 'once' | 'daily' | 'weekly' | 'dateRange',
+  timezone, at?, window?, daysOfWeek?, startDate?, endDate?,
+  missPolicy: 'expire' | 'skip_wait_next' | 'deliver_late'
+}</div>
+  <p>Job serveur (cron minute) + ledger <code>occurrenceLedger[ruleId]</code> : <code>lastFiredAt</code>, <code>missedAt[]</code>, <code>nextDueAt</code>, <code>exhausted</code>.</p>
+  <p><strong>Appel 20h17 unique</strong> : Note consultée + Cassette consommée + zone Bureau + heure 20h17 + <code>appel_20h17_deja_recu = false</code> → sonner téléphone → audio → <code>var.set true</code>. Si absent : <code>missPolicy: expire</code> → événement manqué, non récupérable. Si quotidien : <code>daily</code> + <code>skip_wait_next</code> → prochaine occurrence.</p>
+
+  <h3>10.2 GeoZone</h3>
+  <div class="diagram">GeoZone = {
+  id, label,
+  kind: 'circle' | 'polygon' | 'arrondissement'
+  // circle: center + radiusM
+  // polygon: coordinates
+  // arrondissement: Paris 1..20
+}</div>
+  <p>Mobile envoie la position ; <strong>serveur revalide</strong> (Haversine + polygones). Pas de geofence OS obligatoire en v1 (polling / heartbeat).</p>
+
+  <h3>10.3 Beacon</h3>
+  <div class="diagram">Beacon = {
+  id, channel: 'qr' | 'nfc', tokenId opaque,
+  bindsTo?: { mediaItemId?, placeLabel? }
+}</div>
+  <p>Scan → <code>POST /api/lanterns/:runId/events</code>. NFC = même contrat (stub). Bridge Event Engine via Action <code>badge.importDiscover</code>.</p>
+
+  <h3>10.4 OccurrencePolicy</h3>
+  <div class="diagram">OccurrencePolicy = {
+  kind: 'always' | 'once_per_run' | 'once_per_player' | 'once_per_team'
+      | 'once_per_occurrence' | 'daily' | 'cron',
+  schedule?, missPolicy?, maxFires?
+}</div>
+
+  <h2>11. Lantern Lab — atelier du Bâtisseur</h2>
+  <p>App web <code>lantern-lab/</code> (Vite/React), auth admin. <strong>Ce n’est pas</strong> le Material Lab (<code>lantype-lab/</code> = DA verre uniquement).</p>
+  <h3>11.1 Shell</h3>
+  <ul>
+    <li><strong>Barre projet</strong> : titre, kind, status, version, Publish, Lint</li>
+    <li><strong>Rail gauche</strong> : Médias, Items, Zones, Beacons, Variables, Objets, Équipe</li>
+    <li><strong>Centre</strong> : vues à onglets</li>
+    <li><strong>Droite</strong> : Inspecteur contextuel (toujours visible)</li>
+  </ul>
+  <h3>11.2 Onglets</h3>
+  <ol>
+    <li>Histoire / Étapes / Objectifs</li>
+    <li><strong>Arbre de Situation</strong> — conception logique principale</li>
+    <li><strong>Timeline</strong> — fenêtres, appels, expirations, récurrences</li>
+    <li><strong>Carte</strong> — QR, NFC, zones GPS, POI</li>
+    <li><strong>Médias</strong> — Content ↔ Item ↔ Rules</li>
+    <li><strong>Simulateur</strong> — état joueur injecté → SIMULER → trace</li>
+    <li>Audit (diagnostics)</li>
+    <li>Publication / Archivage / Corrigé / Porte Rouge</li>
+  </ol>
+
+  <h2>12. Arbre de Situation</h2>
+  <p>Projection éditable des Rules + layout. <strong>Pas une seconde source de vérité.</strong></p>
+  <div class="diagram">Situation = {
+  id, label, kind: beat|branch|gate|action_chain|start|end,
+  ruleIds[], parentId?, position {x,y}
+}
+SituationEdge = { from, to, label?, derivedFrom? }</div>
+  <div class="diagram">TALKIE DÉCOUVERT
+        │
+        ▼
+ HEURE 17h00–17h15 ?
+        │
+        ▼
+   QUELLE ZONE ?
+   ├── 1er / 3e  → Monsieur Y
+   ├── 7e / 17e  → Madame V
+   └── 11e / 13e → Monsieur X</div>
+  <p>Clic nœud → Inspecteur : id, type, conditions, actions, médias, variables, horaires, zones, dépendances. Le créateur modifie la Rule sous-jacente.</p>
+
+  <h2>13. Timeline, Carte, Vue Médias, Simulateur</h2>
+  <ul>
+    <li><strong>Timeline</strong> : événements ponctuels / récurrents, appels téléphone &amp; talkie, radio, médias temporaires, expirations, fenêtres horaires.</li>
+    <li><strong>Carte</strong> : balises QR/NFC, zones GPS, lieux, déclencheurs géo, zones radio.</li>
+    <li><strong>Médias</strong> : type, Item, état, déclencheur, durée, conditions, actions liées.</li>
+    <li><strong>Simulateur</strong> : position, heure, date, étape, médias, variables, choix, équipe → même moteur d’eval, <code>source: lab_sim</code>, trace feuille par feuille + ActionPlan. Pas de Wallet / push réels.</li>
+  </ul>
+
+  <h2>14. Liaison des vues — SelectionContext</h2>
+  <p>Objet partagé <code>{ ruleId?, mediaItemId?, zoneId?, beaconId?, situationId?, timeCursor? }</code>. Une sélection dans une vue met en évidence les entités liées partout ailleurs. Un seul Inspecteur — pas de formulaires dupliqués divergents.</p>
+
+  <h2>15. Audit narratif (lint)</h2>
+  <table>
+    <thead><tr><th>Code</th><th>Détection</th></tr></thead>
+    <tbody>
+      <tr><td><code>IMPOSSIBLE_TIME</code></td><td>Fenêtres / comparaisons contradictoires dans un <code>and</code></td></tr>
+      <tr><td><code>IMPOSSIBLE_GEO</code></td><td><code>inZone(A)</code> et <code>outsideZone(A)</code> ; zone vide</td></tr>
+      <tr><td><code>UNREACHABLE_MEDIA</code></td><td>Média jamais débloqué / imposé / découvrable</td></tr>
+      <tr><td><code>DEAD_BRANCH</code></td><td>Rule sans actions ni suite</td></tr>
+      <tr><td><code>MISSING_DEP</code></td><td>Ref média / var / zone / beacon / objet absente</td></tr>
+      <tr><td><code>ACTION_INVALID</code></td><td>Type inconnu ou params invalides</td></tr>
+      <tr><td><code>CONDITION_UNSAT</code></td><td>Condition jamais satisfiable</td></tr>
+      <tr><td><code>LOOP_UNGUARDED</code></td><td>Cycle Rule→Rule sans garde once / not var</td></tr>
+      <tr><td><code>OCCURRENCE_CONFLICT</code></td><td>once + daily mal configurés</td></tr>
+    </tbody>
+  </table>
+  <p>Publish <strong>bloqué</strong> si diagnostics <code>error</code>. Filet runtime : <code>depthMax</code> + <code>ruleFireBudget</code>.</p>
+  <p><strong>Boucles :</strong> graphe Rule A → Rule B si une Action de A peut émettre un Event écouté par B. Cycle sans garde = erreur bloquante.</p>
+
+  <h2>16. Versioning &amp; évolution sans casser</h2>
+  <div class="diagram">LanternDefinition {
+  id, slug, kind: main|bonus,
+  engineSchemaVersion,   // breaking moteur
+  contentVersion,        // incrément publish
+  status: draft|published|archived,
+  // media, items, zones, beacons, variables,
+  // rules, situations, atelier, porte, corrigé…
+}</div>
+  <ul>
+    <li>Draft mutable · Publish = snapshot immuable · Runs pinés sur leur <code>contentVersion</code></li>
+    <li>Registres predicates / actions versionnés (<code>introducedInSchema</code>, <code>deprecatedInSchema</code>)</li>
+    <li>Fail-soft sur types inconnus · migrations Lab « Upgrade definition »</li>
+    <li>Golden tests : fixtures Magellan + Appel 20h17 (données, pas code Lanterne)</li>
+  </ul>
+
+  <h2>17. Lisibilité à grande complexité</h2>
+  <ul>
+    <li>Situations = chapitres (collapse, focus sous-arbre, breadcrumb)</li>
+    <li>Filtres : média, zone, fenêtre, variable, type trigger</li>
+    <li>Recherche globale · mode lecture vs technique</li>
+    <li>Edges en langage naturel (« 11e ou 13e »)</li>
+    <li>Templates de patterns (fenêtre+zone+audio ; appel unique ; NFC unlock)</li>
+    <li>Warning si trop de Rules sans Situation parente</li>
+  </ul>
+
+  <h2>18. Ajouts vs architecture actuelle</h2>
+  <table>
+    <thead><tr><th>À ajouter</th><th>Rôle</th></tr></thead>
+    <tbody>
+      <tr><td><code>backend/src/lib/lanternEngine/</code></td><td>Story/State Engine, registries, lint, scheduler</td></tr>
+      <tr><td>Tables</td><td>definitions, versions, runs, runtime_state, journal, occurrence_ledger, teams</td></tr>
+      <tr><td>API</td><td>CRUD draft, publish, start run, post event, get runtime, simulate</td></tr>
+      <tr><td><code>lantern-lab/</code></td><td>Atelier créateur</td></tr>
+      <tr><td>JSON Schemas</td><td>Definition, Condition, Action, Rule</td></tr>
+    </tbody>
+  </table>
+  <p><strong>Conserver / brancher sans fusionner :</strong> Event Engine <code>type:lanterne</code> (badge) · Porte lanternes + glass Material Lab · <code>geo.distanceKm</code> · Orchestration intents après décision narrative · Identity handles pour tokens beacon.</p>
+  <p><strong>Ne pas faire :</strong> logique ARG dans <code>lantype-lab/</code> ou Event Engine · Rules Magellan en JS · Arbre comme second moteur · geofence OS en dépendance v1.</p>
+
+  <h2>19. Pipeline post-validation (pas maintenant)</h2>
+  <ol>
+    <li><strong>E0</strong> — Schémas + organe eval + tests Magellan / 20h17 (sans UI)</li>
+    <li><strong>E1</strong> — Runtime persisté + API events + occurrence / miss</li>
+    <li><strong>E2</strong> — Shell mobile Atelier + actions device / media</li>
+    <li><strong>E3</strong> — Beacons QR + geo zones</li>
+    <li><strong>E4</strong> — Scheduler temporel</li>
+    <li><strong>E5</strong> — Lab : bibliothèques + Arbre + Inspecteur + lint</li>
+    <li><strong>E6</strong> — Timeline + Carte + Médias + Simulateur</li>
+    <li><strong>E7</strong> — Publish versionné + Porte Rouge + corrigé + bridge badge</li>
+  </ol>
+
+  <div class="verdict">
+    <h2>20. Principe directeur</h2>
+    <p>Le <strong>développeur</strong> construit le moteur générique (predicates, actions, eval, lint).</p>
+    <p>Le <strong>créateur</strong> construit les aventures dans le Lantern Lab — sans jamais demander « programme une condition spéciale pour la Lanterne 27 ».</p>
+    <p>Le Lantern Engine doit être assez puissant pour des ARG complexes ; le Lantern Lab assez intuitif pour que le Bâtisseur les compose. Une nouvelle Lanterne = une nouvelle Definition publiée — jamais une nouvelle fonctionnalité codée.</p>
+    <p><strong>Aucune implémentation avant validation explicite de cette architecture V2.</strong></p>
+  </div>
+
+  <footer>
+    Ma Zone — Analyse Lantern Engine narratif V2 · 9 août 2026 · Complète ANALYSE_ARCHITECTURE_LANTERN_ENGINE · Ne remplace pas une fiche FD validée
+  </footer>
+</div>
+</body>
+</html>

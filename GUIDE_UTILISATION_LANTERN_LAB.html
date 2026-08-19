@@ -1,0 +1,778 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="utf-8" />
+<title>Guide d’utilisation — Lantern Lab</title>
+<style>
+  @page { size: A4; margin: 15mm 14mm; }
+  :root {
+    --ink: #1a1520;
+    --muted: #5c5366;
+    --line: #d8d0c4;
+    --accent: #b45309;
+    --bg: #faf7f2;
+    --card: #ffffff;
+    --ok: #166534;
+    --warn: #92400e;
+    --info: #1e3a5f;
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0;
+    font-family: "Iowan Old Style", "Palatino Linotype", Palatino, Georgia, serif;
+    color: var(--ink);
+    background: var(--bg);
+    font-size: 10.2pt;
+    line-height: 1.42;
+  }
+  .page { max-width: 740px; margin: 0 auto; padding: 20px 8px 48px; }
+  header.doc-head {
+    border-bottom: 2px solid var(--ink);
+    padding-bottom: 12px;
+    margin-bottom: 18px;
+  }
+  .eyebrow {
+    font-family: "IBM Plex Sans", "Helvetica Neue", Arial, sans-serif;
+    font-size: 9.5px;
+    letter-spacing: 0.14em;
+    text-transform: uppercase;
+    color: var(--accent);
+    margin: 0 0 8px;
+  }
+  h1 { font-size: 20pt; line-height: 1.15; margin: 0 0 8px; font-weight: 700; }
+  .subtitle { margin: 0; color: var(--muted); font-size: 10.5pt; }
+  .meta {
+    margin-top: 10px;
+    font-family: "IBM Plex Sans", "Helvetica Neue", Arial, sans-serif;
+    font-size: 8.5pt;
+    color: var(--muted);
+  }
+  h2 {
+    font-size: 12.5pt;
+    margin: 22px 0 8px;
+    padding-top: 8px;
+    border-top: 1px solid var(--line);
+    page-break-after: avoid;
+  }
+  h3 {
+    font-size: 11pt;
+    margin: 14px 0 6px;
+    color: var(--info);
+    page-break-after: avoid;
+  }
+  h4 {
+    font-size: 10pt;
+    margin: 10px 0 4px;
+    font-family: "IBM Plex Sans", "Helvetica Neue", Arial, sans-serif;
+  }
+  p { margin: 0 0 8px; }
+  ul, ol { margin: 0 0 10px; padding-left: 1.25em; }
+  li { margin-bottom: 3px; }
+  .toc {
+    background: var(--card);
+    border: 1px solid var(--line);
+    border-radius: 8px;
+    padding: 14px 16px;
+    margin: 14px 0 20px;
+    font-family: "IBM Plex Sans", "Helvetica Neue", Arial, sans-serif;
+    font-size: 9.5pt;
+  }
+  .toc ol { margin: 0; padding-left: 1.3em; }
+  .toc a { color: var(--ink); text-decoration: none; }
+  .callout {
+    border-left: 3px solid var(--accent);
+    background: #fff8ef;
+    padding: 8px 12px;
+    margin: 10px 0 12px;
+    font-size: 9.8pt;
+  }
+  .callout.info { border-color: #3b82f6; background: #eff6ff; }
+  .callout.ok { border-color: var(--ok); background: #f0fdf4; }
+  .callout.warn { border-color: var(--warn); background: #fffbeb; }
+  .panel {
+    background: var(--card);
+    border: 1px solid var(--line);
+    border-radius: 8px;
+    padding: 10px 12px;
+    margin: 8px 0 12px;
+  }
+  .panel .label {
+    font-family: "IBM Plex Sans", "Helvetica Neue", Arial, sans-serif;
+    font-size: 8pt;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    color: var(--accent);
+    margin: 0 0 6px;
+  }
+  table {
+    width: 100%;
+    border-collapse: collapse;
+    margin: 8px 0 14px;
+    font-size: 9pt;
+    font-family: "IBM Plex Sans", "Helvetica Neue", Arial, sans-serif;
+  }
+  th, td {
+    border: 1px solid var(--line);
+    padding: 5px 7px;
+    text-align: left;
+    vertical-align: top;
+  }
+  th { background: #f3eee6; font-weight: 650; }
+  code, .mono {
+    font-family: "SF Mono", Menlo, Consolas, monospace;
+    font-size: 8.5pt;
+    background: #f0ebe3;
+    padding: 1px 4px;
+    border-radius: 3px;
+  }
+  .steps {
+    counter-reset: step;
+    list-style: none;
+    padding-left: 0;
+  }
+  .steps > li {
+    counter-increment: step;
+    position: relative;
+    padding-left: 2.2em;
+    margin-bottom: 8px;
+  }
+  .steps > li::before {
+    content: counter(step);
+    position: absolute;
+    left: 0;
+    top: 0;
+    width: 1.5em;
+    height: 1.5em;
+    border-radius: 50%;
+    background: var(--accent);
+    color: #fff;
+    font-family: "IBM Plex Sans", sans-serif;
+    font-size: 8.5pt;
+    font-weight: 700;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    line-height: 1.5em;
+    text-align: center;
+  }
+  .diagram {
+    font-family: "SF Mono", Menlo, Consolas, monospace;
+    font-size: 8pt;
+    background: #1a1520;
+    color: #f3ebe3;
+    padding: 12px 14px;
+    border-radius: 8px;
+    white-space: pre;
+    overflow-x: auto;
+    margin: 10px 0 14px;
+    line-height: 1.35;
+  }
+  .grid2 {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 10px;
+    margin: 8px 0 12px;
+  }
+  .chip {
+    display: inline-block;
+    border: 1px solid var(--line);
+    border-radius: 999px;
+    padding: 2px 8px;
+    font-family: "IBM Plex Sans", sans-serif;
+    font-size: 8pt;
+    margin: 1px 2px;
+    background: #fff;
+  }
+  footer {
+    margin-top: 28px;
+    padding-top: 10px;
+    border-top: 1px solid var(--line);
+    font-family: "IBM Plex Sans", sans-serif;
+    font-size: 8pt;
+    color: var(--muted);
+  }
+  .pagebreak { page-break-before: always; }
+  @media print {
+    body { background: white; }
+    .page { max-width: none; padding: 0; }
+    a { color: inherit; text-decoration: none; }
+  }
+</style>
+</head>
+<body>
+<div class="page">
+
+<header class="doc-head">
+  <p class="eyebrow">Ma Zone · Lantern Lab · Manuel créateur</p>
+  <h1>Guide d’utilisation complet<br/>du Lantern Lab</h1>
+  <p class="subtitle">De l’ouverture de l’atelier à la confection d’une Lanterne ARG complète — sans écrire une ligne de code moteur.</p>
+  <p class="meta">Version atelier Phase C (étages · situations · SI/ET/OU/ALORS · parcours · brouillons) · Août 2026 · Public : concepteur d’aventure ARG</p>
+</header>
+
+<div class="callout ok">
+  <strong>Objectif de ce document.</strong> À la fin de la lecture, vous devez pouvoir, seul, créer une aventure Lanterne de A à Z : étages, situations, conditions, actions, branches, transitions, tests et sauvegarde — en pensant comme un conteur, pas comme un développeur.
+</div>
+
+<nav class="toc">
+  <strong>Sommaire</strong>
+  <ol>
+    <li><a href="#s1">Qu’est-ce que le Lantern Lab ?</a></li>
+    <li><a href="#s2">Démarrer : accès, backend, première ouverture</a></li>
+    <li><a href="#s3">Carte de l’interface (tous les panneaux)</a></li>
+    <li><a href="#s4">Les concepts fondamentaux</a></li>
+    <li><a href="#s5">Les trois vues : Liste, Arbre, Parcours</a></li>
+    <li><a href="#s6">Modes Créateur et Développeur</a></li>
+    <li><a href="#s7">Créer une aventure de zéro</a></li>
+    <li><a href="#s8">Éditer une situation (QUAND / SI / ALORS / SINON / TRANSITION)</a></li>
+    <li><a href="#s9">Catalogue des déclencheurs, conditions et actions</a></li>
+    <li><a href="#s10">Transitions entre étages</a></li>
+    <li><a href="#s11">Branches alternatives (SI / SINON)</a></li>
+    <li><a href="#s12">Médias, items média, lieux, balises</a></li>
+    <li><a href="#s13">Tester une situation</a></li>
+    <li><a href="#s14">Parcours joueur (session multi-étapes)</a></li>
+    <li><a href="#s15">Valider, compiler, alertes</a></li>
+    <li><a href="#s16">Brouillons et sauvegarde</a></li>
+    <li><a href="#s17">Simulateur S1 (lien)</a></li>
+    <li><a href="#s18">Tutoriel guidé : reproduire un bout de « Lanterne de Mira »</a></li>
+    <li><a href="#s19">Méthode de confection d’une Lanterne complète</a></li>
+    <li><a href="#s20">Erreurs fréquentes et bonnes pratiques</a></li>
+    <li><a href="#s21">Ce que le Lab ne fait pas (encore)</a></li>
+    <li><a href="#s22">Glossaire</a></li>
+  </ol>
+</nav>
+
+<!-- 1 -->
+<h2 id="s1">1. Qu’est-ce que le Lantern Lab ?</h2>
+<p>Le <strong>Lantern Lab</strong> est l’<em>atelier du créateur</em> pour construire des aventures ARG (Alternate Reality Game) appelées <strong>Lanternes</strong> dans Ma Zone.</p>
+<ul>
+  <li><strong>Lantern Engine</strong> = le cerveau (règles, conditions, actions, temps, géo). Vous n’avez pas à le programmer.</li>
+  <li><strong>Lantern Lab</strong> = l’atelier (étages, situations, langage humain). Vous concevez ici.</li>
+  <li><strong>Simulateur S1</strong> = laboratoire virtuel pour exécuter le vrai moteur avec une trace technique.</li>
+</ul>
+<div class="diagram">Vous (concepteur)
+    │  pensez : ÉTAGE → SITUATION → SI / ET / OU → ALORS → TRANSITION
+    ▼
+Lantern Lab (interface)
+    │  compile / traduit
+    ▼
+Lantern Engine (moteur existant)
+    │  évalue
+    ▼
+Résultat joueur (messages, médias, sonneries, étages débloqués…)</div>
+<div class="callout">
+  <strong>Règle d’or.</strong> Vous ne devez jamais avoir besoin d’écrire <code>geo.inZone</code>, <code>var.set</code> ou du JSON pour créer une situation. Si vous voyez ce langage, passez en Mode Développeur uniquement pour diagnostiquer — puis revenez en Mode Créateur.
+</div>
+
+<!-- 2 -->
+<h2 id="s2">2. Démarrer : accès, backend, première ouverture</h2>
+<h3>2.1 Prérequis</h3>
+<ul>
+  <li>Le backend Ma Zone tourne en local (port <code>4000</code>).</li>
+  <li>Vous êtes en <strong>sandbox / bac à sable</strong> (le Lab est interdit en production).</li>
+  <li>Navigateur web (Chrome, Safari, Firefox…).</li>
+</ul>
+<h3>2.2 Adresses</h3>
+<table>
+  <tr><th>Outil</th><th>URL</th></tr>
+  <tr><td>Lantern Lab (atelier)</td><td><code>http://localhost:4000/lantern-lab/</code></td></tr>
+  <tr><td>Simulateur S1</td><td><code>http://localhost:4000/lantern-sim/</code></td></tr>
+  <tr><td>API santé Lab</td><td><code>/api/admin/lantern-lab/health</code></td></tr>
+</table>
+<h3>2.3 Si vous voyez « Ressource introuvable »</h3>
+<p>Le backend tourne probablement avec une ancienne version. Redémarrez le backend, puis rechargez la page (Cmd+Shift+R).</p>
+<p>À l’ouverture réussie, le bandeau affiche <strong>🏮 Lantern Lab</strong> et la liste contient au minimum la fixture <strong>Lanterne de Mira</strong>.</p>
+
+<!-- 3 -->
+<h2 id="s3" class="pagebreak">3. Carte de l’interface (tous les panneaux)</h2>
+<p>L’écran est découpé en <strong>quatre zones</strong> :</p>
+<div class="diagram">┌─────────────────────────────────────────────────────────────┐
+│ EN-TÊTE : titre · vues · modes · lien Simulateur S1         │
+├──────────┬──────────────────────────────┬───────────────────┤
+│ GAUCHE   │ CENTRE                       │ DROITE            │
+│          │                              │                   │
+│ Aventures│ Barre d’outils               │ Onglets :         │
+│ Brouillons│ (+ Étage, Situation…)        │  Éditer / Tester  │
+│ Alertes  │                              │  / Parcours       │
+│          │ Vue principale :             │                   │
+│          │  Liste | Arbre | Parcours    │ Panneau détail    │
+│          │                              │ + Mode Dev JSON   │
+└──────────┴──────────────────────────────┴───────────────────┘</div>
+
+<h3>3.1 En-tête</h3>
+<table>
+  <tr><th>Élément</th><th>Rôle</th></tr>
+  <tr><td>Liste / Arbre / Parcours</td><td>Change la visualisation centrale (mêmes données).</td></tr>
+  <tr><td>Mode Créateur / Développeur</td><td>Langage humain vs JSON moteur.</td></tr>
+  <tr><td>Simulateur S1</td><td>Ouvre le lab technique (fixtures Magellan, Appel 20h17…).</td></tr>
+</table>
+
+<h3>3.2 Colonne gauche</h3>
+<div class="panel">
+  <p class="label">Aventures</p>
+  <p>Fixtures livrées avec le Lab (ex. <em>Lanterne de Mira</em>). Cliquez pour charger.</p>
+</div>
+<div class="panel">
+  <p class="label">Brouillons</p>
+  <p>Vos sauvegardes locales sandbox. Cliquez pour reprendre un travail en cours.</p>
+</div>
+<div class="panel">
+  <p class="label">+ Nouvelle aventure</p>
+  <p>Crée une coquille vide (étage 0) prête à être remplie.</p>
+</div>
+<div class="panel">
+  <p class="label">Alertes</p>
+  <p>Validations créateur : étage inatteignable, contradiction, situation sans action, transition manquante…</p>
+</div>
+
+<h3>3.3 Barre d’outils (centre haut)</h3>
+<table>
+  <tr><th>Bouton</th><th>Effet</th></tr>
+  <tr><td><strong>+ Étage</strong></td><td>Ajoute un étage numéroté suivant.</td></tr>
+  <tr><td><strong>+ Situation</strong></td><td>Ajoute A/B/C… dans l’étage sélectionné.</td></tr>
+  <tr><td><strong>🔗 Transition</strong></td><td>Édite la condition pour débloquer l’étage suivant.</td></tr>
+  <tr><td><strong>Compiler</strong></td><td>Traduit l’aventure vers le moteur et rafraîchit Liste/Arbre/Alertes.</td></tr>
+  <tr><td><strong>💾 Sauver brouillon</strong></td><td>Persiste le travail dans le dossier sandbox local.</td></tr>
+  <tr><td><strong>✓ Valider</strong></td><td>Lance les contrôles structurels créateur.</td></tr>
+</table>
+
+<h3>3.4 Colonne droite (onglets)</h3>
+<table>
+  <tr><th>Onglet</th><th>Contenu</th></tr>
+  <tr><td><strong>Éditer</strong></td><td>Éditeur de situation (blocs QUAND/SI/ALORS…) ou éditeur de transition d’étage.</td></tr>
+  <tr><td><strong>🧪 Tester</strong></td><td>Simulateur d’une situation isolée (position, heure, médias, balises).</td></tr>
+  <tr><td><strong>Parcours</strong></td><td>Session multi-étapes : enchaînez des événements comme un joueur.</td></tr>
+</table>
+
+<!-- 4 -->
+<h2 id="s4">4. Les concepts fondamentaux</h2>
+<p>Maîtrisez ces quatre idées — tout le reste en découle.</p>
+
+<h3>4.1 Aventure (Lanterne)</h3>
+<p>Une aventure est un conteneur : titre, fuseau horaire, médias, lieux, balises, variables, et une liste d’<strong>étages</strong>.</p>
+
+<h3>4.2 Étage de situation</h3>
+<p>Un <strong>étage</strong> est une étape logique / narrative de progression (pas une « page »).</p>
+<ul>
+  <li>Numéroté : 0, 1, 2, … N</li>
+  <li>Peut contenir plusieurs situations simultanées (A, B, C…)</li>
+  <li>Peut définir une <strong>condition de passage</strong> vers l’étage suivant</li>
+</ul>
+<p>Exemple Mira — Étage 1 « Premiers indices » : A lettre · B clé USB · C polaroid.</p>
+
+<h3>4.3 Situation</h3>
+<p>Une situation = un événement narratif identifiable, construit ainsi :</p>
+<div class="diagram">QUAND  (déclencheur — ce qui vient d’arriver)
+SI     (conditions — ET / OU / PAS)
+ALORS  (actions — ce que l’app fait)
+SINON  (actions alternatives — optionnel)
+TRANSITION (débloquer un autre étage — optionnel)</div>
+
+<h3>4.4 Les quatre niveaux à distinguer</h3>
+<table>
+  <tr><th>Concept</th><th>Question</th><th>Exemple</th></tr>
+  <tr><td>Situation</td><td>Que se passe-t-il ?</td><td>« Le joueur consomme la lettre »</td></tr>
+  <tr><td>Condition</td><td>Sous quelles exigences ?</td><td>« Il est dans Rue de Paradis »</td></tr>
+  <tr><td>Action</td><td>Que fait l’application ?</td><td>« Afficher un message »</td></tr>
+  <tr><td>Transition</td><td>Est-ce qu’on progresse ?</td><td>« DONC étage 2 accessible »</td></tr>
+</table>
+<div class="callout info">
+  Toutes les situations ne débloquent pas un nouvel étage. Beaucoup ne font qu’afficher un texte, changer un état, ou préparer une condition future. C’est normal.
+</div>
+
+<!-- 5 -->
+<h2 id="s5" class="pagebreak">5. Les trois vues : Liste, Arbre, Parcours</h2>
+<p><strong>Important :</strong> Liste, Arbre et Parcours montrent les <em>mêmes données</em>. Modifier une situation dans l’éditeur met à jour les trois vues après compilation.</p>
+
+<h3>5.1 Vue Liste (recommandée pour concevoir)</h3>
+<p>Liste verticale d’étages dépliables.</p>
+<ol>
+  <li>Cliquez l’en-tête d’un étage pour le déplier / replier.</li>
+  <li>Cliquez une situation A/B/C pour la sélectionner → panneau Éditer à droite.</li>
+  <li>Sous l’étage, la boîte pointillée <strong>🔗 Condition pour l’étage suivant</strong> montre (ou propose) la transition.</li>
+</ol>
+<p>Vous y lisez immédiatement :</p>
+<ul>
+  <li>QUAND …</li>
+  <li>SI / ET …</li>
+  <li>ALORS / PUIS …</li>
+  <li>SINON …</li>
+</ul>
+
+<h3>5.2 Vue Arbre</h3>
+<p>Cartes reliées par des étiquettes <span class="chip">SI</span> <span class="chip">ALORS</span> <span class="chip">PUIS</span> <span class="chip">DONC</span>.</p>
+<ul>
+  <li>Utile pour voir les convergences (plusieurs situations → même étage suivant).</li>
+  <li>Cliquez une carte situation pour l’éditer.</li>
+  <li>Les actions sont des cartes en pointillés (aperçu).</li>
+</ul>
+
+<h3>5.3 Vue Parcours</h3>
+<p>Lecture « côté joueur » : suite d’étages avec mentions de choix (A/B) et statut.</p>
+<ul>
+  <li>✓ conception / atteignable</li>
+  <li>🔵 ouvert (pendant une session Parcours active)</li>
+  <li>⚠️ inatteignable (selon les validations)</li>
+</ul>
+<p>Utilisez cette vue pour vérifier que le chemin imaginé correspond au chemin réel.</p>
+
+<!-- 6 -->
+<h2 id="s6">6. Modes Créateur et Développeur</h2>
+<table>
+  <tr><th>Mode</th><th>Vous voyez</th><th>Quand l’utiliser</th></tr>
+  <tr><td><strong>Créateur</strong> (défaut)</td><td>Étages, situations, langage humain, résultats de test lisibles</td><td>Toujours, pour concevoir</td></tr>
+  <tr><td><strong>Développeur</strong></td><td>JSON de définition compilée, détails techniques de simulation</td><td>Diagnostic, QA technique</td></tr>
+</table>
+<p>Le Mode Créateur est le mode principal. Ne restez pas en Mode Développeur pour « créer ».</p>
+
+<!-- 7 -->
+<h2 id="s7">7. Créer une aventure de zéro</h2>
+<ol class="steps">
+  <li>Cliquez <strong>+ Nouvelle aventure</strong> (colonne gauche). Un étage 0 vide apparaît.</li>
+  <li>Renommez l’aventure plus tard en sauvant un brouillon (le titre est dans les données ; pour Mira, le titre est déjà « Lanterne de Mira »).</li>
+  <li>Préparez le <strong>matériel narratif</strong> (médias, lieux, balises) — aujourd’hui souvent via la fixture Mira ou en partant d’une copie brouillon. Sans médias/zones dans l’aventure, certains menus de sélection seront vides.</li>
+  <li>Ajoutez des étages avec <strong>+ Étage</strong>.</li>
+  <li>Dans chaque étage, ajoutez des situations avec <strong>+ Situation</strong>.</li>
+  <li>Éditez chaque situation (section 8), puis les transitions (section 10).</li>
+  <li>Cliquez <strong>✓ Valider</strong>, corrigez les alertes, <strong>Compiler</strong>, <strong>Tester</strong>, puis <strong>Sauver brouillon</strong>.</li>
+</ol>
+<div class="callout warn">
+  <strong>Astuce pédagogique.</strong> Pour apprendre, chargez d’abord <em>Lanterne de Mira</em>, explorez les 15 étages, puis créez une mini-aventure à 3 étages avant de viser une ARG complète.
+</div>
+
+<!-- 8 -->
+<h2 id="s8" class="pagebreak">8. Éditer une situation — panneau par panneau</h2>
+<p>Sélectionnez une situation → onglet <strong>Éditer</strong>.</p>
+
+<h3>8.1 Titre</h3>
+<p>Nom humain de la situation (« Lettre consommée », « Code PIZZA correct »…). Les lettres A/B/C sont automatiques dans l’étage.</p>
+
+<h3>8.2 QUAND (déclencheur)</h3>
+<p>Ce qui <em>vient de se produire</em> pour que la règle écoute.</p>
+<ol>
+  <li>Choisissez le type dans le menu (ex. « Le joueur consomme »).</li>
+  <li>Remplissez les champs affichés (item média, balise, code, etc.).</li>
+</ol>
+<p>Sans QUAND cohérent, la situation ne se déclenchera jamais au test.</p>
+
+<h3>8.3 SI / ET / OU (conditions)</h3>
+<ul>
+  <li><strong>+ Condition (ET)</strong> : ajoute une exigence supplémentaire (toutes doivent être vraies).</li>
+  <li><strong>+ Groupe OU</strong> : crée un groupe « (A OU B) », combinable avec d’autres ET.</li>
+  <li>Bouton <strong>×</strong> : retire une condition.</li>
+</ul>
+<p>Exemples de logique supportée :</p>
+<ul>
+  <li>SI A ET B ET C</li>
+  <li>SI A OU B</li>
+  <li>SI A ET (B OU C)</li>
+</ul>
+
+<h3>8.4 ALORS / PUIS (actions)</h3>
+<ol>
+  <li>Cliquez <strong>+ Action</strong>.</li>
+  <li>Choisissez le type (message, débloquer média, journal, sonnerie…).</li>
+  <li>Remplissez les champs.</li>
+  <li>Ajoutez d’autres actions : elles s’enchaînent (ALORS puis PUIS).</li>
+</ol>
+
+<h3>8.5 SINON</h3>
+<p>Branche alternative quand le QUAND arrive mais les SI ne sont pas satisfaits (cas simple sans multi-branches exclusives).</p>
+<p>Exemple classique : « Détruire la clé USB » trop tôt → message d’avertissement.</p>
+
+<h3>8.6 TRANSITION (dans la situation)</h3>
+<p>Champ optionnel « Débloquer l’étage » : si cette situation réussit, elle peut aussi ouvrir un numéro d’étage.</p>
+<p>Préférez souvent la <strong>transition d’étage</strong> (boîte 🔗) quand plusieurs situations doivent être réunies pour progresser.</p>
+
+<h3>8.7 Appliquer / Supprimer</h3>
+<ul>
+  <li><strong>Appliquer</strong> : enregistre les blocs dans l’aventure en mémoire, puis recompile les vues.</li>
+  <li><strong>Supprimer la situation</strong> : retire définitivement la situation de l’étage (confirmez).</li>
+</ul>
+
+<!-- 9 -->
+<h2 id="s9">9. Catalogue des blocs (référence créateur)</h2>
+
+<h3>9.1 Déclencheurs QUAND</h3>
+<table>
+  <tr><th>Libellé</th><th>À utiliser quand…</th><th>Champs typiques</th></tr>
+  <tr><td>Le joueur découvre</td><td>Un item apparaît / est trouvé</td><td>Item média</td></tr>
+  <tr><td>Le joueur consomme</td><td>Lecture / visionnage / usage terminé</td><td>Item média</td></tr>
+  <tr><td>Le joueur ouvre</td><td>Ouverture (ex. talkie)</td><td>Item média</td></tr>
+  <tr><td>Le joueur trouve une balise</td><td>QR ou NFC scanné</td><td>Balise, type qr/nfc</td></tr>
+  <tr><td>L’heure prévue arrive</td><td>Horaire programmé / relatif</td><td>Identifiant horaire</td></tr>
+  <tr><td>L’aventure commence</td><td>Démarrage de run</td><td>—</td></tr>
+  <tr><td>Le joueur appuie sur</td><td>Bouton UI</td><td>Identifiant bouton, libellé</td></tr>
+  <tr><td>Le joueur entre un code</td><td>Saisie (ex. PIZZA)</td><td>Identifiant saisie, code attendu</td></tr>
+  <tr><td>Le joueur se déplace</td><td>Position / zone</td><td>—</td></tr>
+</table>
+
+<h3>9.2 Conditions SI</h3>
+<table>
+  <tr><th>Libellé</th><th>Usage</th></tr>
+  <tr><td>Le joueur est dans</td><td>Géo : une zone (cercle, arrondissement…)</td></tr>
+  <tr><td>Le joueur est dans l’un de</td><td>Plusieurs zones possibles</td></tr>
+  <tr><td>Il est / Il est entre</td><td>Heure précise ou fenêtre</td></tr>
+  <tr><td>A découvert / a consommé</td><td>État d’un item média</td></tr>
+  <tr><td>Ceci est déjà arrivé / n’est pas encore arrivé</td><td>Drapeaux d’état (flags)</td></tr>
+  <tr><td>L’item est déverrouillé</td><td>Contenu accessible</td></tr>
+  <tr><td>Le joueur a choisi</td><td>Valeur d’un choix précédent</td></tr>
+  <tr><td>L’étage est accessible</td><td>Gate de progression</td></tr>
+  <tr><td>L’objet est dans l’état</td><td>État immersif (carte arrachée, clé fracassée…)</td></tr>
+</table>
+
+<h3>9.3 Actions ALORS</h3>
+<table>
+  <tr><th>Libellé</th><th>Effet ressenti</th></tr>
+  <tr><td>Afficher un message</td><td>Notification / texte</td></tr>
+  <tr><td>Lire le média</td><td>Audio / vidéo / contenu</td></tr>
+  <tr><td>Faire sonner le téléphone / talkie</td><td>Appareil physique immersif</td></tr>
+  <tr><td>Débloquer / Afficher / Masquer un item</td><td>Inventaire Atelier</td></tr>
+  <tr><td>Modifier l’état</td><td>Flag narratif</td></tr>
+  <tr><td>Ajouter une note au journal</td><td>Journal de bord</td></tr>
+  <tr><td>Afficher saisie de code / bouton</td><td>UI interactive</td></tr>
+  <tr><td>Changer l’état d’un objet</td><td>Transformation d’item</td></tr>
+  <tr><td>Débloquer un étage</td><td>Progression structurelle</td></tr>
+  <tr><td>Attendre puis déclencher</td><td>Délai relatif (ex. J+1, 17 min)</td></tr>
+</table>
+
+<!-- 10 -->
+<h2 id="s10" class="pagebreak">10. Transitions entre étages</h2>
+<p>Deux façons de progresser :</p>
+<ol>
+  <li><strong>Transition d’étage (recommandée pour les AND collectifs)</strong> — boîte 🔗 sous l’étage, ou bouton <strong>🔗 Transition</strong>.</li>
+  <li><strong>Transition dans une situation</strong> — champ « Débloquer l’étage » dans l’éditeur de situation.</li>
+</ol>
+
+<h3>10.1 Mettre en place une transition d’étage</h3>
+<ol class="steps">
+  <li>Sélectionnez l’étage de départ (ex. étage 1).</li>
+  <li>Cliquez <strong>🔗 Transition</strong> ou la boîte pointillée sous l’étage.</li>
+  <li>Ajoutez des conditions ET (ex. lettre consommée ET polaroid ET clé USB).</li>
+  <li>Optionnel : message « DONC » (« Étage 2 — Rue de Paradis »).</li>
+  <li><strong>Appliquer la transition</strong>.</li>
+</ol>
+<p>Résultat mental :</p>
+<div class="diagram">ÉTAGE 1
+  [A] [B] [C]  (situations indépendantes)
+        │
+        │  SI lettre ET polaroid ET clé USB
+        ▼
+🔓 ÉTAGE 2</div>
+
+<!-- 11 -->
+<h2 id="s11">11. Branches alternatives (SI / SINON)</h2>
+<p>Cas Mira — Étage 8 « Détruire la clé USB » :</p>
+<ul>
+  <li><strong>Situation A</strong> : appuie sur Détruire ET <em>pas</em> tout consommé → avertissement (pas de destruction).</li>
+  <li><strong>Situation B</strong> : appuie sur Détruire ET tout consommé → destruction.</li>
+</ul>
+<p>Comment le reproduire :</p>
+<ol>
+  <li>Deux situations dans le même étage, même QUAND (« appuie sur Détruire »).</li>
+  <li>Conditions <em>complémentaires</em> (l’une exige les médias consommés, l’autre l’inverse / le manque).</li>
+  <li>Actions différentes.</li>
+  <li>Validez : le Lab signale si deux situations partagent le même QUAND sans conditions distinctes (branche ambiguë).</li>
+</ol>
+
+<!-- 12 -->
+<h2 id="s12">12. Médias, items média, lieux, balises</h2>
+<h3>12.1 Distinction cruciale</h3>
+<table>
+  <tr><th>Terme</th><th>Signification</th><th>Exemple</th></tr>
+  <tr><td><strong>Média</strong></td><td>Le contenu</td><td><code>audio_mira_01.mp3</code>, photo, texte</td></tr>
+  <tr><td><strong>Item média</strong></td><td>Le contenant immersif</td><td>Talkie-walkie, Clé USB, Polaroid, Lettre</td></tr>
+</table>
+<p>Skins d’items disponibles dans le catalogue : VHS, USB, Cassette, Dictaphone, Téléphone, Talkie, Radio, Lettre, Polaroid.</p>
+
+<h3>12.2 Lieux (zones)</h3>
+<p>Utilisés par « Le joueur est dans… ». Types supportés côté moteur : cercle GPS, arrondissement, polygone (selon définition).</p>
+<p>Dans le testeur, choisir une zone place automatiquement le joueur au centre de cette zone.</p>
+
+<h3>12.3 Balises</h3>
+<p>QR ou NFC. Le QUAND « trouve une balise » + éventuellement la condition d’avoir déjà scanné.</p>
+
+<!-- 13 -->
+<h2 id="s13">13. Tester une situation</h2>
+<ol class="steps">
+  <li>Sélectionnez la situation.</li>
+  <li>Onglet <strong>🧪 Tester</strong>.</li>
+  <li>Renseignez : position (zone), heure, date, médias déjà consommés, balises découvertes.</li>
+  <li>Vérifiez l’identifiant d’événement (prérempli depuis le QUAND) et la valeur de code si besoin.</li>
+  <li>Cliquez <strong>▶ Simuler</strong>.</li>
+</ol>
+<p>Résultat attendu (Mode Créateur) :</p>
+<ul>
+  <li>🟢 <strong>SITUATION DÉCLENCHÉE</strong> + liste des actions humaines</li>
+  <li>ou ⚪️ non déclenchée / manquée — avec indices sur les conditions</li>
+</ul>
+<div class="callout">
+  Le test ouvre automatiquement les étages jusqu’à l’étage de la situation testée, pour que le « sas » d’étage ne bloque pas artificiellement votre essai unitaire.
+</div>
+
+<!-- 14 -->
+<h2 id="s14" class="pagebreak">14. Parcours joueur (session multi-étapes)</h2>
+<p>Contrairement au test unitaire, le parcours conserve l’état entre les étapes (comme un vrai run).</p>
+<ol class="steps">
+  <li>Onglet <strong>Parcours</strong>.</li>
+  <li><strong>▶ Démarrer le parcours</strong> — crée une session simulateur sur l’aventure compilée.</li>
+  <li>Pour chaque étape : choisissez l’événement (consommer, se déplacer, scanner, code…), l’id, la zone, l’heure.</li>
+  <li>Optionnel : cochez des médias déjà consommés avant l’étape.</li>
+  <li><strong>▶ Étape suivante</strong> — lisez le journal humain et les étages ouverts.</li>
+</ol>
+<p>La vue Parcours (centre) se met à jour avec les étages 🔵 ouverts.</p>
+
+<!-- 15 -->
+<h2 id="s15">15. Valider, compiler, alertes</h2>
+<h3>15.1 Compiler</h3>
+<p>Traduit étages/situations → règles du Lantern Engine, rafraîchit Liste / Arbre / alertes. Faites-le après chaque série d’éditions importantes.</p>
+<h3>15.2 Valider</h3>
+<p>Contrôles créateur typiques :</p>
+<table>
+  <tr><th>Alerte</th><th>Signification</th><th>Que faire</th></tr>
+  <tr><td>Étage inatteignable</td><td>Aucune transition n’y mène</td><td>Ajouter unlockNext ou transition situation</td></tr>
+  <tr><td>Aucune situation</td><td>Étage vide</td><td>Ajouter A, ou supprimer l’étage</td></tr>
+  <tr><td>Sans QUAND / sans ALORS</td><td>Situation incomplète</td><td>Compléter l’éditeur</td></tr>
+  <tr><td>Contradiction</td><td>Flag vrai ET faux</td><td>Corriger les SI</td></tr>
+  <tr><td>Pas de transition</td><td>Pas de passage vers N+1</td><td>Définir 🔗 ou unlock dans une situation</td></tr>
+  <tr><td>Branches ambiguës</td><td>Même QUAND, pas de SI distincts</td><td>Séparer les conditions</td></tr>
+</table>
+
+<!-- 16 -->
+<h2 id="s16">16. Brouillons et sauvegarde</h2>
+<ul>
+  <li><strong>Sauver brouillon</strong> écrit un fichier dans le sandbox backend (<code>backend/data/lantern-drafts/</code>).</li>
+  <li>Les brouillons apparaissent à gauche ; cliquez pour recharger.</li>
+  <li>Ce n’est <strong>pas</strong> une publication joueur ni une persistance production.</li>
+  <li>Les fixtures (Mira) restent les modèles de référence ; vos brouillons sont vos variantes de travail.</li>
+</ul>
+
+<!-- 17 -->
+<h2 id="s17">17. Simulateur S1 (lien)</h2>
+<p>Le bouton <strong>Simulateur S1</strong> ouvre l’UI technique historique :</p>
+<ul>
+  <li>Fixtures golden (Talkie Magellan, Appel 20h17, relatif)</li>
+  <li>Injection d’état, tick d’horloge, trace condition par condition</li>
+</ul>
+<p>Utilisez S1 pour le debug moteur profond. Utilisez le Lab (onglets Tester / Parcours) pour le debug créateur au quotidien.</p>
+
+<!-- 18 -->
+<h2 id="s18" class="pagebreak">18. Tutoriel guidé — un bout de « Lanterne de Mira »</h2>
+<p>Objectif : comprendre le geste créateur sur un cas réel (déjà présent en fixture).</p>
+
+<h3>18.1 Explorer l’étage 0</h3>
+<ol>
+  <li>Chargez <strong>Lanterne de Mira</strong>.</li>
+  <li>Dépliez l’étage <strong>00 Déverrouillage</strong>.</li>
+  <li>Situation A : QUAND consomme média imposé → ALORS débloque Bureau + message.</li>
+  <li>Testez : cochez le média imposé, simulez → 🟢 déclenché.</li>
+</ol>
+
+<h3>18.2 Explorer l’étage 1 (parallélisme)</h3>
+<p>Trois situations indépendantes A/B/C. La transition 🔗 exige les trois consommations pour ouvrir l’étage 2. C’est le modèle « indices parallèles ».</p>
+
+<h3>18.3 Explorer l’étage 2 (géo + historique)</h3>
+<p>QUAND déplacement + SI dans Rue de Paradis + médias déjà consommés → note journal « ça sentait la PIZZA ».</p>
+<p>Test : zone Rue de Paradis + médias cochés + simuler.</p>
+
+<h3>18.4 Explorer l’étage 4 (code)</h3>
+<p>QUAND entre le code PIZZA → débloque vidéo, lettre Mira, carte.</p>
+
+<h3>18.5 Explorer l’étage 8 (branches)</h3>
+<p>Deux situations, même bouton, conditions opposées. Testez les deux chemins.</p>
+
+<!-- 19 -->
+<h2 id="s19">19. Méthode de confection d’une Lanterne complète</h2>
+<p>Processus recommandé pour un concepteur seul :</p>
+<ol class="steps">
+  <li><strong>Pitch &amp; découpage narratif</strong> — écrivez sur papier la liste des étages (0 = sas, 1 = indices, … fin = résolution).</li>
+  <li><strong>Inventaire matériel</strong> — médias, items (skins), lieux Paris, balises, boutons, codes, drapeaux d’état.</li>
+  <li><strong>Squelette Lab</strong> — nouvelle aventure → créer tous les étages vides avec titres.</li>
+  <li><strong>Situations cœur</strong> — une situation = une phrase « SI le joueur fait X, ALORS Y ».</li>
+  <li><strong>Transitions</strong> — pour chaque étage, définir clairement le DONC vers N+1 (AND / OR).</li>
+  <li><strong>Branches</strong> — identifier les forks (trop tôt / trop tard / déjà pris / choix moral).</li>
+  <li><strong>Temps &amp; lieu</strong> — ajouter horaires, J+1, zones uniquement où le récit l’exige.</li>
+  <li><strong>Valider</strong> — zéro erreur rouge ; warnings compris et assumés.</li>
+  <li><strong>Tester unitairement</strong> chaque situation critique.</li>
+  <li><strong>Parcours bout-en-bout</strong> — session Parcours du début à la fin (au moins un happy path + une branche).</li>
+  <li><strong>Sauver brouillon</strong> — versionner mentalement (titre + date).</li>
+  <li><strong>Revue humaine</strong> — faire lire la vue Liste à quelqu’un qui ne connaît pas l’histoire : est-elle compréhensible ?</li>
+</ol>
+
+<div class="callout ok">
+  <strong>Critère de maîtrise.</strong> Vous maîtrisez le Lab quand vous pouvez créer un nouvel étage, y mettre deux situations concurrentes, une transition AND, une branche SINON, tester les deux chemins, et sauver un brouillon — sans ouvrir le Mode Développeur.
+</div>
+
+<!-- 20 -->
+<h2 id="s20" class="pagebreak">20. Erreurs fréquentes et bonnes pratiques</h2>
+<table>
+  <tr><th>Erreur</th><th>Symptôme</th><th>Remède</th></tr>
+  <tr><td>Oublier Appliquer</td><td>Les vues ne changent pas</td><td>Bouton Appliquer puis Compiler</td></tr>
+  <tr><td>QUAND incohérent avec le test</td><td>Jamais déclenché</td><td>Aligner événement de test et déclencheur</td></tr>
+  <tr><td>Étage suivant sans transition</td><td>Parcours bloqué / alerte</td><td>Définir 🔗 unlockNext</td></tr>
+  <tr><td>Deux situations même QUAND sans SI</td><td>Comportement flou</td><td>Conditions exclusives</td></tr>
+  <tr><td>Confondre média et item</td><td>Mauvais menu</td><td>Item = contenant ; média = contenu</td></tr>
+  <tr><td>Tester sans cocher l’historique</td><td>SI faux</td><td>Cocher médias / balises déjà acquis</td></tr>
+  <tr><td>Penser « page » au lieu d’« étage »</td><td>Découpage confus</td><td>Étage = jalon de progression</td></tr>
+</table>
+
+<h3>Bonnes pratiques</h3>
+<ul>
+  <li>Nommez les situations comme des phrases narratives, pas des ids techniques.</li>
+  <li>Une situation = une responsabilité claire.</li>
+  <li>Préférez les transitions d’étage pour les AND collectifs.</li>
+  <li>Testez dès qu’une situation est « jouable », ne stockez pas 20 situations non testées.</li>
+  <li>Gardez Mira comme référence de complexité, pas comme logique magique (c’est de la donnée).</li>
+</ul>
+
+<!-- 21 -->
+<h2 id="s21">21. Ce que le Lab ne fait pas (encore)</h2>
+<p>Hors scope actuel (à ne pas chercher dans l’UI) :</p>
+<ul>
+  <li>GPS / NFC / QR <strong>réels</strong> sur téléphone</li>
+  <li>Test Terrain live à Paris</li>
+  <li>Publication joueur / persistance production</li>
+  <li>Éditeur graphique drag-and-drop avancé type « canvas infini »</li>
+  <li>Création visuelle complète du catalogue médias/zones depuis zéro (souvent préparé dans la définition / fixture)</li>
+</ul>
+<p>Le Lab actuel = <strong>outil de création + validation + simulation</strong> au-dessus du moteur. Le terrain réel viendra ensuite.</p>
+
+<!-- 22 -->
+<h2 id="s22">22. Glossaire</h2>
+<table>
+  <tr><th>Terme</th><th>Définition courte</th></tr>
+  <tr><td>Lanterne</td><td>Aventure ARG Ma Zone orchestrée par le Lantern Engine</td></tr>
+  <tr><td>Étage</td><td>Jalon de progression narrative / logique</td></tr>
+  <tr><td>Situation</td><td>Unité QUAND / SI / ALORS (lettre A, B, C…)</td></tr>
+  <tr><td>Transition</td><td>Condition de passage vers un autre étage</td></tr>
+  <tr><td>Flag / état</td><td>Variable booléenne ou valeur mémorisant un fait narratif</td></tr>
+  <tr><td>Item média</td><td>Contenant immersif (talkie, USB, lettre…)</td></tr>
+  <tr><td>Compilation</td><td>Traduction créateur → règles moteur</td></tr>
+  <tr><td>Sandbox</td><td>Environnement local de labo, pas la prod</td></tr>
+  <tr><td>Parcours</td><td>Session de simulation multi-étapes à état conservé</td></tr>
+  <tr><td>S1</td><td>Simulateur technique du Lantern Engine</td></tr>
+</table>
+
+<div class="callout ok" style="margin-top:18px">
+  <strong>Check-list « je suis autonome »</strong>
+  <ol>
+    <li>Je sais ouvrir le Lab et charger Mira.</li>
+    <li>Je sais basculer Liste / Arbre / Parcours.</li>
+    <li>Je sais créer un étage et une situation sans JSON.</li>
+    <li>Je sais remplir QUAND, SI (ET/OU), ALORS, SINON, TRANSITION.</li>
+    <li>Je sais définir une transition d’étage 🔗.</li>
+    <li>Je sais tester une situation et lire un résultat humain.</li>
+    <li>Je sais lancer un parcours multi-étapes.</li>
+    <li>Je sais interpréter les alertes et sauver un brouillon.</li>
+  </ol>
+  Si les 8 cases sont cochées : vous pouvez confectionner une Lanterne de A à Z avec le Lantern Lab.
+</div>
+
+<footer>
+  Ma Zone — Guide d’utilisation Lantern Lab · Phase C atelier créateur · Août 2026<br/>
+  Complète les documents ANALYSE / PLAN TEST TERRAIN / CHECKPOINT S1 · Ne remplace pas une fiche FD validée<br/>
+  URL atelier : http://localhost:4000/lantern-lab/
+</footer>
+
+</div>
+</body>
+</html>

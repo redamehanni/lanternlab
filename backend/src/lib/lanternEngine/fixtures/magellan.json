@@ -1,0 +1,172 @@
+{
+  "id": "lantern_golden_magellan",
+  "slug": "talkie-magellan",
+  "kind": "main",
+  "engineSchemaVersion": 1,
+  "contentVersion": 1,
+  "status": "draft",
+  "timezone": "Europe/Paris",
+  "title": "Golden Test — Talkie Magellan",
+  "mediaItems": [
+    {
+      "id": "talkie_magellan",
+      "label": "Talkie-Walkie Magellan",
+      "skin": "talkie",
+      "contentId": "content_talkie_idle",
+      "policy": "unlockable"
+    }
+  ],
+  "mediaContents": [
+    { "id": "audio_monsieur_x", "kind": "audio", "label": "Monsieur X" },
+    { "id": "audio_monsieur_y", "kind": "audio", "label": "Monsieur Y" },
+    { "id": "audio_madame_v", "kind": "audio", "label": "Madame V" }
+  ],
+  "variables": [
+    {
+      "id": "talkie_branch",
+      "label": "Branche talkie (X|Y|V)",
+      "valueType": "string",
+      "defaultValue": null,
+      "scope": "run"
+    }
+  ],
+  "zones": [
+    { "id": "arr_1", "label": "Paris 1er", "kind": "arrondissement", "code": 1 },
+    { "id": "arr_3", "label": "Paris 3e", "kind": "arrondissement", "code": 3 },
+    { "id": "arr_7", "label": "Paris 7e", "kind": "arrondissement", "code": 7 },
+    { "id": "arr_11", "label": "Paris 11e", "kind": "arrondissement", "code": 11 },
+    { "id": "arr_13", "label": "Paris 13e", "kind": "arrondissement", "code": 13 },
+    { "id": "arr_17", "label": "Paris 17e", "kind": "arrondissement", "code": 17 }
+  ],
+  "beacons": [
+    { "id": "nfc_magellan_001", "channel": "nfc", "tokenId": "NFC_MAGELLAN_001" }
+  ],
+  "rules": [
+    {
+      "id": "rule_talkie_magellan_x",
+      "title": "Talkie Magellan — Monsieur X (11e/13e)",
+      "enabled": true,
+      "priority": 100,
+      "exclusiveGroupId": "talkie_magellan_zone",
+      "listen": ["media.discovered"],
+      "condition": {
+        "op": "and",
+        "children": [
+          { "type": "media.discovered", "mediaItemId": "talkie_magellan" },
+          { "type": "event.payloadEquals", "key": "mediaItemId", "value": "talkie_magellan" },
+          { "type": "geo.inAnyZone", "zoneIds": ["arr_11", "arr_13"] },
+          {
+            "type": "time.inWindow",
+            "start": "17:00",
+            "end": "17:15",
+            "timezone": "Europe/Paris"
+          }
+        ]
+      },
+      "actions": [
+        {
+          "id": "act_ring_x",
+          "type": "device.ringTalkie",
+          "params": { "deviceId": "talkie_magellan", "label": "Talkie Magellan" }
+        },
+        {
+          "id": "act_play_x",
+          "type": "media.play",
+          "params": { "mediaContentId": "audio_monsieur_x", "label": "Monsieur X" },
+          "delayMs": 500,
+          "waitFor": "ui_ack"
+        },
+        {
+          "id": "act_var_x",
+          "type": "var.set",
+          "params": { "varId": "talkie_branch", "value": "X" }
+        }
+      ],
+      "occurrence": { "kind": "once_per_run" }
+    },
+    {
+      "id": "rule_talkie_magellan_y",
+      "title": "Talkie Magellan — Monsieur Y (1er/3e)",
+      "enabled": true,
+      "priority": 100,
+      "exclusiveGroupId": "talkie_magellan_zone",
+      "listen": ["media.discovered"],
+      "condition": {
+        "op": "and",
+        "children": [
+          { "type": "media.discovered", "mediaItemId": "talkie_magellan" },
+          { "type": "event.payloadEquals", "key": "mediaItemId", "value": "talkie_magellan" },
+          { "type": "geo.inAnyZone", "zoneIds": ["arr_1", "arr_3"] },
+          {
+            "type": "time.inWindow",
+            "start": "17:00",
+            "end": "17:15",
+            "timezone": "Europe/Paris"
+          }
+        ]
+      },
+      "actions": [
+        {
+          "id": "act_ring_y",
+          "type": "device.ringTalkie",
+          "params": { "deviceId": "talkie_magellan", "label": "Talkie Magellan" }
+        },
+        {
+          "id": "act_play_y",
+          "type": "media.play",
+          "params": { "mediaContentId": "audio_monsieur_y", "label": "Monsieur Y" },
+          "delayMs": 500,
+          "waitFor": "ui_ack"
+        },
+        {
+          "id": "act_var_y",
+          "type": "var.set",
+          "params": { "varId": "talkie_branch", "value": "Y" }
+        }
+      ],
+      "occurrence": { "kind": "once_per_run" }
+    },
+    {
+      "id": "rule_talkie_magellan_v",
+      "title": "Talkie Magellan — Madame V (7e/17e)",
+      "enabled": true,
+      "priority": 100,
+      "exclusiveGroupId": "talkie_magellan_zone",
+      "listen": ["media.discovered"],
+      "condition": {
+        "op": "and",
+        "children": [
+          { "type": "media.discovered", "mediaItemId": "talkie_magellan" },
+          { "type": "event.payloadEquals", "key": "mediaItemId", "value": "talkie_magellan" },
+          { "type": "geo.inAnyZone", "zoneIds": ["arr_7", "arr_17"] },
+          {
+            "type": "time.inWindow",
+            "start": "17:00",
+            "end": "17:15",
+            "timezone": "Europe/Paris"
+          }
+        ]
+      },
+      "actions": [
+        {
+          "id": "act_ring_v",
+          "type": "device.ringTalkie",
+          "params": { "deviceId": "talkie_magellan", "label": "Talkie Magellan" }
+        },
+        {
+          "id": "act_play_v",
+          "type": "media.play",
+          "params": { "mediaContentId": "audio_madame_v", "label": "Madame V" },
+          "delayMs": 500,
+          "waitFor": "ui_ack"
+        },
+        {
+          "id": "act_var_v",
+          "type": "var.set",
+          "params": { "varId": "talkie_branch", "value": "V" }
+        }
+      ],
+      "occurrence": { "kind": "once_per_run" }
+    }
+  ]
+}

@@ -1,0 +1,141 @@
+{
+  "id": "lantern_golden_appel_relatif",
+  "slug": "appel-relatif-17min",
+  "kind": "main",
+  "engineSchemaVersion": 1,
+  "contentVersion": 1,
+  "status": "draft",
+  "timezone": "Europe/Paris",
+  "title": "Golden E0b — Lettre consommée → +17 min → appel",
+  "mediaItems": [
+    {
+      "id": "note_batisseur",
+      "label": "Note du Bâtisseur",
+      "skin": "letter",
+      "contentId": "content_note_batisseur",
+      "policy": "displayed"
+    }
+  ],
+  "mediaContents": [
+    { "id": "audio_appel_relatif", "kind": "audio", "label": "Appel_relatif_17min" }
+  ],
+  "variables": [
+    {
+      "id": "appel_relatif_deja_recu",
+      "label": "Appel relatif déjà reçu",
+      "valueType": "boolean",
+      "defaultValue": false,
+      "scope": "run"
+    },
+    {
+      "id": "appel_relatif_missed",
+      "label": "Appel relatif manqué",
+      "valueType": "boolean",
+      "defaultValue": false,
+      "scope": "run"
+    }
+  ],
+  "zones": [
+    {
+      "id": "bureau",
+      "label": "Bureau",
+      "kind": "circle",
+      "center": { "lat": 48.8606, "lng": 2.3376 },
+      "radiusM": 80
+    }
+  ],
+  "rules": [
+    {
+      "id": "rule_schedule_appel_apres_note",
+      "title": "Après lecture de la note → planifier appel +17 min",
+      "enabled": true,
+      "priority": 100,
+      "listen": ["media.consumed"],
+      "condition": {
+        "op": "and",
+        "children": [
+          { "type": "event.payloadEquals", "key": "mediaItemId", "value": "note_batisseur" },
+          { "type": "media.consumed", "mediaItemId": "note_batisseur" }
+        ]
+      },
+      "actions": [
+        {
+          "id": "act_schedule_appel",
+          "type": "schedule.after",
+          "params": {
+            "afterMinutes": 17,
+            "scheduleId": "appel_relatif_17",
+            "emitEventType": "time.schedule",
+            "missPolicy": "expire",
+            "payload": { "scheduleId": "appel_relatif_17" }
+          }
+        }
+      ],
+      "occurrence": { "kind": "once_per_run" }
+    },
+    {
+      "id": "rule_appel_relatif_ring",
+      "title": "Appel relatif — sonner si au Bureau",
+      "enabled": true,
+      "priority": 200,
+      "listen": ["time.schedule"],
+      "condition": {
+        "op": "and",
+        "children": [
+          { "type": "event.payloadEquals", "key": "scheduleId", "value": "appel_relatif_17" },
+          { "type": "geo.inZone", "zoneId": "bureau" },
+          { "type": "var.equals", "varId": "appel_relatif_deja_recu", "value": false }
+        ]
+      },
+      "actions": [
+        {
+          "id": "act_ring_relatif",
+          "type": "device.ringPhone",
+          "params": { "deviceId": "phone", "label": "Appel relatif" }
+        },
+        {
+          "id": "act_play_relatif",
+          "type": "media.play",
+          "params": { "mediaContentId": "audio_appel_relatif", "label": "Appel_relatif_17min" },
+          "delayMs": 800,
+          "waitFor": "media_end"
+        },
+        {
+          "id": "act_mark_relatif",
+          "type": "var.set",
+          "params": { "varId": "appel_relatif_deja_recu", "value": true }
+        }
+      ],
+      "occurrence": {
+        "kind": "once_per_run",
+        "missPolicy": "expire"
+      }
+    },
+    {
+      "id": "rule_appel_relatif_miss_flag",
+      "title": "Marquer appel relatif manqué (hors Bureau)",
+      "enabled": true,
+      "priority": 50,
+      "listen": ["time.schedule"],
+      "condition": {
+        "op": "and",
+        "children": [
+          { "type": "event.payloadEquals", "key": "scheduleId", "value": "appel_relatif_17" },
+          { "type": "var.equals", "varId": "appel_relatif_deja_recu", "value": false },
+          {
+            "op": "not",
+            "child": { "type": "geo.inZone", "zoneId": "bureau" }
+          }
+        ]
+      },
+      "actions": [
+        {
+          "id": "act_mark_relatif_missed",
+          "type": "var.set",
+          "params": { "varId": "appel_relatif_missed", "value": true }
+        }
+      ],
+      "occurrence": { "kind": "once_per_run" }
+    }
+  ]
+}

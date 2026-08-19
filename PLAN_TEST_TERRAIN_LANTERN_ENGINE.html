@@ -1,0 +1,414 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="utf-8" />
+<title>Plan Test Terrain — Lantern Engine &amp; Lantern Lab</title>
+<style>
+  @page { size: A4; margin: 16mm 14mm; }
+  :root {
+    --ink: #1a1520;
+    --muted: #5c5366;
+    --line: #d8d0c4;
+    --accent: #b45309;
+    --bg: #faf7f2;
+    --card: #ffffff;
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0;
+    font-family: "Iowan Old Style", "Palatino Linotype", Palatino, Georgia, serif;
+    color: var(--ink);
+    background: var(--bg);
+    font-size: 10.5pt;
+    line-height: 1.42;
+  }
+  .page { max-width: 720px; margin: 0 auto; padding: 24px 8px 40px; }
+  header.doc-head {
+    border-bottom: 2px solid var(--ink);
+    padding-bottom: 12px;
+    margin-bottom: 18px;
+  }
+  .eyebrow {
+    font-family: "IBM Plex Sans", "Helvetica Neue", Arial, sans-serif;
+    font-size: 10px;
+    letter-spacing: 0.14em;
+    text-transform: uppercase;
+    color: var(--accent);
+    margin: 0 0 8px;
+  }
+  h1 { font-size: 21pt; line-height: 1.15; margin: 0 0 8px; font-weight: 700; }
+  .subtitle { margin: 0; color: var(--muted); font-size: 10.5pt; }
+  .meta {
+    margin-top: 10px;
+    font-family: "IBM Plex Sans", "Helvetica Neue", Arial, sans-serif;
+    font-size: 9pt;
+    color: var(--muted);
+  }
+  h2 {
+    font-size: 13pt;
+    margin: 22px 0 8px;
+    padding-top: 6px;
+    border-top: 1px solid var(--line);
+    page-break-after: avoid;
+  }
+  h3 { font-size: 11pt; margin: 14px 0 6px; page-break-after: avoid; }
+  p { margin: 0 0 8px; }
+  ul, ol { margin: 0 0 10px; padding-left: 1.2em; }
+  li { margin-bottom: 3px; }
+  strong { font-weight: 700; }
+  code {
+    font-family: "IBM Plex Mono", Menlo, Consolas, monospace;
+    font-size: 8.5pt;
+    background: #efe9df;
+    padding: 1px 4px;
+    border-radius: 3px;
+  }
+  table {
+    width: 100%;
+    border-collapse: collapse;
+    margin: 8px 0 12px;
+    font-size: 8.5pt;
+    font-family: "IBM Plex Sans", "Helvetica Neue", Arial, sans-serif;
+    page-break-inside: avoid;
+  }
+  th, td {
+    border: 1px solid var(--line);
+    padding: 5px 6px;
+    text-align: left;
+    vertical-align: top;
+  }
+  th { background: #efe9df; font-weight: 600; }
+  .callout {
+    background: var(--card);
+    border: 1px solid var(--line);
+    border-left: 4px solid var(--accent);
+    padding: 10px 12px;
+    margin: 10px 0 12px;
+    page-break-inside: avoid;
+  }
+  .flow {
+    font-family: "IBM Plex Sans", "Helvetica Neue", Arial, sans-serif;
+    font-size: 9.5pt;
+    background: #efe9df;
+    padding: 10px 12px;
+    margin: 8px 0 12px;
+    border-radius: 4px;
+    page-break-inside: avoid;
+  }
+  .flow .arrow { color: var(--accent); font-weight: 700; }
+  .diagram {
+    font-family: "IBM Plex Mono", Menlo, Consolas, monospace;
+    font-size: 7.6pt;
+    line-height: 1.32;
+    background: #1a1520;
+    color: #f3ead2;
+    padding: 12px 14px;
+    margin: 8px 0 12px;
+    white-space: pre;
+    overflow: hidden;
+    page-break-inside: avoid;
+  }
+  .verdict {
+    background: #1a1520;
+    color: #f3ead2;
+    padding: 14px 16px;
+    margin: 16px 0;
+    page-break-inside: avoid;
+  }
+  .verdict h2 { border: none; color: #e8a830; margin-top: 0; padding-top: 0; }
+  .verdict p { color: #f3ead2; }
+  footer {
+    margin-top: 24px;
+    padding-top: 8px;
+    border-top: 1px solid var(--line);
+    font-family: "IBM Plex Sans", "Helvetica Neue", Arial, sans-serif;
+    font-size: 8.5pt;
+    color: var(--muted);
+  }
+  @media print { body { background: white; } .page { padding: 0; max-width: none; } }
+</style>
+</head>
+<body>
+<div class="page">
+  <header class="doc-head">
+    <p class="eyebrow">Ma Zone · Lantern Engine · Plan d’intégration</p>
+    <h1>Test Terrain, environnements &amp; Golden Tests</h1>
+    <p class="subtitle">Tester les Lanternes à Paris avant App Store — Simulateur et terrain sur le même moteur.</p>
+    <p class="meta">
+      Date : 9 août 2026 · Statut : plan (pré-implémentation) · Destinataires : Reda / Adam<br />
+      Complète : <code>ANALYSE_LANTERN_ENGINE_NARRATIF_V2</code> · Principe : un seul <code>handleEvent()</code> pour sim et terrain
+    </p>
+  </header>
+
+  <h2>1. Verdict</h2>
+  <p>Le cœur reste le <strong>Story/State Engine</strong> (Event → état → ConditionExpr → Actions). <strong>Simulateur</strong> et <strong>Test Terrain</strong> ne sont que deux sources d’événements vers le même <code>handleEvent()</code>. Aucune logique <code>if (lantern === Magellan)</code>.</p>
+  <div class="flow">
+    Cursor / Code
+    <span class="arrow">→</span> Lantern Engine
+    <span class="arrow">→</span> Lantern Lab
+    <span class="arrow">→</span> Dev Build / Internal Preview
+    <span class="arrow">→</span> téléphones de test
+    <span class="arrow">→</span> test réel Paris
+    <span class="arrow">→</span> journal
+    <span class="arrow">→</span> correction
+    <span class="arrow">→</span> validation
+    <span class="arrow">→</span> <strong>seulement ensuite</strong> App Store / Google Play
+  </div>
+  <p><strong>Existant réutilisable :</strong> QR partiel (Event Engine), journaux/idempotence backend, Lab sandbox admin.</p>
+  <p><strong>Absent aujourd’hui :</strong> organe Lantern Engine, <code>expo-location</code>, NFC, audio/push, EAS preview builds, API iOS physique fiable (<code>127.0.0.1</code> hardcodé).</p>
+
+  <h2>2. Architecture globale</h2>
+  <div class="diagram">Sources événements
+  ├── Lab Simulateur     (source: lab_sim / forced)
+  ├── Mobile Preview     (source: mobile — GPS, QR, NFC réels)
+  └── Scheduler serveur  (time.schedule, schedule.after)
+
+        ▼
+ EventIngest (idempotent, clientEventId)
+        ▼
+ StoryStateEngine.handleEvent
+        ▼
+ lantern_journal + trace debug
+        ▼
+ ActionPlan → mobile Atelier
+        ▼
+ Stream SSE/WS → Lantern Lab (Test Terrain live)</div>
+
+  <h2>3. Trois environnements (ne pas mélanger)</h2>
+  <table>
+    <thead>
+      <tr><th>Env</th><th>Mobile</th><th>Backend</th><th>Lab</th><th>Debug joueur</th></tr>
+    </thead>
+    <tbody>
+      <tr>
+        <td><strong>development / lab</strong></td>
+        <td>Expo Go ou Dev Client → API locale/staging</td>
+        <td><code>NODE_ENV=development</code> + sandbox</td>
+        <td>Simulateur, forcer event, logs max</td>
+        <td>HUD debug autorisé</td>
+      </tr>
+      <tr>
+        <td><strong>preview / internal</strong></td>
+        <td>EAS Internal / Dev Client sur iPhone/Android</td>
+        <td>staging dédié (<code>preview</code>)</td>
+        <td>Test Terrain live + journal</td>
+        <td>HUD opt-in testeurs internes</td>
+      </tr>
+      <tr>
+        <td><strong>production</strong></td>
+        <td>Store</td>
+        <td>prod, sandbox interdit</td>
+        <td>aucun forcer / sim sur runs joueurs</td>
+        <td>aucun outil debug</td>
+      </tr>
+    </tbody>
+  </table>
+  <p>Contrats : <code>EXPO_PUBLIC_APP_ENV</code> ∈ <code>lab | preview | production</code> · <code>EXPO_PUBLIC_API_URL</code> toujours respecté · runs tagués <code>channel</code> · events <code>lab_sim</code> / <code>forced</code> refusés sur run <code>production</code>.</p>
+
+  <h2>4. Simulateur vs Test Terrain</h2>
+  <table>
+    <thead><tr><th></th><th>Simulateur</th><th>Test Terrain</th></tr></thead>
+    <tbody>
+      <tr><td>Position / heure</td><td>injectées Lab</td><td>GPS + horloge appareil (ou horloge simulée sur run de test)</td></tr>
+      <tr><td>QR / NFC</td><td>boutons FORCER</td><td>scan / tap réels</td></tr>
+      <tr><td>Marqueur</td><td><code>source: lab_sim / forced</code></td><td><code>source: mobile</code></td></tr>
+      <tr><td>Évaluation</td><td colspan="2"><strong>identique</strong> — <code>StoryStateEngine.handleEvent</code></td></tr>
+    </tbody>
+  </table>
+  <div class="callout">
+    <strong>Mode voyage temporel :</strong> « Montre-moi demain à 20h17 dans le 13e avec ces médias débloqués » = simulate avec <code>now</code> / position / état injectés. Le temps simulé ne modifie jamais les données production.
+  </div>
+
+  <h2>5. Vue Test Terrain (Lantern Lab)</h2>
+  <div class="diagram">LANTERNE #001 — SESSION DE TEST #42
+État : ● Session active
+
+Position : 48.8566, 2.3522 · Zone : PARIS_13 · Précision : 8 m
+Heure réelle : 17:07:12 · Heure moteur : 17:07:12
+
+Événements récents :
+  ✓ NFC_MAGELLAN_DISCOVERED
+  ✓ PLAYER_ENTERED_ZONE_13
+
+Rule #42 — Talkie Magellan — MATCH
+  ✓ Talkie découvert
+  ✓ Paris 13
+  ✓ 17h00–17h15
+  ✓ occurrence disponible
+
+Actions :
+  ✓ Talkie sonne
+  ✓ Audio Monsieur X
+  ✓ Variable talkie_branch = X
+
+Journal :
+  17:06:51 — NFC découvert
+  17:07:02 — entrée zone
+  17:07:12 — conditions OK → talkie déclenché</div>
+  <p>Fonctionnalité <strong>« POURQUOI ? »</strong> : sélectionner une Action → voir Rule, Event, chaque condition ✓/✗, occurrence, nouvel état.</p>
+  <p>L’<strong>Arbre de Situation</strong> highlight les branches parcourues pendant le test (✓ / ✗) — projection des Rules, pas un second moteur.</p>
+
+  <h2>6. GPS réel &amp; stabilisation</h2>
+  <p>Zones : cercle, polygone, arrondissement, zone personnalisée. Trigger <code>geo.enter</code> / <code>geo.exit</code> / <code>geo.heartbeat</code>. Condition <code>geo.inAnyZone</code>.</p>
+  <p>Module serveur <code>geoStabilizer</code> : précision minimale, hysteresis enter/exit, debounce, cooldown, <code>minDwellMs</code>, confirmation de présence. Le client envoie <code>{ lat, lng, accuracy, at, clientEventId }</code> ; le serveur décide enter/exit — évite ENTER/EXIT/ENTER en quelques secondes sur une frontière.</p>
+
+  <h2>7. QR &amp; NFC</h2>
+  <p>QR / NFC = identifiants de balise logique (<code>QR_MAGELLAN_001</code>, <code>NFC_MAGELLAN_001</code>), pas la logique de l’aventure. Scan → Event → Rules.</p>
+  <p>Beacon catalogue dans Definition. Token opaque (esprit Identity). NFC iOS limité → fallback QR obligatoire sur même Beacon.</p>
+
+  <h2>8. Temps absolu, récurrent, relatif</h2>
+  <table>
+    <thead><tr><th>Type</th><th>Exemple</th></tr></thead>
+    <tbody>
+      <tr><td>Heure absolue</td><td>20h17</td></tr>
+      <tr><td>Date absolue</td><td>12 mars à 20h17</td></tr>
+      <tr><td>Récurrence</td><td>tous les jours à 20h17</td></tr>
+      <tr><td><strong>Délai relatif</strong></td><td>LETTER_CONSUMED → attendre 17 min → PHONE_RING</td></tr>
+    </tbody>
+  </table>
+  <p>Action <code>schedule.after</code> : <code>{ afterMs | afterMinutes, emitEventType, payload }</code> → job serveur <code>dueAt = event.at + delay</code>. Occurrence / miss s’appliquent comme aux schedules absolus.</p>
+
+  <h2>9. Golden Test #1 — Talkie Magellan</h2>
+  <p>3 Rules, même <code>exclusiveGroupId: talkie_magellan_zone</code>, zones disjointes, fenêtre 17h00–17h15 :</p>
+  <table>
+    <thead><tr><th>Zone</th><th>Audio</th></tr></thead>
+    <tbody>
+      <tr><td>Paris 11e ou 13e</td><td>Monsieur X</td></tr>
+      <tr><td>Paris 1er ou 3e</td><td>Monsieur Y</td></tr>
+      <tr><td>Paris 7e ou 17e</td><td>Madame V</td></tr>
+    </tbody>
+  </table>
+  <p>Une seule branche gagne (<code>exclusiveGroupId</code>). Tout en données Lab — zéro code spécifique.</p>
+
+  <h2>10. Golden Test #2 — Appel 20h17</h2>
+  <p>Trigger temporel · zone « Bureau » · heure 20h17 · occurrence unique · <code>missPolicy: expire</code> → absent = appel perdu définitivement. Récurrent = prochaine occurrence. Actions : <code>device.ringPhone</code> → <code>media.play</code> → <code>var.set</code>.</p>
+
+  <h2>11. Idempotence &amp; offline</h2>
+  <p>Chaque event client porte <code>clientEventId</code> UUID + <code>Idempotency-Key</code>. Retry réseau ne doit pas déclencher deux fois un talkie « once ».</p>
+  <table>
+    <thead><tr><th>Outbox device (offline)</th><th>Serveur obligatoire</th></tr></thead>
+    <tbody>
+      <tr>
+        <td>GPS samples, scans QR/NFC bruts, media.opened UI</td>
+        <td>unlock média critique, Wallet, miss définitif, once exclusive, vars équipe</td>
+      </tr>
+    </tbody>
+  </table>
+  <p>Sync → ingest idempotent → moteur. Conflit : serveur gagne. Miss 20h17 unique décidé côté serveur à l’heure due — sync tardive ne rattrape pas.</p>
+
+  <h2>12. Match multi-Rules</h2>
+  <ul>
+    <li>Défaut : <code>matchPolicy: 'all'</code> — toutes les Rules candidates vraies s’exécutent (priority desc).</li>
+    <li>Groupes exclusifs : <code>exclusiveGroupId</code> — une seule Rule gagne dans le groupe.</li>
+    <li>Magellan : 3 Rules, même groupe exclusif, zones disjointes.</li>
+  </ul>
+
+  <h2>13. États médias &amp; actions</h2>
+  <p>Conserver <strong>DISCOVERED</strong> ≠ <strong>OPENED</strong> ≠ <strong>CONSUMED</strong>. Source de triggers (ex. <code>media.consumed</code> → +17 min → ring).</p>
+  <p>Actions <strong>critical</strong> vs <strong>non-critical</strong> : échec notification secondaire ne bloque pas l’aventure ; erreur journalisée avec Action id.</p>
+
+  <h2>14. Versioning</h2>
+  <p>Publish = snapshot immuable. Runs en cours restent pinés sur leur <code>contentVersion</code>. Correction → V5 ; nouveaux runs V5, anciens V4 jusqu’à terme.</p>
+
+  <h2>15. Fichiers à créer / modifier</h2>
+  <h3>Créer</h3>
+  <ul>
+    <li><code>backend/src/lib/lanternEngine/</code> — handleEvent, registries, occurrence, matchPolicy</li>
+    <li><code>geoStabilizer.js</code>, <code>relativeScheduler.js</code>, <code>lint.js</code></li>
+    <li>Fixtures <code>magellan.json</code>, <code>appel20h17.json</code></li>
+    <li>Tables : definitions, versions, runs, runtime_state, journal, occurrence_ledger</li>
+    <li>API : <code>POST …/runs/:id/events</code>, <code>GET …/journal/stream</code>, <code>POST …/simulate</code></li>
+    <li><code>lantern-lab/</code> — Simulateur + Test Terrain + Pourquoi + Arbre highlight</li>
+  </ul>
+  <h3>Modifier (ciblé)</h3>
+  <ul>
+    <li><code>mobile/src/config.js</code> — API URL device, APP_ENV</li>
+    <li><code>app.json</code> → <code>app.config.js</code> — permissions location, prep NFC/audio</li>
+    <li><code>mobile/eas.json</code> — profiles development / preview</li>
+    <li>Event Engine <code>type:lanterne</code> — inchangé ; bridge <code>badge.importDiscover</code> seulement</li>
+  </ul>
+  <p><strong>Ne pas toucher en masse :</strong> commerce, Portes hors Lanternes, Material Lab (<code>lantype-lab/</code>).</p>
+
+  <h2>16. Dépendances &amp; réutilisable</h2>
+  <table>
+    <thead><tr><th>Couche</th><th>Besoin</th></tr></thead>
+    <tbody>
+      <tr><td>Mobile terrain</td><td><code>expo-dev-client</code>, <code>expo-location</code>, EAS CLI ; plus tard audio, push, NFC</td></tr>
+      <tr><td>Backend</td><td>cron/jobs, SSE ou WS pour stream journal</td></tr>
+      <tr><td>Infra</td><td>staging joignable en 4G Paris (pas localhost sur iPhone)</td></tr>
+    </tbody>
+  </table>
+  <p>Réutilisable : <code>event_journal</code>, <code>kernel/idempotency</code>, <code>geo.distanceKm</code>, <code>LanternScanScreen</code>, Lab admin sandbox, architecture V2.</p>
+
+  <h2>17. Risques &amp; mitigations</h2>
+  <table>
+    <thead><tr><th>Risque</th><th>Mitigation</th></tr></thead>
+    <tbody>
+      <tr><td>GPS flapping</td><td>geoStabilizer serveur</td></tr>
+      <tr><td>iPhone → localhost</td><td>staging public + fix config</td></tr>
+      <tr><td>Expo Go insuffisant</td><td>Dev Client / Internal Distribution</td></tr>
+      <tr><td>Double sonnerie retry</td><td>clientEventId + once + idempotence</td></tr>
+      <tr><td>Forced events en prod</td><td>refus si channel production</td></tr>
+      <tr><td>Deux moteurs sim/terrain</td><td>un seul package + tests golden</td></tr>
+    </tbody>
+  </table>
+
+  <h2>18. Décisions actées (validation plan)</h2>
+  <ol>
+    <li>Match : <code>all</code> + <code>exclusiveGroupId</code> pour branches exclusives.</li>
+    <li>Même <code>handleEvent</code> ; séparation par <code>source</code> + <code>run.channel</code>.</li>
+    <li>GPS vérité serveur après reports client.</li>
+    <li>Builds Paris : EAS Internal / Dev Client.</li>
+    <li>Délai relatif : <code>schedule.after</code> + job serveur.</li>
+    <li>Offline v1 : outbox bruts ; effets sensibles online-only.</li>
+    <li>Test Terrain : stream journal → Lab.</li>
+    <li>Event Engine QR→badge : bridge, pas fusion.</li>
+  </ol>
+
+  <h2>19. Plan de livraison E0 → Test Terrain</h2>
+  <table>
+    <thead><tr><th>Phase</th><th>Livrable</th><th>Critère</th></tr></thead>
+    <tbody>
+      <tr><td><strong>E0</strong></td><td>lanternEngine + schémas + ingest idempotent + tests</td><td>handleEvent pur, sans UI</td></tr>
+      <tr><td><strong>G1</strong></td><td>Fixture Magellan</td><td>X/Y/V selon zone sans code aventure</td></tr>
+      <tr><td><strong>G2</strong></td><td>Fixture Appel 20h17</td><td>miss + recurrent</td></tr>
+      <tr><td><strong>E0b</strong></td><td>schedule.after (+17 min)</td><td>test unitaire délai relatif</td></tr>
+      <tr><td><strong>S1</strong></td><td>API simulate + trace journal</td><td>SIMULER minimal</td></tr>
+      <tr><td><strong>J1</strong></td><td>Endpoint « Pourquoi ? »</td><td>debug narratif</td></tr>
+      <tr><td><strong>GPS1</strong></td><td>expo-location + geoStabilizer</td><td>enter stable en marchant</td></tr>
+      <tr><td><strong>QR1</strong></td><td>beacon.qr token</td><td>scan réel preview build</td></tr>
+      <tr><td><strong>NFC1</strong></td><td>beacon.nfc</td><td>Android ; fallback QR iOS</td></tr>
+      <tr><td><strong>T1</strong></td><td>Vue Test Terrain + stream + Arbre</td><td>session live Paris</td></tr>
+      <tr><td><strong>B1</strong></td><td>eas.json + fix API URL + Internal</td><td>2 téléphones sans Store</td></tr>
+      <tr><td><strong>L1</strong></td><td>Lantern Lab complet</td><td>après moteur prouvé</td></tr>
+    </tbody>
+  </table>
+
+  <h2>20. Garantie : un seul moteur</h2>
+  <ol>
+    <li>Un seul package <code>backend/src/lib/lanternEngine</code>.</li>
+    <li>API simulate et POST mobile appellent le même <code>handleEvent</code>.</li>
+    <li>Tests : même fixture Magellan via event synthétique et event mobile → traces égales.</li>
+    <li>UI Lab n’évalue jamais les conditions en local — affiche la trace serveur.</li>
+    <li>FORCER event = <code>source: forced</code>, interdit sur channel production.</li>
+  </ol>
+  <div class="diagram">LanternLab ──simulate/watch──► API_lanterns
+MobilePreview ──POST events──► API_lanterns
+        API ──► StoryStateEngine.handleEvent
+        API ◄── trace + ActionPlan
+LanternLab ◄── journal stream (SSE/WS)
+MobilePreview ◄── ActionPlan → Atelier UI</div>
+
+  <div class="verdict">
+    <h2>21. Critère de réussite</h2>
+    <p>Créer Magellan + Appel 20h17 <strong>uniquement en données</strong>. Les valider via : (1) simulateur (2) téléphone (3) GPS réel (4) QR (5) NFC (6) heure réelle (7) heure simulée — <strong>sans modifier le code du moteur</strong> entre les deux aventures.</p>
+    <p>Le Lantern Lab = outil de création ARG. Le Simulateur = laboratoire virtuel. Le Test Terrain = laboratoire réel. Paris = environnement de test — <strong>avant</strong> publication publique.</p>
+    <p><strong>Prochaine étape après validation :</strong> E0 uniquement (organe + fixtures golden en tests) — pas de rewrite mobile massif.</p>
+  </div>
+
+  <footer>
+    Ma Zone — Plan Test Terrain Lantern Engine · 9 août 2026 · Ne remplace pas une fiche FD validée
+  </footer>
+</div>
+</body>
+</html>

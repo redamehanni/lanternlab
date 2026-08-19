@@ -1,0 +1,80 @@
+{
+  "id": "sit_talkie_magellan",
+  "title": "Talkie-walkie rue Magellan",
+  "description": "Le joueur découvre le talkie. Selon l'arrondissement entre 17h00 et 17h15, Monsieur X, Y ou Madame V parle.",
+  "fixtureId": "magellan",
+  "exclusiveGroupId": "talkie_magellan_zone",
+  "trigger": {
+    "kind": "media_discovered",
+    "mediaItemId": "talkie_magellan",
+    "label": "le talkie-walkie Magellan"
+  },
+  "conditions": [
+    {
+      "kind": "clock_between",
+      "start": "17:00",
+      "end": "17:15"
+    }
+  ],
+  "branches": [
+    {
+      "id": "br_x",
+      "label": "11e / 13e → Monsieur X",
+      "conditions": [
+        {
+          "kind": "player_in_any_place",
+          "zoneIds": ["arr_11", "arr_13"],
+          "labels": ["Paris 11e", "Paris 13e"]
+        }
+      ],
+      "thenActions": [
+        { "kind": "ring_talkie", "deviceId": "talkie_magellan", "label": "Talkie Magellan" },
+        { "kind": "play_media", "mediaContentId": "audio_monsieur_x", "label": "Monsieur X" },
+        { "kind": "set_flag", "varId": "talkie_branch", "value": "X", "label": "Branche Monsieur X" }
+      ]
+    },
+    {
+      "id": "br_y",
+      "label": "1er / 3e → Monsieur Y",
+      "conditions": [
+        {
+          "kind": "player_in_any_place",
+          "zoneIds": ["arr_1", "arr_3"],
+          "labels": ["Paris 1er", "Paris 3e"]
+        }
+      ],
+      "thenActions": [
+        { "kind": "ring_talkie", "deviceId": "talkie_magellan", "label": "Talkie Magellan" },
+        { "kind": "play_media", "mediaContentId": "audio_monsieur_y", "label": "Monsieur Y" },
+        { "kind": "set_flag", "varId": "talkie_branch", "value": "Y", "label": "Branche Monsieur Y" }
+      ]
+    },
+    {
+      "id": "br_v",
+      "label": "7e / 17e → Madame V",
+      "conditions": [
+        {
+          "kind": "player_in_any_place",
+          "zoneIds": ["arr_7", "arr_17"],
+          "labels": ["Paris 7e", "Paris 17e"]
+        }
+      ],
+      "thenActions": [
+        { "kind": "ring_talkie", "deviceId": "talkie_magellan", "label": "Talkie Magellan" },
+        { "kind": "play_media", "mediaContentId": "audio_madame_v", "label": "Madame V" },
+        { "kind": "set_flag", "varId": "talkie_branch", "value": "V", "label": "Branche Madame V" }
+      ]
+    }
+  ],
+  "occurrence": { "once": true },
+  "testDefaults": {
+    "lat": 48.8322,
+    "lng": 2.3561,
+    "now": "2026-08-09T15:07:00.000Z",
+    "event": {
+      "type": "media.discovered",
+      "at": "2026-08-09T15:07:00.000Z",
+      "payload": { "mediaItemId": "talkie_magellan" }
+    }
+  }
+}

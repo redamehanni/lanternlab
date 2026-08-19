@@ -1,0 +1,3487 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Lantern Lab — Atelier créateur</title>
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600&family=IBM+Plex+Sans:wght@400;500;600&display=swap" rel="stylesheet" />
+<style>
+  :root {
+    --bg: #050806;
+    --panel: #08110c;
+    --card: #0c1711;
+    --elev: #102017;
+    --line: #1a3a28;
+    --line-hi: #2a5a3e;
+    --ink: #d8f5e4;
+    --muted: #6e9480;
+    --phos: #3dff9a;
+    --phos-dim: #1aa86a;
+    --accent: #3dff9a;
+    --ok: #3dff9a;
+    --bad: #ff5a6a;
+    --info: #6ec8ff;
+    --warn: #e8d45c;
+    --floor: #3dff9a;
+    --glow: rgba(61, 255, 154, 0.14);
+    --font: "IBM Plex Sans", "Segoe UI", system-ui, sans-serif;
+    --mono: "IBM Plex Mono", "SF Mono", ui-monospace, Menlo, monospace;
+    --radius: 3px;
+  }
+  * { box-sizing: border-box; }
+  html, body { height: 100%; }
+  body {
+    margin: 0;
+    font-family: var(--font);
+    color: var(--ink);
+    font-size: 14.5px;
+    line-height: 1.45;
+    background-color: var(--bg);
+    background-image:
+      radial-gradient(900px 420px at 0% -10%, rgba(61,255,154,0.07), transparent 55%),
+      linear-gradient(rgba(61,255,154,0.028) 1px, transparent 1px),
+      linear-gradient(90deg, rgba(61,255,154,0.028) 1px, transparent 1px);
+    background-size: auto, 28px 28px, 28px 28px;
+  }
+  button, .btn, input, select, textarea { font-family: inherit; }
+  header {
+    display: grid;
+    grid-template-columns: minmax(180px, auto) 1fr auto;
+    gap: 20px;
+    align-items: center;
+    padding: 0 20px;
+    height: 58px;
+    border-bottom: 1px solid var(--line);
+    background: rgba(5, 8, 6, 0.92);
+    backdrop-filter: blur(10px);
+    position: sticky; top: 0; z-index: 30;
+  }
+  .brand { display: flex; align-items: center; gap: 10px; min-width: 0; }
+  .brand-mark {
+    width: 28px; height: 28px;
+    border: 1px solid var(--phos);
+    color: var(--phos);
+    display: grid; place-items: center;
+    font-family: var(--mono); font-size: 13px; font-weight: 600;
+    box-shadow: 0 0 12px var(--glow);
+  }
+  header h1 {
+    margin: 0; font-size: 0.78rem; font-weight: 600; letter-spacing: 0.16em;
+    text-transform: uppercase; font-family: var(--mono); color: var(--phos);
+  }
+  header .tag { margin: 2px 0 0; color: var(--muted); font-size: 0.7rem; letter-spacing: 0.04em; }
+  .workspace {
+    display: flex; justify-content: center; gap: 0;
+    border: 1px solid var(--line); background: var(--panel);
+  }
+  .workspace button {
+    border: 0; background: transparent; color: var(--muted);
+    padding: 8px 22px; font-size: 0.8rem; letter-spacing: 0.08em;
+    text-transform: uppercase; font-family: var(--mono); cursor: pointer;
+  }
+  .workspace button + button { border-left: 1px solid var(--line); }
+  .workspace button:hover { color: var(--ink); }
+  .workspace button.active {
+    background: var(--phos); color: #04140c; font-weight: 600;
+    box-shadow: 0 0 18px var(--glow);
+  }
+  .header-actions { display: flex; align-items: center; gap: 8px; justify-self: end; }
+  .modes { display: flex; gap: 0; border: 1px solid var(--line); }
+  .modes button {
+    border: 0; background: transparent; color: var(--muted);
+    padding: 6px 10px; font-size: 0.72rem; font-family: var(--mono);
+    text-transform: uppercase; letter-spacing: 0.06em; cursor: pointer;
+  }
+  .modes button + button { border-left: 1px solid var(--line); }
+  .modes button.active { color: var(--phos); background: var(--glow); }
+  a.btn { text-decoration: none; display: inline-flex; align-items: center; }
+  button, .btn {
+    border: 1px solid var(--line);
+    background: var(--card); color: var(--ink);
+    border-radius: var(--radius);
+    padding: 7px 11px; cursor: pointer; font-size: 0.8rem;
+  }
+  button:hover, .btn:hover { border-color: var(--line-hi); color: var(--phos); }
+  button.active { background: var(--phos); color: #04140c; border-color: var(--phos); font-weight: 600; }
+  .btn.primary { background: transparent; color: var(--phos); border-color: var(--phos); }
+  .btn.primary:hover { background: var(--glow); }
+  button:disabled { opacity: 0.35; cursor: not-allowed; }
+  .btn.danger { border-color: #5a2430; color: #ff8a96; background: transparent; }
+  .btn.danger:hover { border-color: var(--bad); color: var(--bad); }
+  .btn.sm { padding: 3px 7px; font-size: 0.7rem; }
+  .layout {
+    display: grid;
+    grid-template-columns: 232px minmax(0, 1fr) 360px;
+    height: calc(100vh - 58px);
+  }
+  body[data-workspace="world"] .layout { grid-template-columns: 232px minmax(0, 1fr) 280px; }
+  @media (max-width: 1100px) {
+    header { grid-template-columns: 1fr; height: auto; padding: 10px 16px; }
+    .layout { grid-template-columns: 1fr; height: auto; }
+  }
+  .rail, main, .side { min-height: 0; }
+  .rail {
+    border-right: 1px solid var(--line);
+    background: var(--panel);
+    padding: 16px 14px;
+    overflow-y: auto;
+  }
+  main { padding: 0; overflow: auto; display: flex; flex-direction: column; }
+  .side {
+    border-left: 1px solid var(--line);
+    background: #070f0b;
+    overflow-y: auto;
+    padding: 16px;
+  }
+  .kicker {
+    font-family: var(--mono); font-size: 0.65rem; letter-spacing: 0.16em;
+    text-transform: uppercase; color: var(--phos); margin: 0 0 8px; font-weight: 500;
+  }
+  h2 {
+    font-size: 0.65rem; letter-spacing: 0.16em; text-transform: uppercase;
+    color: var(--phos); margin: 0 0 10px; font-weight: 600; font-family: var(--mono);
+  }
+  .rail-block { margin-bottom: 22px; }
+  .adv-card {
+    background: var(--card); border: 1px solid var(--line); border-radius: var(--radius);
+    padding: 10px 12px; margin-bottom: 6px; cursor: pointer;
+  }
+  .adv-card:hover { border-color: var(--line-hi); }
+  .adv-card.active {
+    border-color: var(--phos);
+    box-shadow: inset 2px 0 0 var(--phos), 0 0 12px var(--glow);
+  }
+  .adv-card h3 { margin: 0 0 3px; font-size: 0.88rem; font-weight: 600; }
+  .adv-card p { margin: 0; color: var(--muted); font-size: 0.72rem; font-family: var(--mono); }
+  .adv-card .card-row { display: flex; align-items: flex-start; gap: 8px; }
+  .adv-card .card-row > div { flex: 1; min-width: 0; }
+  .story-chrome {
+    position: sticky; top: 0; z-index: 5;
+    background: rgba(5, 8, 6, 0.94);
+    border-bottom: 1px solid var(--line);
+    padding: 14px 20px 12px;
+  }
+  .main-head { display: flex; align-items: flex-end; justify-content: space-between; gap: 16px; flex-wrap: wrap; }
+  .main-head h2, #storyTitle {
+    font-family: var(--font); font-size: 1.15rem; letter-spacing: 0; text-transform: none;
+    color: var(--ink); margin: 0; font-weight: 600;
+  }
+  #storyTitle {
+    display: block; width: min(420px, 100%);
+    border: 1px solid transparent; background: transparent;
+    padding: 2px 6px 2px 0; border-radius: var(--radius);
+  }
+  #storyTitle:hover { border-color: var(--line); }
+  #storyTitle:focus { border-color: var(--phos); outline: none; background: #050a07; }
+  .views { display: flex; gap: 0; border: 1px solid var(--line); }
+  .views button {
+    border: 0; background: transparent; color: var(--muted);
+    padding: 6px 11px; font-size: 0.7rem; font-family: var(--mono);
+    text-transform: uppercase; letter-spacing: 0.07em; border-radius: 0;
+  }
+  .views button + button { border-left: 1px solid var(--line); }
+  .views button.active { color: #04140c; background: var(--phos); }
+  .toolbar { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 12px; }
+  .canvas { padding: 18px 20px 40px; flex: 1; }
+  #viewWorld { flex: 1; min-height: 0; overflow: auto; }
+  .floor { background: var(--card); border: 1px solid var(--line); border-radius: var(--radius); margin-bottom: 10px; overflow: hidden; }
+  .floor-head { display: flex; align-items: center; gap: 12px; padding: 12px 14px; cursor: pointer; user-select: none; }
+  .floor-head:hover { background: var(--glow); }
+  .floor-num { font-family: var(--mono); font-weight: 600; font-size: 1.15rem; color: var(--phos); min-width: 2.2rem; }
+  .floor-meta { flex: 1; }
+  .floor-meta h3 { margin: 0; font-size: 0.98rem; font-weight: 600; }
+  .floor-meta .letters { color: var(--muted); font-size: 0.75rem; font-family: var(--mono); margin-top: 2px; }
+  .status { font-family: var(--mono); font-size: 0.65rem; padding: 3px 7px; border: 1px solid var(--line); color: var(--muted); text-transform: uppercase; letter-spacing: 0.06em; }
+  .status.done { color: var(--ok); border-color: var(--ok); }
+  .status.designing { color: var(--info); border-color: #2a4a60; }
+  .status.error { color: var(--bad); border-color: var(--bad); }
+  .floor-body { display: none; padding: 0 14px 14px; border-top: 1px solid var(--line); }
+  .floor.open .floor-body { display: block; }
+  .sit { margin-top: 10px; padding: 12px; background: var(--bg); border: 1px solid var(--line); cursor: pointer; }
+  .sit.selected { border-color: var(--phos); box-shadow: 0 0 0 1px var(--phos), 0 0 14px var(--glow); }
+  .sit .letter {
+    display: inline-flex; width: 24px; height: 24px; align-items: center; justify-content: center;
+    background: var(--phos); color: #04140c; font-weight: 700;
+    font-family: var(--mono); margin-right: 8px; font-size: 0.75rem;
+  }
+  .sit .flow { margin: 8px 0 0 32px; font-size: 0.85rem; color: var(--muted); }
+  .sit .flow .arrow { color: var(--phos); margin: 4px 0; font-family: var(--mono); font-size: 0.68rem; letter-spacing: 0.1em; }
+  .unlock-box { margin-top: 12px; padding: 12px; border: 1px dashed var(--line-hi); background: rgba(61,255,154,0.04); cursor: pointer; }
+  .unlock-box h4 { margin: 0 0 8px; font-size: 0.68rem; letter-spacing: 0.12em; text-transform: uppercase; color: var(--phos); font-family: var(--mono); }
+  .tree-wrap { overflow: auto; padding-bottom: 40px; }
+  .tree-row { display: flex; flex-wrap: wrap; gap: 12px; align-items: flex-start; margin-bottom: 24px; }
+  .tree-floor-label { min-width: 100%; font-family: var(--mono); color: var(--phos); font-weight: 500; margin-bottom: 4px; font-size: 0.72rem; letter-spacing: 0.1em; }
+  .tcard { background: var(--card); border: 1px solid var(--line); padding: 10px 12px; min-width: 150px; max-width: 210px; cursor: pointer; }
+  .tcard.floor-node { border-color: var(--line-hi); }
+  .tcard.action-node { border-style: dashed; opacity: 0.9; font-size: 0.8rem; }
+  .tcard.selected { border-color: var(--phos); box-shadow: 0 0 0 1px var(--phos); }
+  .tcard .k { font-size: 0.62rem; letter-spacing: 0.12em; text-transform: uppercase; color: var(--muted); font-family: var(--mono); }
+  .edge-label { align-self: center; font-family: var(--mono); font-size: 0.65rem; color: var(--phos); font-weight: 600; letter-spacing: 0.1em; }
+  .path-view { }
+  .path-step { padding: 10px 14px; border-left: 2px solid var(--line); margin-left: 10px; color: var(--muted); }
+  .path-step.done { border-color: var(--ok); color: var(--ink); }
+  .path-step.open { border-color: var(--info); color: var(--ink); }
+  .path-step.blocked { border-color: var(--bad); opacity: 0.7; }
+  .field { margin-bottom: 12px; }
+  .field label { display: block; font-size: 0.68rem; color: var(--muted); margin-bottom: 5px; text-transform: uppercase; letter-spacing: 0.1em; font-family: var(--mono); }
+  .field input, .field select, .field textarea {
+    width: 100%; background: #050a07; border: 1px solid var(--line); color: var(--ink);
+    border-radius: var(--radius); padding: 8px 10px; font: inherit;
+  }
+  .field input:focus, .field select:focus, .field textarea:focus {
+    outline: none; border-color: var(--phos); box-shadow: 0 0 0 1px var(--phos);
+  }
+  .checks label { display: flex; gap: 8px; align-items: center; margin: 4px 0; font-size: 0.85rem; text-transform: none; letter-spacing: 0; color: var(--ink); }
+  .result { margin-top: 12px; padding: 12px; background: var(--panel); border: 1px solid var(--line); font-size: 0.85rem; }
+  .result.ok { border-color: var(--ok); }
+  .result.bad { border-color: var(--bad); }
+  .warn { color: var(--warn); font-size: 0.75rem; margin: 6px 0; line-height: 1.4; }
+  .warn.error { color: #ff8a96; }
+  .dev pre { background: #030605; border: 1px solid var(--line); padding: 10px; overflow: auto; font-size: 0.7rem; max-height: 280px; font-family: var(--mono); color: var(--phos); }
+  .hidden { display: none !important; }
+  .empty { color: var(--muted); padding: 28px 12px; text-align: center; font-size: 0.85rem; }
+  .block-editor { background: var(--card); border: 1px solid var(--line); padding: 12px; margin-bottom: 12px; }
+  .block-editor .role {
+    font-size: 0.65rem; letter-spacing: 0.14em; text-transform: uppercase;
+    color: var(--phos); font-weight: 600; margin-bottom: 8px; font-family: var(--mono);
+  }
+  .block-row {
+    display: flex; flex-wrap: wrap; gap: 6px; align-items: flex-start;
+    background: #050a07; border: 1px solid var(--line);
+    padding: 8px; margin-bottom: 8px;
+  }
+  .block-row select, .block-row input { flex: 1; min-width: 90px; background: #050a07; border: 1px solid var(--line); color: var(--ink); border-radius: var(--radius); padding: 6px 8px; font-size: 0.8rem; }
+  .block-row .conn { color: var(--phos); font-size: 0.65rem; font-weight: 600; align-self: center; min-width: 40px; font-family: var(--mono); letter-spacing: 0.08em; }
+  .tabs { display: flex; gap: 0; margin-bottom: 14px; border: 1px solid var(--line); }
+  .tabs button { padding: 7px 12px; font-size: 0.72rem; border: 0; border-radius: 0; background: transparent; color: var(--muted); font-family: var(--mono); text-transform: uppercase; letter-spacing: 0.06em; }
+  .tabs button + button { border-left: 1px solid var(--line); }
+  .tabs button.active { background: var(--phos); color: #04140c; }
+  .side-section { margin-bottom: 18px; }
+  .world-shell { display: grid; grid-template-columns: 240px minmax(0, 1fr); min-height: 100%; height: 100%; }
+  @media (max-width: 900px) { .world-shell { grid-template-columns: 1fr; } }
+  .world-nav { border-right: 1px solid var(--line); background: var(--panel); padding: 18px 12px 32px; }
+  .world-nav .intro { font-size: 0.78rem; color: var(--muted); line-height: 1.5; margin: 0 8px 18px; }
+  .world-group { margin-bottom: 18px; }
+  .world-group-label {
+    font-family: var(--mono); font-size: 0.62rem; letter-spacing: 0.14em; text-transform: uppercase;
+    color: var(--phos); padding: 0 8px; margin: 14px 0 6px;
+  }
+  .world-nav > .world-group-label:first-of-type { margin-top: 0; }
+  .world-nav button[data-wtab] {
+    display: block; width: 100%; text-align: left; border: 0; background: transparent;
+    color: var(--ink); padding: 9px 10px; margin-bottom: 2px; border-radius: var(--radius);
+  }
+  .world-nav button[data-wtab] .wn-title { display: block; font-size: 0.88rem; font-weight: 600; }
+  .world-nav button[data-wtab] .wn-help { display: block; font-size: 0.72rem; color: var(--muted); font-weight: 400; margin-top: 2px; }
+  .world-nav button[data-wtab]:hover { background: var(--glow); }
+  .world-nav button[data-wtab].active { background: var(--glow); box-shadow: inset 2px 0 0 var(--phos); }
+  .world-nav button[data-wtab].active .wn-title { color: var(--phos); }
+  .world-main { padding: 18px 20px 40px; }
+  .world-chain {
+    font-family: var(--mono); font-size: 0.7rem; color: var(--muted); letter-spacing: 0.04em;
+    margin: 0 0 16px; padding: 10px 12px; border: 1px solid var(--line); background: #050a07;
+  }
+  .world-chain b { color: var(--phos); font-weight: 500; }
+  .world-list { display: flex; flex-direction: column; gap: 16px; }
+  .world-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(240px, 1fr)); gap: 10px; }
+  .wcard { background: var(--card); border: 1px solid var(--line); padding: 12px 14px; }
+  .wcard h3 { margin: 0 0 6px; font-size: 0.92rem; }
+  .wcard .meta { color: var(--muted); font-size: 0.75rem; margin-bottom: 8px; font-family: var(--mono); }
+  .world-form { background: var(--elev); border: 1px solid var(--line); padding: 16px; margin-bottom: 18px; }
+  .world-form .checks { margin: 6px 0 4px; }
+  .world-form .checks label { display: flex; gap: 8px; align-items: center; margin: 4px 0; font-size: 0.85rem; text-transform: none; letter-spacing: 0; color: var(--ink); }
+  .wcard .row-actions { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 8px; }
+  .family-block {
+    border: 1px solid var(--line);
+    background: #050a07;
+    padding: 12px 14px 14px;
+  }
+  .family-head {
+    font-family: var(--mono); font-size: 0.72rem; letter-spacing: 0.12em; text-transform: uppercase;
+    color: var(--phos); margin: 0 0 12px; padding-bottom: 8px; border-bottom: 1px solid var(--line);
+    display: flex; align-items: baseline; justify-content: space-between; gap: 12px;
+  }
+  .family-count {
+    color: var(--muted); letter-spacing: 0; font-weight: 400; font-size: 0.7rem;
+  }
+  .resume-bar { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; margin: 0 0 14px; }
+  .sheet {
+    position: fixed; inset: 0; z-index: 40; background: rgba(2,6,4,0.72);
+    display: flex; justify-content: flex-end;
+  }
+  .sheet.hidden { display: none; }
+  .sheet-panel {
+    width: min(560px, 100%); height: 100%; overflow: auto;
+    background: #07110c; border-left: 1px solid var(--line-hi); padding: 18px 18px 48px;
+  }
+  .sheet-panel h2 { margin: 0 0 4px; font-size: 1.05rem; }
+  .sheet-k { font-family: var(--mono); font-size: 0.68rem; color: var(--phos); letter-spacing: 0.1em; text-transform: uppercase; margin: 0 0 14px; }
+  .detail-list { margin: 0 0 10px; }
+  .detail-item {
+    border: 1px solid var(--line); padding: 8px 10px; margin: 0 0 6px; background: #050a07; font-size: 0.82rem;
+  }
+  .detail-item p { margin: 0 0 6px; color: var(--ink); white-space: pre-wrap; }
+  .floor-chip {
+    display: inline-block; font-family: var(--mono); font-size: 0.65rem; color: var(--phos);
+    border: 1px solid var(--line); padding: 1px 6px; margin-left: 6px;
+  }
+  .mut-line { font-size: 0.78rem; color: var(--muted); margin: 0 0 4px; font-family: var(--mono); }
+  .legend p { color: var(--muted); font-size: 0.8rem; line-height: 1.55; margin: 0 0 12px; }
+  .legend ol { margin: 0; padding-left: 18px; color: var(--ink); font-size: 0.82rem; }
+  .legend li { margin: 0 0 8px; }
+  .legend code { font-family: var(--mono); color: var(--phos); font-size: 0.78rem; }
+
+  body[data-view="graph"] .side { display: none; }
+  body[data-view="graph"] .layout { grid-template-columns: 232px 1fr; }
+  .canvas.is-onto { padding: 0; overflow: hidden; }
+  #viewGraph { display: none; height: 100%; min-height: 420px; }
+  .canvas.is-onto #viewGraph { display: block; position: absolute; inset: 0; }
+  .canvas { position: relative; }
+  .onto-root {
+    position: relative; width: 100%; height: 100%;
+    background:
+      radial-gradient(800px 400px at 50% 40%, rgba(61,255,154,0.07), transparent 60%),
+      radial-gradient(circle at 20% 80%, rgba(61,255,154,0.04), transparent 35%),
+      #040806;
+    overflow: hidden;
+  }
+  .onto-hud {
+    position: absolute; z-index: 4; left: 12px; right: 12px; top: 10px;
+    display: flex; flex-wrap: wrap; gap: 8px; align-items: center;
+    pointer-events: none;
+  }
+  .onto-hud > * { pointer-events: auto; }
+  .onto-hint {
+    font-family: var(--mono); font-size: 0.65rem; color: var(--muted);
+    letter-spacing: 0.04em; background: rgba(4,8,6,0.75);
+    border: 1px solid var(--line); padding: 6px 10px;
+  }
+  .onto-tools { display: flex; gap: 6px; align-items: center; margin-left: auto; }
+  .onto-zoom { font-family: var(--mono); font-size: 0.7rem; color: var(--phos); min-width: 3rem; }
+  .onto-filters { display: flex; flex-wrap: wrap; gap: 4px; width: 100%; }
+  .onto-chip {
+    font-family: var(--mono); font-size: 0.62rem; letter-spacing: 0.08em; text-transform: uppercase;
+    padding: 4px 8px; border: 1px solid var(--line); background: rgba(4,8,6,0.7); color: var(--muted);
+  }
+  .onto-chip.on { color: #04140c; background: var(--phos); border-color: var(--phos); }
+  .onto-viewport { position: absolute; inset: 0; cursor: grab; touch-action: none; }
+  .onto-viewport.grabbing { cursor: grabbing; }
+  .onto-space { position: absolute; left: 0; top: 0; transform-origin: 0 0; will-change: transform; }
+  .onto-svg { position: absolute; overflow: visible; width: 1px; height: 1px; left: 0; top: 0; pointer-events: none; }
+  .onto-fil {
+    fill: none; stroke: #3dff9a; stroke-width: 1.35; filter: url(#phosGlow);
+    stroke-dasharray: 7 11; animation: ontoFlow 2.8s linear infinite;
+    opacity: 0.85;
+  }
+  .onto-fil.hot { stroke-width: 2.1; opacity: 1; }
+  .onto-fil.dim, .onto-elab.dim { opacity: 0.12; }
+  .onto-elab {
+    fill: #3dff9a; font-size: 9px; font-family: var(--mono);
+    letter-spacing: 0.12em; opacity: 0.7;
+  }
+  @keyframes ontoFlow { to { stroke-dashoffset: -36; } }
+  .onto-cards { position: absolute; left: 0; top: 0; }
+  .onto-card {
+    position: absolute;
+    background: linear-gradient(180deg, #102017 0%, #0a1410 100%);
+    border: 1px solid var(--line-hi);
+    padding: 10px 12px 36px;
+    box-shadow: 0 0 24px rgba(61,255,154,0.08), 0 12px 28px rgba(0,0,0,0.45);
+    cursor: pointer;
+    user-select: none;
+  }
+  .onto-card:hover { border-color: var(--phos); box-shadow: 0 0 28px var(--glow); }
+  .onto-card.selected {
+    border-color: var(--phos);
+    box-shadow: 0 0 0 1px var(--phos), 0 0 32px rgba(61,255,154,0.28);
+  }
+  .onto-card.dim { opacity: 0.22; }
+  .onto-card.kind-sit { background: linear-gradient(180deg, #12261a 0%, #0b1611 100%); }
+  .onto-card.kind-imposed { border-color: #3dff9a; box-shadow: 0 0 22px rgba(61,255,154,0.18); }
+  .onto-card.kind-bureau { border-color: #7dffb8; }
+  .onto-card.kind-code { border-color: #3dff9a; }
+  .onto-card.kind-zone { border-color: #2a5a3e; }
+  .onto-k {
+    font-family: var(--mono); font-size: 0.58rem; letter-spacing: 0.14em; text-transform: uppercase;
+    color: var(--phos); display: flex; gap: 6px; align-items: center; margin-bottom: 4px;
+  }
+  .onto-card h3 { margin: 0; font-size: 0.86rem; font-weight: 600; line-height: 1.25; max-height: 2.5em; overflow: hidden; }
+  .onto-card p { margin: 4px 0 0; font-size: 0.68rem; color: var(--muted); font-family: var(--mono); }
+  .onto-det {
+    position: absolute; left: 10px; right: 10px; bottom: 8px;
+    font-size: 0.62rem !important; letter-spacing: 0.06em; text-transform: uppercase;
+    font-family: var(--mono) !important;
+  }
+  .onto-float {
+    position: absolute; z-index: 8; top: 72px; right: 16px; width: min(360px, calc(100% - 32px));
+    max-height: calc(100% - 96px); overflow: auto;
+    background: rgba(8, 16, 12, 0.94); border: 1px solid var(--phos);
+    box-shadow: 0 0 40px rgba(61,255,154,0.18), 0 18px 40px rgba(0,0,0,0.5);
+    backdrop-filter: blur(12px);
+  }
+  .onto-float > header {
+    display: flex; justify-content: space-between; gap: 10px; align-items: flex-start;
+    padding: 14px 14px 10px; border-bottom: 1px solid var(--line);
+  }
+  .onto-float h3 { margin: 4px 0 0; font-size: 1rem; }
+  .onto-float-body { padding: 12px 14px 18px; }
+  .onto-float section { margin-bottom: 14px; }
+  .onto-float h4 {
+    font-family: var(--mono); font-size: 0.62rem; letter-spacing: 0.14em; text-transform: uppercase;
+    color: var(--phos); margin: 0 0 8px;
+  }
+  .onto-line { margin: 0 0 8px; font-size: 0.82rem; line-height: 1.45; color: var(--ink); }
+  .onto-line b { color: var(--phos); font-family: var(--mono); font-size: 0.68rem; font-weight: 600; margin-right: 6px; }
+  .onto-muted { color: var(--muted); font-size: 0.8rem; margin: 0; }
+  .onto-code {
+    display: flex; justify-content: space-between; gap: 10px; align-items: baseline;
+    margin: 0 0 8px; padding: 8px 10px; border: 1px solid var(--line); background: #050a07;
+    font-size: 0.78rem;
+  }
+  .onto-code span { color: var(--muted); font-family: var(--mono); font-size: 0.65rem; }
+  .onto-code strong { color: var(--phos); font-family: var(--mono); letter-spacing: 0.12em; }
+  .onto-link {
+    display: block; width: 100%; text-align: left; margin: 0 0 6px; padding: 7px 8px;
+    background: transparent; border: 1px solid var(--line); color: var(--ink); font-size: 0.78rem;
+  }
+  .onto-link:hover { border-color: var(--phos); color: var(--phos); }
+</style>
+</head>
+<body data-workspace="story">
+<header>
+  <div class="brand">
+    <div class="brand-mark">▣</div>
+    <div>
+      <h1>Lantern Lab</h1>
+      <p class="tag">Atelier créateur · sandbox</p>
+    </div>
+  </div>
+  <nav class="workspace" id="workspaceNav" aria-label="Espace de travail">
+    <button type="button" data-workspace="story" class="active">Aventure</button>
+    <button type="button" data-workspace="world">Matériel</button>
+  </nav>
+  <div class="header-actions">
+    <button type="button" class="btn primary" id="btnCompile">Compiler</button>
+    <button type="button" id="btnSaveDraft">Sauver brouillon</button>
+    <button type="button" id="btnValidate">Valider</button>
+    <div class="modes" id="uiModes">
+      <button type="button" data-mode="creator" class="active">Mode Créateur</button>
+      <button type="button" data-mode="dev">Mode Développeur</button>
+    </div>
+    <a class="btn" href="/lantern-sim/">Simulateur S1</a>
+  </div>
+</header>
+
+<div class="layout">
+  <aside class="rail">
+    <div class="rail-block">
+      <h2>Aventures</h2>
+      <div id="advList"></div>
+    </div>
+    <div class="rail-block">
+      <h2>Brouillons</h2>
+      <div id="draftList"></div>
+      <button type="button" class="btn sm" id="btnNewAdv" style="margin-top:8px;width:100%">+ Nouvelle aventure</button>
+      <div id="newAdvAsk" hidden style="margin-top:8px;padding:8px;border:1px solid var(--line);border-radius:var(--radius);background:#050a07">
+        <label for="newAdvTitle" class="kicker" style="display:block;margin-bottom:6px">Nom de l’aventure</label>
+        <input id="newAdvTitle" type="text" placeholder="ex. La lanterne de Mira" style="width:100%;margin-bottom:8px" />
+        <div style="display:flex;gap:6px">
+          <button type="button" class="btn sm primary" id="newAdvCreate">Créer</button>
+          <button type="button" class="btn sm" id="newAdvCancel">Annuler</button>
+        </div>
+      </div>
+    </div>
+    <div class="rail-block">
+      <h2>Alertes</h2>
+      <div id="warnings"></div>
+    </div>
+  </aside>
+
+  <main>
+    <div id="storyChrome" class="story-chrome">
+      <div class="main-head">
+        <div>
+          <p class="kicker">Étages &amp; situations</p>
+          <input id="storyTitle" type="text" value="Aventure" spellcheck="false" placeholder="Nom de l’aventure" aria-label="Nom de l’aventure" />
+        </div>
+        <div class="views" id="viewModes">
+          <button type="button" data-view="list" class="active">Liste</button>
+          <button type="button" data-view="tree">Arbre</button>
+          <button type="button" data-view="path">Parcours</button>
+          <button type="button" data-view="graph">Ontologie</button>
+        </div>
+      </div>
+      <div class="toolbar">
+        <button type="button" class="btn primary" id="btnAddFloor">+ Étage</button>
+        <button type="button" id="btnAddSit" disabled>+ Situation</button>
+        <button type="button" id="btnEditFloorUnlock" disabled>Transition</button>
+      </div>
+    </div>
+    <div class="canvas" id="storyCanvas">
+      <div id="viewList"></div>
+      <div id="viewTree" class="tree-wrap hidden"></div>
+      <div id="viewPath" class="path-view hidden"></div>
+      <div id="viewGraph" class="hidden"></div>
+    </div>
+    <div id="viewWorld" class="hidden"></div>
+  </main>
+
+  <div class="side">
+    <div id="inspectorStory">
+      <div class="tabs" id="sideTabs">
+        <button type="button" data-tab="edit" class="active">Éditer</button>
+        <button type="button" data-tab="test">Tester</button>
+        <button type="button" data-tab="journey">Parcours</button>
+      </div>
+      <div id="tabEdit" class="side-section">
+        <h2>Situation</h2>
+        <div id="sitPanel"><p class="empty">Sélectionnez une situation dans la liste</p></div>
+        <div id="floorUnlockPanel" class="hidden"></div>
+      </div>
+      <div id="tabTest" class="side-section hidden">
+        <h2>Tester la situation</h2>
+        <div id="testPanel"><p class="empty">Choisissez une situation</p></div>
+      </div>
+      <div id="tabJourney" class="side-section hidden">
+        <h2>Parcours joueur (session)</h2>
+        <div id="journeyPanel">
+          <button type="button" class="btn primary" id="btnStartJourney">Démarrer le parcours</button>
+          <div id="journeyStatus" style="margin-top:12px"></div>
+          <div id="journeyStepForm" class="hidden" style="margin-top:12px"></div>
+          <div id="journeyLog" style="margin-top:12px"></div>
+        </div>
+      </div>
+      <div id="devPanel" class="dev hidden">
+        <h2>Moteur (JSON)</h2>
+        <pre id="devJson">—</pre>
+      </div>
+    </div>
+    <div id="inspectorWorld" class="hidden legend">
+      <h2>Chaîne du matériel</h2>
+      <p>Ici tu prépares ce que les situations utiliseront. Rien ne se déclenche dans cet écran — tu ranges les pièces.</p>
+      <ol>
+        <li><b>Média imposé</b> — le point de départ : visible dès l’étage 0, distinct des autres objets.</li>
+        <li><b>Bureau</b> — les objets de l’étage 1. Liste éditable : contenu, nature, analyses. Importez un objet déjà créé depuis Tous les objets.</li>
+        <li><b>Objets recouvrables</b> — tout ce qui se débloque plus tard (code, lieu, balise). Même raccourci d’import.</li>
+        <li><b>Résumé</b> — tous les objets, par famille ou par étage. C’est aussi l’éditeur principal.</li>
+      </ol>
+      <p style="margin-top:16px">Ensuite, dans <b>Aventure</b>, tu les branches dans QUAND / SI / ALORS.</p>
+    </div>
+  </div>
+</div>
+
+<div id="objectSheet" class="sheet hidden"></div>
+
+<script src="ontology.js"></script>
+<script>
+const API = '/api/admin/lantern-lab';
+const KEY = 'mazone-lantern-sim';
+const headers = { 'Content-Type': 'application/json', 'X-Lantern-Sim-Key': KEY };
+
+const state = {
+  mode: 'creator', view: 'list', workspace: 'story', sideTab: 'edit',
+  adventures: [], drafts: [], adventure: null, draftId: null,
+  list: null, tree: null, journey: null, warnings: [],
+  selectedFloor: null, selectedSitId: null, editingUnlockFloor: null,
+  catalog: null, lastCompile: null,
+  journeySessionId: null, journeyFloorsOpen: [],
+  worldTab: 'imposed',
+  worldEditId: null,
+  worldAddMode: 'create',
+  importConfirm: null,
+  boxViewId: null,
+  stashConfirm: null,
+  resumeGroup: 'family',
+  sheetId: null,
+};
+
+async function api(path, opts = {}) {
+  const res = await fetch(API + path, { ...opts, headers: { ...headers, ...(opts.headers || {}) } });
+  const data = await res.json().catch(() => ({}));
+  if (!res.ok) throw new Error(data.error || data.message || res.statusText);
+  return data;
+}
+
+function esc(s) {
+  return String(s ?? '').replace(/[&<>"']/g, (c) => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+}
+function statusIcon(s) {
+  if (s === 'done') return '🟢';
+  if (s === 'designing') return '🔵';
+  if (s === 'available') return '🟡';
+  if (s === 'error') return '⚠️';
+  return '🔒';
+}
+
+async function boot() {
+  const [cat, adv, dr] = await Promise.all([
+    api('/creator/catalog'),
+    api('/creator/adventures'),
+    api('/creator/drafts'),
+  ]);
+  state.catalog = cat.catalog;
+  state.adventures = adv.adventures || [];
+  state.drafts = dr.drafts || [];
+  renderAdvList();
+  renderDraftList();
+  if (state.adventures.length) await loadAdventure(state.adventures[0].id);
+}
+
+function renderAdvList() {
+  const el = document.getElementById('advList');
+  el.innerHTML = state.adventures.map((a) => `
+    <div class="adv-card ${state.adventure?.id === a.id && !state.draftId ? 'active' : ''}" data-id="${esc(a.id)}">
+      <h3>${esc(a.title)}</h3>
+      <p>${a.floorCount} étages · fixture</p>
+    </div>`).join('') || '<p class="empty">Aucune</p>';
+  el.querySelectorAll('.adv-card').forEach((n) => { n.onclick = () => loadAdventure(n.dataset.id); });
+}
+
+function renderDraftList() {
+  const el = document.getElementById('draftList');
+  el.innerHTML = state.drafts.map((d) => `
+    <div class="adv-card ${state.draftId === d.id ? 'active' : ''}" data-id="${esc(d.id)}">
+      <div class="card-row">
+        <div>
+          <h3>${esc(d.title)}</h3>
+          <p>${d.floorCount} étages · brouillon</p>
+        </div>
+        <button type="button" class="btn sm danger" data-del-draft="${esc(d.id)}" title="Supprimer">✕</button>
+      </div>
+    </div>`).join('') || '<p class="empty" style="padding:8px;font-size:0.8rem">Aucun brouillon</p>';
+  el.querySelectorAll('.adv-card').forEach((n) => { n.onclick = () => loadDraft(n.dataset.id); });
+  el.querySelectorAll('[data-del-draft]').forEach((b) => {
+    b.onclick = (e) => { e.stopPropagation(); deleteDraft(b.dataset.delDraft); };
+  });
+}
+
+async function deleteDraft(id) {
+  if (!id || !confirm('Supprimer ce brouillon ? Cette action est définitive.')) return;
+  try {
+    await api('/creator/drafts/' + encodeURIComponent(id), { method: 'DELETE' });
+    const list = await api('/creator/drafts');
+    state.drafts = list.drafts || [];
+    if (state.draftId === id) {
+      state.draftId = null;
+      if (state.adventures.length) await loadAdventure(state.adventures[0].id);
+      else {
+        state.adventure = null;
+        renderAll();
+      }
+    }
+    renderDraftList();
+  } catch (e) { alert(e.message); }
+}
+
+async function loadAdventure(id) {
+  const data = await api('/creator/adventures/' + encodeURIComponent(id));
+  applyBundle(data.adventure, data, null);
+}
+
+async function loadDraft(id) {
+  const data = await api('/creator/drafts/' + encodeURIComponent(id));
+  applyBundle(data.adventure, data, data.draft.id);
+}
+
+function applyBundle(adventure, data, draftId) {
+  state.adventure = adventure;
+  state.draftId = draftId;
+  state.list = data.list;
+  state.tree = data.tree;
+  state.journey = data.journey || null;
+  state.warnings = data.warnings || [];
+  state.selectedFloor = state.adventure.floors?.[0]?.index ?? null;
+  state.selectedSitId = null;
+  state.editingUnlockFloor = null;
+  state.lastCompile = { enginePreview: data.enginePreview, definition: null };
+  renderAdvList();
+  renderDraftList();
+  renderAll();
+}
+
+function renderAll() {
+  renderWarnings();
+  renderList();
+  renderTree();
+  renderPath();
+  renderWorld();
+  renderSitPanel();
+  renderFloorUnlockPanel();
+  renderTestPanel();
+  const title = document.getElementById('storyTitle');
+  if (title && document.activeElement !== title) {
+    title.value = state.adventure?.title || 'Aventure';
+  }
+  applyView();
+  applyMode();
+  applySideTab();
+  document.getElementById('btnAddSit').disabled = state.selectedFloor == null;
+  document.getElementById('btnEditFloorUnlock').disabled = state.selectedFloor == null;
+}
+
+function renderWarnings() {
+  const el = document.getElementById('warnings');
+  if (!state.warnings.length) {
+    el.innerHTML = '<p style="color:var(--ok);font-size:0.85rem">Aucune alerte</p>';
+    return;
+  }
+  el.innerHTML = state.warnings.map((w) =>
+    `<div class="warn ${w.level === 'error' ? 'error' : ''}">${w.level === 'error' ? '⚠️' : '·'} ${esc(w.message)}</div>`
+  ).join('');
+}
+
+function findSituation(id) {
+  if (!state.adventure) return null;
+  for (const f of state.adventure.floors || []) {
+    const s = (f.situations || []).find((x) => x.id === id);
+    if (s) return { sit: s, floor: f };
+  }
+  return null;
+}
+
+function findFloor(index) {
+  return (state.adventure?.floors || []).find((f) => f.index === index) || null;
+}
+
+function actionLabel(a) {
+  if (!a) return '';
+  if (a.kind === 'notify') return (a.message || 'Message').slice(0, 70);
+  if (a.kind === 'unlock_floor') return `Débloquer étage ${a.floorIndex}`;
+  if (a.kind === 'play_media') return `Lire ${a.label || a.mediaContentId}`;
+  if (a.kind === 'show_button') return a.label || a.choiceId;
+  if (a.kind === 'add_journal') return `Journal : ${(a.message || a.noteId || '').slice(0, 40)}`;
+  const cat = state.catalog?.actions?.find((x) => x.kind === a.kind);
+  return cat ? cat.label : a.kind;
+}
+
+function triggerLabel(t) {
+  if (!t) return '—';
+  const cat = state.catalog?.triggers?.find((x) => x.kind === t.kind);
+  const base = cat ? cat.label : t.kind;
+  if (t.mediaItemId) return `${base} « ${labelOf('mediaItem', t.mediaItemId) || t.mediaItemId} »`;
+  if (t.choiceId) return `${base} « ${t.label || t.choiceId} »`;
+  if (t.beaconId) return `${base} « ${labelOf('beacon', t.beaconId) || t.beaconId} »`;
+  if (t.expected) return `${base} « ${t.expected} »`;
+  return base;
+}
+
+function humanExpr(c) {
+  if (!c) return '';
+  if (c.op === 'and') return (c.children || []).map(humanExpr).join(' ET ');
+  if (c.op === 'or') return '(' + (c.children || []).map(humanExpr).join(' OU ') + ')';
+  if (c.op === 'not') return 'PAS (' + humanExpr(c.child) + ')';
+  const cat = state.catalog?.conditions?.find((x) => x.kind === c.kind);
+  if (c.kind === 'player_in_place') return `dans « ${c.label || labelOf('zone', c.zoneId) || c.zoneId} »`;
+  if (c.kind === 'media_consumed') return `consommé « ${c.label || labelOf('mediaItem', c.mediaItemId) || c.mediaItemId} »`;
+  if (c.kind === 'flag_true') return c.label || c.varId;
+  if (c.kind === 'flag_false') return 'PAS ' + (c.label || c.varId);
+  if (c.kind === 'clock_is') return `il est ${c.at}`;
+  if (c.kind === 'floor_open') return `étage ${c.floorIndex} ouvert`;
+  return cat?.label || c.kind || '';
+}
+
+function labelOf(type, id) {
+  if (!state.adventure || !id) return id;
+  if (type === 'mediaItem') return (state.adventure.mediaItems || []).find((m) => m.id === id)?.label || id;
+  if (type === 'mediaContent') return (state.adventure.mediaContents || []).find((m) => m.id === id)?.label || id;
+  if (type === 'zone') return (state.adventure.zones || []).find((z) => z.id === id)?.label || id;
+  if (type === 'beacon') return (state.adventure.beacons || []).find((b) => b.id === id)?.label || id;
+  if (type === 'variable') return (state.adventure.variables || []).find((v) => v.id === id)?.label || id;
+  return id;
+}
+
+function renderList() {
+  const el = document.getElementById('viewList');
+  if (!state.list) { el.innerHTML = '<p class="empty">Chargez une aventure</p>'; return; }
+  const floors = state.list.floors || [];
+  el.innerHTML = floors.map((f) => {
+      const open = state.selectedFloor === f.index ? 'open' : '';
+      return `
+      <div class="floor ${open}" data-floor="${f.index}">
+        <div class="floor-head">
+          <div class="floor-num">${String(f.index).padStart(2,'0')}</div>
+          <div class="floor-meta">
+            <h3>${esc(f.title)}</h3>
+            <div class="letters">${f.situationLetters.length ? f.situationLetters.map(esc).join(' · ') : 'aucune situation'}</div>
+          </div>
+          <span class="status ${esc(f.status)}">${statusIcon(f.status)} ${esc(f.status)}</span>
+        </div>
+        <div class="floor-body">
+          ${(f.situations || []).map((s) => `
+            <div class="sit ${state.selectedSitId === s.id ? 'selected' : ''}" data-sit="${esc(s.id)}" data-floor="${f.index}">
+              <div><span class="letter">${esc(s.letter)}</span><strong>${esc(s.title)}</strong></div>
+              <div class="flow">
+                ${s.when ? `<div>QUAND ${esc(s.when)}</div>` : ''}
+                ${(s.conditions || []).map((c) => `<div class="arrow">SI / ET</div><div>${esc(c)}</div>`).join('')}
+                ${(s.then || []).map((a, i) => `<div class="arrow">${i === 0 ? 'ALORS' : 'PUIS'}</div><div>${esc(a)}</div>`).join('')}
+                ${(s.else || []).map((a) => `<div class="arrow">SINON</div><div>${esc(a)}</div>`).join('')}
+              </div>
+            </div>`).join('')}
+          ${f.unlockNextHuman ? `
+            <div class="unlock-box" data-edit-unlock="${f.index}" style="cursor:pointer">
+              <h4>🔗 Condition pour l’étage ${f.unlockTarget ?? (f.index + 1)}</h4>
+              <div>${esc(f.unlockNextHuman)}</div>
+              <div class="arrow" style="margin-top:8px;color:var(--accent)">↓ DONC → 🔓 Étage ${f.unlockTarget ?? (f.index + 1)}</div>
+            </div>` : `
+            <div class="unlock-box" data-edit-unlock="${f.index}" style="cursor:pointer;opacity:0.7">
+              <h4>🔗 Ajouter une transition vers l’étage suivant</h4>
+            </div>`}
+        </div>
+      </div>`;
+    }).join('');
+
+  el.querySelectorAll('.floor-head').forEach((h) => {
+    h.onclick = () => {
+      const floor = Number(h.parentElement.dataset.floor);
+      state.selectedFloor = state.selectedFloor === floor ? null : floor;
+      state.editingUnlockFloor = null;
+      renderAll();
+    };
+  });
+  el.querySelectorAll('.sit').forEach((n) => {
+    n.onclick = (e) => {
+      e.stopPropagation();
+      state.selectedSitId = n.dataset.sit;
+      state.selectedFloor = Number(n.dataset.floor);
+      state.editingUnlockFloor = null;
+      state.sideTab = 'edit';
+      renderAll();
+    };
+  });
+  el.querySelectorAll('[data-edit-unlock]').forEach((n) => {
+    n.onclick = (e) => {
+      e.stopPropagation();
+      state.editingUnlockFloor = Number(n.dataset.editUnlock);
+      state.selectedFloor = state.editingUnlockFloor;
+      state.selectedSitId = null;
+      state.sideTab = 'edit';
+      renderAll();
+    };
+  });
+}
+
+function renderTree() {
+  const el = document.getElementById('viewTree');
+  if (!state.adventure) { el.innerHTML = ''; return; }
+  el.innerHTML = (state.adventure.floors || []).map((f) => {
+    const sits = f.situations || [];
+    return `<div class="tree-row">
+      <div class="tree-floor-label">ÉTAGE ${String(f.index).padStart(2,'0')} — ${esc(f.title)}</div>
+      <div class="tcard floor-node" data-floor="${f.index}"><div class="k">Étage</div><strong>${esc(f.title)}</strong></div>
+      ${sits.map((s) => `
+        <span class="edge-label">SI</span>
+        <div class="tcard ${state.selectedSitId === s.id ? 'selected' : ''}" data-sit="${esc(s.id)}" data-floor="${f.index}">
+          <div class="k">Situation ${esc(s.letter)}</div><strong>${esc(s.title)}</strong>
+        </div>
+        ${(s.thenActions || []).slice(0, 2).map((a, i) => `
+          <span class="edge-label">${i === 0 ? 'ALORS' : 'PUIS'}</span>
+          <div class="tcard action-node">${esc(actionLabel(a))}</div>`).join('')}
+      `).join('')}
+      ${f.unlockNext ? `<span class="edge-label">DONC</span><div class="tcard floor-node">🔓 Étage ${f.index + 1}</div>` : ''}
+    </div>`;
+  }).join('');
+  el.querySelectorAll('[data-sit]').forEach((n) => {
+    n.onclick = () => {
+      state.selectedSitId = n.dataset.sit;
+      state.selectedFloor = Number(n.dataset.floor);
+      state.editingUnlockFloor = null;
+      renderAll();
+    };
+  });
+}
+
+function renderPath() {
+  const el = document.getElementById('viewPath');
+  if (!state.list) { el.innerHTML = ''; return; }
+  const openSet = new Set(state.journeyFloorsOpen || []);
+  const journeySteps = state.journey?.steps || state.list.floors.map((f) => ({
+    floorIndex: f.index, title: f.title, reachable: true, letters: f.situationLetters,
+  }));
+  el.innerHTML = journeySteps.map((f) => {
+      let cls = 'path-step';
+      if (openSet.has(f.floorIndex)) cls += ' open';
+      else if (f.reachable === false) cls += ' blocked';
+      else cls += ' done';
+      const mark = openSet.has(f.floorIndex) ? '🔵 ouvert' : (f.reachable === false ? '⚠️ inatteignable' : '✓');
+      return `<div class="${cls}">
+        Étage ${String(f.floorIndex).padStart(2,'0')} — ${esc(f.title)}
+        ${(f.letters || []).length > 1 ? ' → choix (' + (f.letters || []).join('/') + ')' : ''}
+        <span style="float:right;font-size:0.75rem">${mark}</span>
+      </div><div style="margin-left:18px;color:var(--muted)">↓</div>`;
+    }).join('') + '<div class="path-step">Fin de parcours</div>';
+}
+
+let ontoCtl = null;
+function ensureOnto() {
+  const el = document.getElementById('viewGraph');
+  if (!el || !globalThis.LanternOnto) return null;
+  if (!ontoCtl) {
+    ontoCtl = LanternOnto.create(el, {
+      getAdventure: () => state.adventure,
+      onSelectSit: (sitId, floorIndex) => {
+        state.selectedSitId = sitId;
+        if (floorIndex != null) state.selectedFloor = floorIndex;
+        state.editingUnlockFloor = null;
+      },
+    });
+  }
+  return ontoCtl;
+}
+
+function renderOntology() {
+  const ctl = ensureOnto();
+  if (ctl && state.adventure) ctl.load(state.adventure);
+}
+
+function clientInteractions() {
+  const declared = [...(state.adventure?.interactions || [])];
+  const byId = new Map(declared.map((x) => [x.id, x]));
+  const scan = (n) => {
+    if (!n || typeof n !== 'object') return;
+    if (n.children) n.children.forEach(scan);
+    if (n.child) scan(n.child);
+    const kinds = ['player_choice', 'code_submitted', 'show_button', 'show_code_input'];
+    if (kinds.includes(n.kind) && n.choiceId && !byId.has(n.choiceId)) {
+      byId.set(n.choiceId, {
+        id: n.choiceId,
+        kind: n.kind === 'code_submitted' || n.kind === 'show_code_input' ? 'code' : 'button',
+        label: n.label || n.choiceId,
+        expected: n.expected || null,
+        inferred: true,
+      });
+    }
+  };
+  for (const f of state.adventure?.floors || []) {
+    scan(f.unlockNext);
+    for (const s of f.situations || []) {
+      scan(s.trigger);
+      (s.conditions || []).forEach(scan);
+      scan(s.conditionsGroup);
+      (s.thenActions || []).forEach(scan);
+      (s.elseActions || []).forEach(scan);
+    }
+  }
+  return [...byId.values()];
+}
+
+function isImposedMedia(m) {
+  return !!m && (m.role === 'imposed' || m.policy === 'imposed' || m.policy === 'required');
+}
+
+function isBureauMedia(m) {
+  return !!m && !isImposedMedia(m) && (m.role === 'bureau' || m.slot === 'bureau');
+}
+
+function isContainerMedia(m) {
+  if (!m) return false;
+  if (m.role === 'container') return true;
+  return (state.adventure.containers || []).some((c) => c.id === m.id || c.mediaItemId === m.id);
+}
+
+function isRecoverableMedia(m) {
+  return !!m && !isImposedMedia(m) && !isBureauMedia(m) && !isContainerMedia(m);
+}
+
+function familyOf(m) {
+  if (isImposedMedia(m)) return 'imposed';
+  if (isContainerMedia(m)) return 'container';
+  if (isBureauMedia(m)) return 'bureau';
+  return 'recoverable';
+}
+
+function familyLabel(f) {
+  return ({
+    imposed: 'Média imposé',
+    bureau: 'Bureau',
+    container: 'Contenant',
+    recoverable: 'Item média déblocable',
+  })[f] || f;
+}
+
+function findBox(id) {
+  return (state.adventure.containers || []).find((c) => c.id === id || c.mediaItemId === id) || null;
+}
+
+function boxesHolding(itemId) {
+  return (state.adventure.containers || []).filter((c) => (c.contains || []).includes(itemId));
+}
+
+function boxFloorIndex(box) {
+  if (!box) return null;
+  const media = (state.adventure.mediaItems || []).find((m) => m.id === box.mediaItemId || m.id === box.id);
+  return inferFloorOf(media || { id: box.id, role: box.placement, slot: box.placement === 'bureau' ? 'bureau' : undefined, floorHint: box.placement === 'bureau' ? 1 : null });
+}
+
+function containerKinds() {
+  return state.catalog?.containerKinds || [
+    { id: 'box', label: 'Boîte', help: 'Objets divers.', allowsLinks: false, empty: 'Aucune boîte.' },
+    { id: 'usb', label: 'Clé USB', help: 'Texte, image, audio, vidéo.', allowsLinks: false, empty: 'Aucune clé USB.' },
+    { id: 'pc', label: 'PC', help: 'Fichiers + liens web.', allowsLinks: true, empty: 'Aucun PC.' },
+    { id: 'folder', label: 'Pochette cartonnée', help: 'Documents papier.', allowsLinks: false, empty: 'Aucune pochette cartonnée.' },
+    { id: 'locker', label: 'Casier', help: 'Objets pour la suite.', allowsLinks: false, empty: 'Aucun casier.' },
+  ];
+}
+
+function itemSkins() {
+  return (state.catalog?.mediaItemSkins || []).filter((s) => !s.container);
+}
+
+function containerKindOf(box) {
+  if (!box) return 'box';
+  const kinds = containerKinds();
+  if (box.containerKind && kinds.some((k) => k.id === box.containerKind)) return box.containerKind;
+  const bySkin = kinds.find((k) => k.id === box.skin || k.skin === box.skin);
+  return bySkin ? bySkin.id : 'box';
+}
+
+function containerKindLabel(kindId) {
+  return containerKinds().find((k) => k.id === kindId)?.label || 'Contenant';
+}
+
+function containerOpenLabel(kindId) {
+  return ({
+    box: 'Ouvrir la boîte',
+    usb: 'Ouvrir la clé USB',
+    pc: 'Ouvrir le PC',
+    folder: 'Ouvrir la pochette',
+    locker: 'Ouvrir le casier',
+  })[kindId] || 'Ouvrir le contenant';
+}
+
+function containedPhrase(box) {
+  const kind = containerKindOf(box);
+  const n = boxFloorIndex(box);
+  const floor = n == null ? '—' : String(n);
+  const noun = ({
+    box: 'la boîte',
+    usb: 'la clé USB',
+    pc: 'le PC',
+    folder: 'la pochette',
+    locker: 'le casier',
+  })[kind] || 'le contenant';
+  return `contenu dans ${noun} de l’étage ${floor}${box.label ? ' — ' + esc(box.label) : ''}`;
+}
+
+function containedMentionHtml(m) {
+  const boxes = boxesHolding(m.id);
+  if (!boxes.length) return '';
+  return boxes.map((box) => `<div class="meta" style="color:var(--phos)">${containedPhrase(box)}</div>`).join('');
+}
+
+function importTargetForTab(tab) {
+  if (tab === 'bureau') return 'bureau';
+  if (tab === 'recoverable') return 'recoverable';
+  if (tab === 'imposed') return 'imposed';
+  return null;
+}
+
+function alreadyInMenu(m, family) {
+  if (family === 'bureau') return isBureauMedia(m);
+  if (family === 'imposed') return isImposedMedia(m);
+  if (family === 'recoverable') return isRecoverableMedia(m) || isContainerMedia(m);
+  return familyOf(m) === family;
+}
+
+function importDestPhrase(family) {
+  if (family === 'bureau') return 'au bureau';
+  if (family === 'recoverable') return 'dans les objets recouvrables';
+  if (family === 'imposed') return 'comme média imposé';
+  return 'dans ce menu';
+}
+
+function addModeBarHtml(tab) {
+  if (state.worldEditId || state.boxViewId) return '';
+  const family = importTargetForTab(tab);
+  const showImport = !!family;
+  const showBox = tab === 'bureau' || tab === 'recoverable' || tab === 'resume';
+  if (!showImport && !showBox) return '';
+  const mode = state.worldAddMode;
+  return `<div class="resume-bar">
+    <button type="button" class="btn sm ${mode === 'create' ? 'primary' : ''}" data-add-mode="create">Créer un objet</button>
+    ${showBox ? `<button type="button" class="btn sm ${mode === 'box' ? 'primary' : ''}" data-add-mode="box">Créer un contenant</button>` : ''}
+    ${showImport ? `<button type="button" class="btn sm ${mode === 'import' ? 'primary' : ''}" data-add-mode="import">Importer depuis « tous les objets »</button>` : ''}
+  </div>`;
+}
+
+function importPickerHtml(family) {
+  const items = (state.adventure.mediaItems || []).filter((m) => !alreadyInMenu(m, family));
+  const dest = importDestPhrase(family);
+  const pending = state.importConfirm;
+  const intro = `<p style="margin:0 0 12px;color:var(--muted);font-size:0.8rem;text-transform:none;letter-spacing:0">
+    Voici <b style="color:var(--phos)">tous les objets</b> déjà créés. Cliquez <b>Importer cet objet</b>, puis confirmez Oui / Non.
+    L’objet <b>reste</b> dans Tous les objets : ce n’est pas un doublon (même identifiant, même contenu).
+  </p>`;
+  if (!items.length) {
+    return intro + '<p class="empty">Tous les objets sont déjà dans ce menu.</p>';
+  }
+  const order = ['imposed', 'bureau', 'container', 'recoverable'];
+  return intro + order.map((fam) => {
+    const list = items.filter((m) => familyOf(m) === fam);
+    if (!list.length) return '';
+    return `<h3 class="family-head">${familyLabel(fam)}</h3><div class="world-grid">` + list.map((m) => {
+      const asking = pending && pending.id === m.id && pending.family === family;
+      const actions = asking
+        ? `<p class="mut-line">Importer « ${esc(m.label || m.id)} » ${dest} ?</p>
+           <div class="row-actions">
+             <button type="button" class="btn sm primary" data-import-yes="${esc(m.id)}" data-import-family="${esc(family)}">Oui</button>
+             <button type="button" class="btn sm" data-import-no="1">Non</button>
+           </div>`
+        : `<div class="row-actions">
+             <button type="button" class="btn sm primary" data-import-ask="${esc(m.id)}" data-import-family="${esc(family)}">Importer cet objet ${dest}</button>
+           </div>`;
+      return `<div class="wcard">
+        <h3>${esc(m.label || m.id)} ${floorChip(m)}</h3>
+        <div class="meta">${esc(familyLabel(fam))} · ${esc(skinLabel(m.skin))}</div>
+        ${actions}
+      </div>`;
+    }).join('') + '</div>';
+  }).join('');
+}
+
+function assignFamilyLocal(item, family) {
+  if (!item || !family) return;
+  if (family === 'bureau') {
+    item.role = 'bureau';
+    item.slot = 'bureau';
+    if (item.policy === 'imposed' || item.policy === 'required') item.policy = 'unlockable';
+    else if (!item.policy) item.policy = 'unlockable';
+    if (item.floorHint == null) item.floorHint = 1;
+  } else if (family === 'recoverable') {
+    item.role = 'recoverable';
+    delete item.slot;
+    if (item.policy === 'imposed' || item.policy === 'required') item.policy = 'unlockable';
+    else if (!item.policy) item.policy = 'unlockable';
+  } else if (family === 'imposed') {
+    item.role = 'imposed';
+    item.policy = 'imposed';
+    delete item.slot;
+    item.floorHint = 0;
+  }
+}
+
+async function importObjectToFamily(id, family) {
+  const item = (state.adventure.mediaItems || []).find((m) => m.id === id);
+  if (!item || !family) return;
+  try {
+    const out = await api('/creator/inventory/update', {
+      method: 'POST',
+      body: JSON.stringify({
+        adventure: state.adventure,
+        kind: 'assign',
+        payload: { id, family },
+      }),
+    });
+    state.adventure = out.adventure;
+  } catch (e) {
+    assignFamilyLocal(item, family);
+    alert('Import enregistré dans l’atelier. Le serveur a répondu : ' + e.message + ' — sauvez un brouillon.');
+  }
+  state.importConfirm = null;
+  renderWorld();
+  refreshViewsFromAdventure();
+}
+
+async function stashObjectInBox(boxId, itemId) {
+  if (!boxId || !itemId) return;
+  try {
+    const out = await api('/creator/inventory/update', {
+      method: 'POST',
+      body: JSON.stringify({
+        adventure: state.adventure,
+        kind: 'stash',
+        payload: { id: boxId, itemId },
+      }),
+    });
+    state.adventure = out.adventure;
+  } catch (e) {
+    const box = findBox(boxId);
+    if (box) {
+      box.contains = (box.contains || []).filter((id) => id !== itemId);
+      box.contains.push(itemId);
+      (state.adventure.containers || []).forEach((c) => {
+        if (c !== box) c.contains = (c.contains || []).filter((id) => id !== itemId);
+      });
+    }
+    alert('Objet rangé dans l’atelier. Le serveur a répondu : ' + e.message + ' — sauvez un brouillon.');
+  }
+  state.stashConfirm = null;
+  state.worldAddMode = 'create';
+  renderWorld();
+  refreshViewsFromAdventure();
+}
+
+async function unstashObjectFromBox(boxId, itemId) {
+  if (!boxId || !itemId) return;
+  try {
+    const out = await api('/creator/inventory/update', {
+      method: 'POST',
+      body: JSON.stringify({
+        adventure: state.adventure,
+        kind: 'unstash',
+        payload: { id: boxId, itemId },
+      }),
+    });
+    state.adventure = out.adventure;
+  } catch (e) {
+    const box = findBox(boxId);
+    if (box) box.contains = (box.contains || []).filter((id) => id !== itemId);
+  }
+  renderWorld();
+  refreshViewsFromAdventure();
+}
+
+async function saveBoxCode(code) {
+  if (!state.boxViewId) return;
+  try {
+    const out = await api('/creator/inventory/update', {
+      method: 'POST',
+      body: JSON.stringify({
+        adventure: state.adventure,
+        kind: 'containerLock',
+        payload: { id: state.boxViewId, code: String(code || '') },
+      }),
+    });
+    state.adventure = out.adventure;
+  } catch (e) {
+    const box = findBox(state.boxViewId);
+    if (box) {
+      const trimmed = String(code || '').trim();
+      box.lockWithCode = !!trimmed;
+      box.code = trimmed || null;
+    }
+    alert('Code enregistré dans l’atelier. Le serveur a répondu : ' + e.message);
+  }
+  renderWorld();
+  refreshViewsFromAdventure();
+}
+
+async function addLinkToBox(boxId, label, url) {
+  if (!boxId || !url) return;
+  try {
+    const out = await api('/creator/inventory/update', {
+      method: 'POST',
+      body: JSON.stringify({
+        adventure: state.adventure,
+        kind: 'addLink',
+        payload: { id: boxId, label, url },
+      }),
+    });
+    state.adventure = out.adventure;
+  } catch (e) {
+    alert(e.message);
+    return;
+  }
+  renderWorld();
+  refreshViewsFromAdventure();
+}
+
+async function removeLinkFromBox(boxId, linkId) {
+  if (!boxId || !linkId) return;
+  try {
+    const out = await api('/creator/inventory/update', {
+      method: 'POST',
+      body: JSON.stringify({
+        adventure: state.adventure,
+        kind: 'removeLink',
+        payload: { id: boxId, linkId },
+      }),
+    });
+    state.adventure = out.adventure;
+  } catch (e) {
+    const box = findBox(boxId);
+    if (box) box.links = (box.links || []).filter((l) => l.id !== linkId);
+  }
+  renderWorld();
+  refreshViewsFromAdventure();
+}
+
+function inferFloorOf(item) {
+  if (!item || !state.adventure) return null;
+  if (item.floorHint != null && item.floorHint !== '') return Number(item.floorHint);
+  if (isImposedMedia(item)) return 0;
+  if (isBureauMedia(item)) return 1;
+  const id = item.id;
+  for (const f of state.adventure.floors || []) {
+    const blob = JSON.stringify(f.situations || []) + JSON.stringify(f.unlockNext || {});
+    if (blob.includes(`"${id}"`)) return f.index;
+  }
+  return null;
+}
+
+function floorChip(item) {
+  const n = inferFloorOf(item);
+  return n == null ? '<span class="floor-chip">étage —</span>' : `<span class="floor-chip">étage ${n}</span>`;
+}
+
+function mediaItemOptionsHtml(selectedId) {
+  const items = state.adventure.mediaItems || [];
+  const imposed = items.filter(isImposedMedia);
+  const bureau = items.filter(isBureauMedia);
+  const rest = items.filter((m) => !isImposedMedia(m) && !isBureauMedia(m) && !isContainerMedia(m));
+  const boxes = items.filter((m) => isContainerMedia(m));
+  const group = (label, list) => {
+    if (!list.length) return '';
+    return `<optgroup label="${esc(label)}">${list.map((m) =>
+      `<option value="${esc(m.id)}" ${m.id === selectedId ? 'selected' : ''}>${esc(m.label || m.id)}</option>`
+    ).join('')}</optgroup>`;
+  };
+  const emptyImposed = imposed.length
+    ? ''
+    : '<optgroup label="Média imposé"><option value="" disabled>Aucun — créez-le dans Matériel</option></optgroup>';
+  const emptyBureau = bureau.length
+    ? ''
+    : '<optgroup label="Bureau"><option value="" disabled>Aucun — créez-les dans Matériel → Bureau</option></optgroup>';
+  return emptyImposed + group('Média imposé', imposed) + emptyBureau + group('Bureau', bureau) + group('Items média', rest) + group('Contenants', boxes);
+}
+
+function skinLabel(id) {
+  return (state.catalog?.mediaItemSkins || []).find((s) => s.id === id)?.label || id;
+}
+
+function renderWorld() {
+  const el = document.getElementById('viewWorld');
+  if (!el) return;
+  if (!state.adventure) { el.innerHTML = '<p class="empty">Chargez une aventure</p>'; return; }
+  const tab = state.worldTab;
+  const counts = {
+    imposed: (state.adventure.mediaItems || []).filter(isImposedMedia).length,
+    bureau: (state.adventure.mediaItems || []).filter(isBureauMedia).length,
+    recoverable: (state.adventure.mediaItems || []).filter((m) => isRecoverableMedia(m) || (isContainerMedia(m) && !isBureauMedia(m) && !isImposedMedia(m))).length,
+    resume: (state.adventure.mediaItems || []).length,
+  };
+  const nav = [
+    ['imposed', '00 · Départ', 'Média imposé', 'Le point de départ de l’aventure'],
+    ['bureau', '01 · Bureau', 'Bureau', 'Objets et boîtes du sas'],
+    ['recoverable', '02 · Recouvrables', 'Objets recouvrables', 'Ce qui se débloque plus tard'],
+    ['resume', '03 · Résumé', 'Tous les objets', 'Éditeur unique, par famille ou étage'],
+  ];
+  const titles = {
+    imposed: 'Média imposé',
+    bureau: 'Bureau',
+    recoverable: 'Objets recouvrables',
+    resume: 'Résumé — tous les objets',
+  };
+  const chains = {
+    imposed: '<b>Média imposé</b> — visible dès l’étage 0. QUAND le joueur le consomme → transition 0 → 1.',
+    bureau: '<b>Bureau</b> — objets posés sur le bureau (étage 1), y compris les boîtes. Ouvrez une boîte pour y ranger des objets.',
+    recoverable: '<b>Objets recouvrables</b> — déblocage par code, lieu ou balise. Vous pouvez aussi y créer des boîtes.',
+    resume: '<b>Résumé éditeur</b> — tous les objets. La famille Contenant recense les boîtes ; un objet rangé reste aussi dans sa famille, avec la mention de la boîte.',
+  };
+  let lastGroup = '';
+  const navHtml = nav.map(([id, group, label, help]) => {
+    const head = group !== lastGroup ? `<div class="world-group-label">${group}</div>` : '';
+    lastGroup = group;
+    const n = counts[id] || 0;
+    return `${head}<button type="button" data-wtab="${id}" class="${tab === id ? 'active' : ''}">
+      <span class="wn-title">${label} <span style="color:var(--muted);font-weight:400;font-family:var(--mono);font-size:0.7rem">${n}</span></span>
+      <span class="wn-help">${help}</span>
+    </button>`;
+  }).join('');
+  const boxPage = boxViewHtml();
+  el.innerHTML = `
+    <div class="world-shell">
+      <nav class="world-nav">
+        <p class="kicker">Matériel</p>
+        <p class="intro">Prépare les pièces du monde. Les situations de l’aventure s’en serviront ensuite.</p>
+        ${navHtml}
+      </nav>
+      <div class="world-main">
+        ${boxPage || `
+        <p class="kicker">${esc(titles[tab] || tab)}</p>
+        <p class="world-chain">${chains[tab] || ''}</p>
+        <div id="worldForm" class="world-form">${worldFormHtml(tab)}</div>
+        <div class="world-list">${worldCardsHtml(tab)}</div>
+        `}
+      </div>
+    </div>
+  `;
+  el.querySelectorAll('[data-wtab]').forEach((b) => {
+    b.onclick = () => {
+      state.worldTab = b.dataset.wtab;
+      state.worldEditId = null;
+      state.worldAddMode = 'create';
+      state.importConfirm = null;
+      state.boxViewId = null;
+      state.stashConfirm = null;
+      renderWorld();
+    };
+  });
+  const form = el.querySelector('#worldAddForm');
+  if (form) {
+    form.onsubmit = (e) => {
+      e.preventDefault();
+      submitWorldForm(tab, form);
+    };
+    const ck = form.querySelector('[name="containerKind"]');
+    if (ck) {
+      ck.addEventListener('change', () => {
+        form.querySelectorAll('[data-ck-help]').forEach((n) => {
+          n.style.display = n.getAttribute('data-ck-help') === ck.value ? '' : 'none';
+        });
+      });
+    }
+  }
+  const codeForm = el.querySelector('#boxCodeForm');
+  if (codeForm) {
+    codeForm.onsubmit = (e) => {
+      e.preventDefault();
+      saveBoxCode(new FormData(codeForm).get('code'));
+    };
+  }
+  const linkForm = el.querySelector('#boxLinkForm');
+  if (linkForm) {
+    linkForm.onsubmit = (e) => {
+      e.preventDefault();
+      const fd = new FormData(linkForm);
+      addLinkToBox(state.boxViewId, String(fd.get('label') || '').trim(), String(fd.get('url') || '').trim());
+    };
+  }
+  el.querySelectorAll('[data-del]').forEach((b) => {
+    b.onclick = () => deleteWorldItem(b.dataset.kind, b.dataset.del);
+  });
+  el.querySelectorAll('[data-edit]').forEach((b) => {
+    b.onclick = () => {
+      state.worldEditId = b.dataset.edit;
+      renderWorld();
+    };
+  });
+  el.querySelectorAll('[data-open-sheet]').forEach((b) => {
+    b.onclick = () => openObjectSheet(b.dataset.openSheet);
+  });
+  el.querySelectorAll('[data-resume-group]').forEach((b) => {
+    b.onclick = () => { state.resumeGroup = b.dataset.resumeGroup; renderWorld(); };
+  });
+  bindObjectKindForm(el);
+  const cancel = el.querySelector('#btnCancelWorldEdit');
+  if (cancel) cancel.onclick = () => { state.worldEditId = null; renderWorld(); };
+  bindWorldClicksOnce();
+}
+
+function bindWorldClicksOnce() {
+  const el = document.getElementById('viewWorld');
+  if (!el || el.dataset.importBound === '1') return;
+  el.dataset.importBound = '1';
+  el.addEventListener('click', (e) => {
+    const ask = e.target.closest('[data-import-ask]');
+    if (ask) {
+      e.preventDefault();
+      state.importConfirm = {
+        id: ask.getAttribute('data-import-ask'),
+        family: ask.getAttribute('data-import-family'),
+      };
+      renderWorld();
+      return;
+    }
+    const yes = e.target.closest('[data-import-yes]');
+    if (yes) {
+      e.preventDefault();
+      importObjectToFamily(yes.getAttribute('data-import-yes'), yes.getAttribute('data-import-family'));
+      return;
+    }
+    const no = e.target.closest('[data-import-no]');
+    if (no) {
+      e.preventDefault();
+      state.importConfirm = null;
+      renderWorld();
+      return;
+    }
+    const addMode = e.target.closest('[data-add-mode]');
+    if (addMode) {
+      e.preventDefault();
+      state.worldAddMode = addMode.getAttribute('data-add-mode');
+      state.importConfirm = null;
+      state.stashConfirm = null;
+      renderWorld();
+      return;
+    }
+    const openBox = e.target.closest('[data-open-box]');
+    if (openBox) {
+      e.preventDefault();
+      state.boxViewId = openBox.getAttribute('data-open-box');
+      state.worldAddMode = 'create';
+      state.stashConfirm = null;
+      renderWorld();
+      return;
+    }
+    const boxBack = e.target.closest('[data-box-back]');
+    if (boxBack) {
+      e.preventDefault();
+      state.boxViewId = null;
+      state.worldAddMode = 'create';
+      state.stashConfirm = null;
+      renderWorld();
+      return;
+    }
+    const stashAsk = e.target.closest('[data-stash-ask]');
+    if (stashAsk) {
+      e.preventDefault();
+      state.stashConfirm = {
+        boxId: stashAsk.getAttribute('data-stash-box'),
+        itemId: stashAsk.getAttribute('data-stash-ask'),
+      };
+      renderWorld();
+      return;
+    }
+    const stashYes = e.target.closest('[data-stash-yes]');
+    if (stashYes) {
+      e.preventDefault();
+      stashObjectInBox(stashYes.getAttribute('data-stash-box'), stashYes.getAttribute('data-stash-yes'));
+      return;
+    }
+    const stashNo = e.target.closest('[data-stash-no]');
+    if (stashNo) {
+      e.preventDefault();
+      state.stashConfirm = null;
+      renderWorld();
+      return;
+    }
+    const unstash = e.target.closest('[data-unstash]');
+    if (unstash) {
+      e.preventDefault();
+      unstashObjectFromBox(unstash.getAttribute('data-unstash-box'), unstash.getAttribute('data-unstash'));
+      return;
+    }
+    const clearCode = e.target.closest('[data-clear-box-code]');
+    if (clearCode) {
+      e.preventDefault();
+      saveBoxCode('');
+      return;
+    }
+    const delLink = e.target.closest('[data-del-link]');
+    if (delLink) {
+      e.preventDefault();
+      removeLinkFromBox(delLink.getAttribute('data-del-link-box'), delLink.getAttribute('data-del-link'));
+    }
+  });
+}
+
+function bindObjectKindForm(root) {
+  const sel = root.querySelector('[name="objectKind"]');
+  const unlockSel = root.querySelector('[name="unlockKind"]');
+  const applyUnlock = () => {
+    if (!unlockSel) return;
+    const k = unlockSel.value;
+    const kindOk = !sel || sel.value === 'recoverable';
+    root.querySelectorAll('[data-unlock]').forEach((el) => {
+      el.style.display = kindOk && el.dataset.unlock === k ? '' : 'none';
+    });
+  };
+  const applyKind = () => {
+    const kind = sel ? sel.value : '';
+    root.querySelectorAll('[data-for-kind]').forEach((el) => {
+      const kinds = (el.dataset.forKind || '').split(',');
+      el.style.display = kinds.includes(kind) ? '' : 'none';
+    });
+    const skin = root.querySelector('[name="skin"]');
+    if (skin && kind === 'container' && [...skin.options].some((o) => o.value === 'box')) {
+      skin.value = 'box';
+    }
+    const btn = root.querySelector('[data-add-label]');
+    if (btn) btn.textContent = kind === 'container' ? '+ Ajouter le contenant' : '+ Ajouter l’objet';
+    applyLock();
+    applyUnlock();
+  };
+  const lock = root.querySelector('[name="lockWithCode"]');
+  const applyLock = () => {
+    const codeField = root.querySelector('[data-for-lock="yes"]');
+    if (!codeField) return;
+    const locked = (sel ? sel.value : '') === 'container' && lock && lock.value === 'yes';
+    codeField.style.display = locked ? '' : 'none';
+    const code = codeField.querySelector('[name="code"]');
+    if (code) code.required = locked;
+  };
+  if (sel) sel.addEventListener('change', applyKind);
+  if (lock) lock.addEventListener('change', applyLock);
+  if (unlockSel) unlockSel.addEventListener('change', applyUnlock);
+  applyKind();
+  applyUnlock();
+}
+
+function worldFormHtml(tab) {
+  if (tab === 'imposed') {
+    const bar = addModeBarHtml('imposed');
+    if (state.worldAddMode === 'import') return bar + importPickerHtml('imposed');
+    const skins = itemSkins();
+    const contents = state.adventure.mediaContents || [];
+    const existing = (state.adventure.mediaItems || []).filter(isImposedMedia);
+    const form = `<form id="worldAddForm">
+      <p style="margin:0 0 12px;color:var(--muted);font-size:0.8rem;text-transform:none;letter-spacing:0">
+        Visible dès l’étage 0. Dans Aventure, SI « le joueur consomme » → choisissez <b style="color:var(--phos)">Média imposé</b>, sans le mélanger aux lettres et USB.
+        ${existing.length ? ' Un média imposé existe déjà ; vous pouvez en ajouter un autre si besoin.' : ''}
+      </p>
+      <div class="field"><label>Nom</label><input name="label" required placeholder="Média imposé" value="${existing.length ? '' : 'Média imposé'}" /></div>
+      <div class="field"><label>Apparence</label>
+        <select name="skin">${skins.map((s) => `<option value="${esc(s.id)}" ${s.id === 'vhs' ? 'selected' : ''}>${esc(s.label)}</option>`).join('')}</select>
+      </div>
+      <div class="field"><label>Contenu lié (optionnel)</label>
+        <select name="contentId"><option value="">— aucun —</option>
+        ${contents.map((c) => `<option value="${esc(c.id)}">${esc(c.label || c.id)}</option>`).join('')}
+        </select>
+      </div>
+      <div class="field"><label>Créer aussi un contenu texte du même nom</label>
+        <select name="alsoContent"><option value="yes">Oui</option><option value="no" selected>Non</option></select>
+      </div>
+      <button type="submit" class="btn primary">+ Ajouter le média imposé</button>
+    </form>`;
+    return bar + form;
+  }
+  if (tab === 'bureau') {
+    const bar = addModeBarHtml('bureau');
+    if (!state.worldEditId && state.worldAddMode === 'import') return bar + importPickerHtml('bureau');
+    if (!state.worldEditId && state.worldAddMode === 'box') return bar + boxFormHtml('bureau');
+    const skins = itemSkins();
+    const contents = state.adventure.mediaContents || [];
+    const editing = (state.adventure.mediaItems || []).find((m) => m.id === state.worldEditId && isBureauMedia(m));
+    if (!editing && state.worldAddMode === 'import') return bar + importPickerHtml('bureau');
+    const labelVal = editing ? esc(editing.label || '') : '';
+    const skinVal = editing ? editing.skin : 'letter';
+    const contentVal = editing ? (editing.contentId || '') : '';
+    return `${bar}<form id="worldAddForm">
+      <p style="margin:0 0 12px;color:var(--muted);font-size:0.8rem;text-transform:none;letter-spacing:0">
+        Uniquement les objets <b style="color:var(--phos)">posés sur le bureau</b> (étage 1) — pas ceux qu’on trouvera plus tard dans la ville.
+        Dans Aventure, ALORS « Déverrouiller le Bureau » les révèle tous d’un coup.
+      </p>
+      ${editing ? `<input type="hidden" name="editId" value="${esc(editing.id)}" />` : ''}
+      <div class="field"><label>Nom de l’objet</label><input name="label" required placeholder="Lettre d’adieu" value="${labelVal}" /></div>
+      <div class="field"><label>Apparence</label>
+        <select name="skin">${skins.map((s) => `<option value="${esc(s.id)}" ${s.id === skinVal ? 'selected' : ''}>${esc(s.label)}</option>`).join('')}</select>
+      </div>
+      <div class="field"><label>Contenu lié (optionnel)</label>
+        <select name="contentId"><option value="">— aucun —</option>
+        ${contents.map((c) => `<option value="${esc(c.id)}" ${c.id === contentVal ? 'selected' : ''}>${esc(c.label || c.id)}</option>`).join('')}
+        </select>
+      </div>
+      ${editing ? '' : `<div class="field"><label>Créer aussi un contenu texte du même nom</label>
+        <select name="alsoContent"><option value="yes">Oui</option><option value="no" selected>Non</option></select>
+      </div>`}
+      <button type="submit" class="btn primary">${editing ? 'Enregistrer l’objet du bureau' : '+ Ajouter au bureau'}</button>
+      ${editing ? '<button type="button" class="btn sm" id="btnCancelWorldEdit" style="margin-top:8px">Annuler</button>' : ''}
+    </form>`;
+  }
+  if (tab === 'recoverable' || tab === 'resume') {
+    if (tab === 'recoverable' && state.worldAddMode === 'import') {
+      return addModeBarHtml('recoverable') + importPickerHtml('recoverable');
+    }
+    if (state.worldAddMode === 'box') {
+      const bar = tab === 'resume'
+        ? `<div class="resume-bar">
+      <span style="font-size:0.78rem;color:var(--muted)">Ranger par</span>
+      <button type="button" class="btn sm ${state.resumeGroup === 'family' ? 'primary' : ''}" data-resume-group="family">Famille d’objets</button>
+      <button type="button" class="btn sm ${state.resumeGroup === 'floor' ? 'primary' : ''}" data-resume-group="floor">Étages</button>
+    </div>` + addModeBarHtml('resume')
+        : addModeBarHtml('recoverable');
+      return bar + boxFormHtml(tab === 'resume' ? 'choose' : 'recoverable');
+    }
+    const skins = itemSkins();
+    const contents = state.adventure.mediaContents || [];
+    const kinds = tab === 'resume'
+      ? [
+          { id: 'imposed', label: 'Média imposé' },
+          { id: 'bureau', label: 'Objet du bureau' },
+          { id: 'recoverable', label: 'Item média déblocable' },
+        ]
+      : [
+          { id: 'recoverable', label: 'Item média déblocable' },
+        ];
+    const floors = state.adventure.floors || [];
+    const zones = state.adventure.zones || [];
+    const beacons = state.adventure.beacons || [];
+    const groupBar = tab === 'resume' ? `<div class="resume-bar">
+      <span style="font-size:0.78rem;color:var(--muted)">Ranger par</span>
+      <button type="button" class="btn sm ${state.resumeGroup === 'family' ? 'primary' : ''}" data-resume-group="family">Famille d’objets</button>
+      <button type="button" class="btn sm ${state.resumeGroup === 'floor' ? 'primary' : ''}" data-resume-group="floor">Étages</button>
+    </div>${addModeBarHtml('resume')}` : addModeBarHtml('recoverable');
+    return `${groupBar}<form id="worldAddForm">
+      <p style="margin:0 0 12px;color:var(--muted);font-size:0.8rem;text-transform:none;letter-spacing:0">
+        ${tab === 'resume' ? 'Créer ou modifier depuis ce résumé — tous les objets, toutes les familles. Les boîtes se créent avec « Créer une boîte ».' : 'Objets trouvés plus tard, hors bureau. Choisissez comment ils se débloquent. Les boîtes ont leur propre bouton.'}
+      </p>
+      <div class="field"><label>Type</label>
+        <select name="objectKind">${kinds.map((k) => `<option value="${esc(k.id)}">${esc(k.label)}</option>`).join('')}</select>
+      </div>
+      <div class="field"><label>Nom</label><input name="label" required placeholder="Talkie-walkie" /></div>
+      <div class="field"><label>Apparence</label>
+        <select name="skin">${skins.map((s) => `<option value="${esc(s.id)}" ${s.id === 'letter' ? 'selected' : ''}>${esc(s.label)}</option>`).join('')}</select>
+      </div>
+      <div class="field"><label>Étage (rappel)</label>
+        <select name="floorHint"><option value="">— non précisé —</option>
+        ${floors.map((f) => `<option value="${f.index}">Étage ${f.index} — ${esc(f.title || '')}</option>`).join('')}</select>
+      </div>
+      <div class="field" data-for-kind="recoverable"><label>Condition de déblocage</label>
+        <select name="unlockKind">
+          <option value="">— aucune pour l’instant —</option>
+          <option value="code">Code</option>
+          <option value="zone">Lieu</option>
+          <option value="beacon">Balise</option>
+        </select>
+      </div>
+      <div class="field" data-unlock="code"><label>Code</label><input name="unlockCode" placeholder="PIZZA" autocomplete="off" /></div>
+      <div class="field" data-unlock="zone"><label>Lieu existant</label>
+        <select name="unlockZoneId"><option value="">— choisir ou créer ci-dessous —</option>
+        ${zones.map((z) => `<option value="${esc(z.id)}">${esc(z.label || z.id)}</option>`).join('')}
+        </select>
+      </div>
+      <div class="field" data-unlock="zone"><label>Ou créer un lieu</label>
+        <input name="newZoneLabel" placeholder="Nom du lieu" />
+        <input name="newZoneLat" placeholder="Latitude (48.8742)" style="margin-top:6px" />
+        <input name="newZoneLng" placeholder="Longitude (2.3548)" style="margin-top:6px" />
+        <input name="newZoneRadius" placeholder="Rayon m" value="100" style="margin-top:6px" />
+      </div>
+      <div class="field" data-unlock="beacon"><label>Balise existante</label>
+        <select name="unlockBeaconId"><option value="">— choisir ou créer ci-dessous —</option>
+        ${beacons.map((b) => `<option value="${esc(b.id)}">${esc(b.label || b.id)}</option>`).join('')}
+        </select>
+      </div>
+      <div class="field" data-unlock="beacon"><label>Ou créer une balise</label>
+        <input name="newBeaconLabel" placeholder="Nom de la balise" />
+        <select name="newBeaconChannel" style="margin-top:6px"><option value="qr">QR</option><option value="nfc">NFC</option></select>
+      </div>
+      <div class="field" data-for-kind="recoverable,imposed,bureau"><label>Contenu lié (optionnel)</label>
+        <select name="contentId"><option value="">— aucun —</option>
+        ${contents.map((c) => `<option value="${esc(c.id)}">${esc(c.label || c.id)}</option>`).join('')}
+        </select>
+      </div>
+      <button type="submit" class="btn primary" data-add-label>+ Ajouter l’objet</button>
+    </form>`;
+  }
+  return '';
+}
+
+function boxFormHtml(placement) {
+  const kinds = containerKinds();
+  const floors = state.adventure.floors || [];
+  const place = placement || 'recoverable';
+  const selected = kinds[0]?.id || 'box';
+  const placeField = place === 'choose'
+    ? `<div class="field"><label>Où apparaît le contenant</label>
+        <select name="placement">
+          <option value="bureau">Bureau (étage 1)</option>
+          <option value="recoverable">Objets recouvrables</option>
+        </select>
+      </div>`
+    : `<input type="hidden" name="placement" value="${esc(place)}" />`;
+  const floorField = place === 'bureau'
+    ? ''
+    : `<div class="field"><label>Étage (rappel)</label>
+        <select name="floorHint"><option value="">— non précisé —</option>
+        ${floors.map((f) => `<option value="${f.index}">Étage ${f.index} — ${esc(f.title || '')}</option>`).join('')}</select>
+      </div>`;
+  const helpLines = kinds.map((k) => `<span data-ck-help="${esc(k.id)}" style="${k.id === selected ? '' : 'display:none'}">${esc(k.help)}</span>`).join('');
+  return `<form id="worldAddForm">
+    <p style="margin:0 0 12px;color:var(--muted);font-size:0.8rem;text-transform:none;letter-spacing:0">
+      Choisissez le type de contenant, un nom, et un <b style="color:var(--phos)">code optionnel</b>. Ensuite ouvrez-le pour y ranger des objets.
+    </p>
+    ${placeField}
+    <div class="field"><label>Type de contenant</label>
+      <select name="containerKind">${kinds.map((k) => `<option value="${esc(k.id)}" ${k.id === selected ? 'selected' : ''}>${esc(k.label)}</option>`).join('')}</select>
+      <p id="containerKindHelp" style="margin:8px 0 0;color:var(--muted);font-size:0.78rem;text-transform:none;letter-spacing:0">${helpLines}</p>
+    </div>
+    <div class="field"><label>Nom</label><input name="label" required placeholder="Boîte / PC / Casier…" /></div>
+    ${floorField}
+    <div class="field"><label>Code (optionnel)</label>
+      <input name="code" placeholder="Laisser vide = accessible sans code" autocomplete="off" />
+    </div>
+    <button type="submit" class="btn primary">+ Créer le contenant</button>
+  </form>`;
+}
+
+function boxViewHtml() {
+  if (!state.boxViewId || !state.adventure) return '';
+  const box = findBox(state.boxViewId);
+  const media = (state.adventure.mediaItems || []).find((m) => m.id === state.boxViewId || m.id === box?.mediaItemId || m.id === box?.id);
+  if (!box || !media) {
+    state.boxViewId = null;
+    return '';
+  }
+  const kind = containerKindOf(box);
+  const spec = containerKinds().find((k) => k.id === kind);
+  const floor = boxFloorIndex(box);
+  const placeLabel = isBureauMedia(media) ? 'Bureau' : 'Objets recouvrables';
+  const stashing = state.worldAddMode === 'stash';
+  const items = (box.contains || [])
+    .map((id) => (state.adventure.mediaItems || []).find((m) => m.id === id))
+    .filter(Boolean);
+  const contents = items.length
+    ? items.map((m) => `
+        <div class="wcard">
+          <h3>${esc(m.label || m.id)} ${floorChip(m)}</h3>
+          <div class="meta">${esc(familyLabel(familyOf(m)))} · ${esc(skinLabel(m.skin))}</div>
+          ${containedMentionHtml(m)}
+          <div class="row-actions">
+            <button type="button" class="btn sm" data-open-sheet="${esc(m.id)}">Voir l’objet</button>
+            <button type="button" class="btn sm" data-unstash="${esc(m.id)}" data-unstash-box="${esc(box.id)}">Retirer</button>
+          </div>
+        </div>`).join('')
+    : `<p class="empty">Ce contenant est vide. Cliquez « Ranger un objet » pour y glisser n’importe quel objet déjà créé.</p>`;
+  const links = box.links || [];
+  const linkSection = spec?.allowsLinks ? `
+      <h3 class="family-head">Liens vers des pages web <span class="family-count">${links.length}</span></h3>
+      <p style="margin:0 0 10px;color:var(--muted);font-size:0.78rem;text-transform:none;letter-spacing:0">
+        Pages extérieures à l’app (site d’un collaborateur, partenariat…). S’ouvrent dans un nouvel onglet.
+      </p>
+      <form id="boxLinkForm">
+        <div class="field"><label>Nom du lien</label><input name="label" placeholder="Site du partenaire" /></div>
+        <div class="field"><label>URL</label><input name="url" placeholder="https://exemple.com" required /></div>
+        <button type="submit" class="btn sm primary">+ Ranger ce lien dans le PC</button>
+      </form>
+      <div class="world-grid" style="margin-top:12px">${links.length ? links.map((l) => `
+        <div class="wcard">
+          <h3>${esc(l.label || l.url)}</h3>
+          <div class="meta">${esc(l.url)}</div>
+          <div class="row-actions">
+            <a class="btn sm primary" href="${esc(l.url)}" target="_blank" rel="noopener noreferrer">Ouvrir la page</a>
+            <button type="button" class="btn sm danger" data-del-link="${esc(l.id)}" data-del-link-box="${esc(box.id)}">Retirer le lien</button>
+          </div>
+        </div>`).join('') : '<p class="empty">Aucun lien pour l’instant.</p>'}</div>
+  ` : '';
+  return `
+    <button type="button" class="btn sm" data-box-back="1" style="margin-bottom:12px">← Retour</button>
+    <p class="kicker">${esc(containerKindLabel(kind))} · ${esc(placeLabel)} ${floor == null ? '' : '· étage ' + floor}</p>
+    <p class="world-chain"><b>${esc(box.label || media.label || box.id)}</b> — ${esc(spec?.help || 'Contenant')}. Code optionnel. Les objets rangés restent dans leur famille d’origine.</p>
+    <div class="world-form">
+      <h3 class="family-head">Modifier</h3>
+      <form id="boxCodeForm">
+        <div class="field"><label>Code (optionnel)</label>
+          <input name="code" value="${esc(box.code || '')}" placeholder="Laisser vide = sans code" autocomplete="off" />
+        </div>
+        <div class="row-actions">
+          <button type="submit" class="btn sm primary">Enregistrer le code</button>
+          ${box.lockWithCode && box.code ? '<button type="button" class="btn sm" data-clear-box-code="1">Supprimer le code</button>' : ''}
+        </div>
+      </form>
+      ${linkSection}
+      <div class="resume-bar" style="margin-top:16px">
+        <button type="button" class="btn sm ${stashing ? 'primary' : ''}" data-add-mode="stash">Ranger un objet</button>
+        <button type="button" class="btn sm ${stashing ? 'primary' : ''}" data-add-mode="stash">Importer un objet</button>
+      </div>
+      ${stashing ? stashPickerHtml(box) : ''}
+    </div>
+    ${stashing ? '' : `<h3 class="family-head">Dans ce contenant <span class="family-count">${items.length}</span></h3>
+    <div class="world-grid">${contents}</div>`}
+  `;
+}
+
+function stashPickerHtml(box) {
+  const pending = state.stashConfirm;
+  const items = (state.adventure.mediaItems || []).filter((m) => {
+    if (isContainerMedia(m)) return false;
+    if (m.id === box.id || m.id === box.mediaItemId) return false;
+    return !(box.contains || []).includes(m.id);
+  });
+  const intro = `<p style="margin:12px 0;color:var(--muted);font-size:0.8rem;text-transform:none;letter-spacing:0">
+    Choisissez n’importe quel objet. Il sera <b style="color:var(--phos)">rangé dans ce contenant</b> sans quitter sa famille.
+  </p>`;
+  if (!items.length) return intro + '<p class="empty">Aucun objet à ranger — tous y sont déjà, ou créez d’abord un objet dans Bureau / Recouvrables.</p>';
+  const order = ['imposed', 'bureau', 'recoverable'];
+  return intro + order.map((fam) => {
+    const list = items.filter((m) => familyOf(m) === fam);
+    if (!list.length) return '';
+    return `<h3 class="family-head">${familyLabel(fam)}</h3><div class="world-grid">` + list.map((m) => {
+      const asking = pending && pending.itemId === m.id && pending.boxId === box.id;
+      const actions = asking
+        ? `<p class="mut-line">Ranger « ${esc(m.label || m.id)} » ici ?</p>
+           <div class="row-actions">
+             <button type="button" class="btn sm primary" data-stash-yes="${esc(m.id)}" data-stash-box="${esc(box.id)}">Oui</button>
+             <button type="button" class="btn sm" data-stash-no="1">Non</button>
+           </div>`
+        : `<div class="row-actions">
+             <button type="button" class="btn sm primary" data-stash-ask="${esc(m.id)}" data-stash-box="${esc(box.id)}">Ranger cet objet ici</button>
+           </div>`;
+      return `<div class="wcard">
+        <h3>${esc(m.label || m.id)} ${floorChip(m)}</h3>
+        <div class="meta">${esc(familyLabel(fam))} · ${esc(skinLabel(m.skin))}</div>
+        ${containedMentionHtml(m)}
+        ${actions}
+      </div>`;
+    }).join('') + '</div>';
+  }).join('');
+}
+
+function familyBlockHtml(title, cards, emptyText) {
+  const n = Array.isArray(cards) ? cards.length : 0;
+  const body = n
+    ? `<div class="world-grid">${cards.join('')}</div>`
+    : `<p class="empty">${emptyText || 'Aucun objet dans cette famille.'}</p>`;
+  return `<section class="family-block">
+    <h3 class="family-head">${title}<span class="family-count">${n}</span></h3>
+    ${body}
+  </section>`;
+}
+
+function worldCardsHtml(tab) {
+  if (tab === 'imposed') {
+    const items = (state.adventure.mediaItems || []).filter(isImposedMedia);
+    if (!items.length) return '<p class="empty">Aucun média imposé. C’est le point de départ — créez-le ici avant de brancher l’étage 0.</p>';
+    return `<div class="world-grid">${items.map((m) => `
+      <div class="wcard">
+        <h3>${esc(m.label || m.id)}</h3>
+        <div class="meta">Média imposé · ${esc(skinLabel(m.skin))} · visible dès l’étage 0</div>
+        <div class="meta">${m.contentId ? 'Contenu : ' + esc(labelOf('mediaContent', m.contentId)) : 'Pas de contenu lié'}</div>
+        ${containedMentionHtml(m)}
+        <div class="row-actions">
+          <button type="button" class="btn sm" data-open-sheet="${esc(m.id)}">Voir / modifier</button>
+          <button type="button" class="btn sm danger" data-del="${esc(m.id)}" data-kind="item">Supprimer</button>
+        </div>
+      </div>`).join('')}</div>`;
+  }
+  if (tab === 'bureau') {
+    const items = (state.adventure.mediaItems || []).filter(isBureauMedia);
+    if (!items.length) return '<p class="empty">Le bureau est vide. Ajoutez des objets ou une boîte, puis ouvrez-les ci-dessous.</p>';
+    return familyBlockHtml('Objets du bureau', items.map(objectCardHtml));
+  }
+  if (tab === 'recoverable') {
+    const items = (state.adventure.mediaItems || []).filter((m) => (isRecoverableMedia(m) || isContainerMedia(m)) && !isBureauMedia(m) && !isImposedMedia(m));
+    if (!items.length) return '<p class="empty">Aucun objet recouvrable. Créez-les ici : ils se débloquent par code, lieu ou balise.</p>';
+    return `<div class="world-grid">${items.map(objectCardHtml).join('')}</div>`;
+  }
+  if (tab === 'resume') return resumeCardsHtml();
+  return '';
+}
+
+function objectCardHtml(m) {
+  const fam = familyOf(m);
+  const box = findBox(m.id);
+  const content = m.contentId ? (state.adventure.mediaContents || []).find((c) => c.id === m.contentId) : null;
+  const unlock = m.unlockBy?.kind
+    ? `déblocage : ${m.unlockBy.kind === 'code' ? 'code' : m.unlockBy.kind === 'zone' ? 'lieu' : 'balise'}`
+    : (fam === 'recoverable' ? 'déblocage : à définir' : '');
+  const detailsN = (m.details || []).length;
+  const anN = (m.analyses || []).length;
+  const canDelete = fam === 'imposed' || fam === 'bureau' || fam === 'recoverable' || fam === 'container';
+  if (box) {
+    const n = (box.contains || []).length;
+    const kind = containerKindOf(box);
+    const linksN = (box.links || []).length;
+    return `
+    <div class="wcard">
+      <h3>${esc(m.label || m.id)} ${floorChip(m)}</h3>
+      <div class="meta">${esc(containerKindLabel(kind))} · ${box.lockWithCode && box.code ? 'code ' + esc(box.code) : 'sans code'}</div>
+      <div class="meta">${n} objet(s) rangé(s)${linksN ? ' · ' + linksN + ' lien(s)' : ''}${isBureauMedia(m) ? ' · apparaît au bureau' : ''}</div>
+      <div class="row-actions">
+        <button type="button" class="btn sm primary" data-open-box="${esc(box.id)}">${esc(containerOpenLabel(kind))}</button>
+        ${canDelete ? `<button type="button" class="btn sm danger" data-del="${esc(m.id)}" data-kind="container">Supprimer</button>` : ''}
+      </div>
+    </div>`;
+  }
+  return `
+    <div class="wcard">
+      <h3>${esc(m.label || m.id)} ${floorChip(m)}</h3>
+      <div class="meta">${esc(familyLabel(fam))} · ${esc(skinLabel(m.skin))}${unlock ? ' · ' + unlock : ''}</div>
+      <div class="meta">${content ? 'Contenu ' + esc(content.kind) + (content.body ? ' : ' + esc(String(content.body).slice(0, 80)) : '') : 'Pas de contenu lié'}</div>
+      ${containedMentionHtml(m)}
+      ${collectMutationsFor(m).map((mut) =>
+        `<div class="meta">modification de l’objet à l’étage ${mut.floorIndex ?? '—'} par le bouton « ${esc(mut.buttonLabel || '')} »</div>`
+      ).join('')}
+      <div class="meta">${detailsN} détail(s) créateur · ${anN} analyse(s)</div>
+      <div class="row-actions">
+        <button type="button" class="btn sm" data-open-sheet="${esc(m.id)}">Voir / modifier</button>
+        ${canDelete ? `<button type="button" class="btn sm danger" data-del="${esc(m.id)}" data-kind="item">Supprimer</button>` : ''}
+      </div>
+    </div>`;
+}
+
+function resumeCardsHtml() {
+  const items = [...(state.adventure.mediaItems || [])];
+  if (!items.length) return '<p class="empty">Aucun objet. Créez-les ci-dessus ou dans Départ / Bureau.</p>';
+  if (state.resumeGroup === 'floor') {
+    const groups = new Map();
+    items.forEach((m) => {
+      const k = inferFloorOf(m);
+      const key = k == null ? 'x' : String(k);
+      if (!groups.has(key)) groups.set(key, []);
+      groups.get(key).push(m);
+    });
+    const keys = [...groups.keys()].sort((a, b) => (a === 'x' ? 1 : b === 'x' ? -1 : Number(a) - Number(b)));
+    return keys.map((k) => {
+      const title = k === 'x' ? 'Étage non rattaché' : `Étage ${k}`;
+      const list = groups.get(k);
+      return familyBlockHtml(title, list.map(objectCardHtml));
+    }).join('');
+  }
+  const order = [
+    ['imposed', 'Aucun média imposé.'],
+    ['bureau', 'Aucun objet au bureau.'],
+    ['container', 'Aucun contenant.'],
+    ['recoverable', 'Aucun objet recouvrable.'],
+  ];
+  return order.map(([fam, empty]) => {
+    const list = items.filter((m) => familyOf(m) === fam);
+    if (fam === 'container') {
+      const inner = containerKinds().map((k) => {
+        const subset = list.filter((m) => containerKindOf(findBox(m.id)) === k.id);
+        return familyBlockHtml(k.label, subset.map(objectCardHtml), k.empty);
+      }).join('');
+      return `<section class="family-block">
+        <h3 class="family-head">Contenant<span class="family-count">${list.length}</span></h3>
+        <div class="world-list">${inner}</div>
+      </section>`;
+    }
+    return familyBlockHtml(familyLabel(fam), list.map(objectCardHtml), empty);
+  }).join('');
+}
+
+function collectMutationsFor(item) {
+  const listed = (item.mutations || []).map((m) => ({
+    floorIndex: m.floorIndex,
+    buttonLabel: m.buttonLabel,
+    kind: 'declared',
+  }));
+  const inferred = [];
+  for (const f of state.adventure.floors || []) {
+    for (const s of f.situations || []) {
+      for (const a of [...(s.thenActions || []), ...(s.elseActions || [])]) {
+        if (a.kind === 'set_object_state' && a.objectId === item.id) {
+          inferred.push({ floorIndex: f.index, buttonLabel: a.label || a.value, kind: 'set_object_state', source: s.title });
+        }
+        if (a.kind === 'show_button' && (a.label || '').length && JSON.stringify(s).includes(item.id)) {
+          inferred.push({ floorIndex: f.index, buttonLabel: a.label || a.choiceId, kind: 'show_button', source: s.title });
+        }
+      }
+      if (s.trigger?.kind === 'player_choice' && JSON.stringify(s).includes(`"${item.id}"`)) {
+        inferred.push({
+          floorIndex: f.index,
+          buttonLabel: s.trigger.label || s.trigger.choiceId,
+          kind: 'player_choice',
+          source: s.title,
+        });
+      }
+    }
+  }
+  return [...listed, ...inferred];
+}
+
+function openObjectSheet(id) {
+  const box = findBox(id);
+  if (box) {
+    state.boxViewId = box.id;
+    closeObjectSheet();
+    renderWorld();
+    return;
+  }
+  const el = document.getElementById('objectSheet');
+  const item = (state.adventure.mediaItems || []).find((m) => m.id === id);
+  if (!el || !item) return;
+  state.sheetId = id;
+  if (!item.details) item.details = [];
+  if (!item.analyses) item.analyses = [];
+  if (!item.mutations) item.mutations = [];
+  const fam = familyOf(item);
+  const content = item.contentId ? (state.adventure.mediaContents || []).find((c) => c.id === item.contentId) : null;
+  const skins = state.catalog?.mediaItemSkins || [];
+  const kinds = state.catalog?.contentKinds || [];
+  const floors = state.adventure.floors || [];
+  const zones = state.adventure.zones || [];
+  const beacons = state.adventure.beacons || [];
+  const ub = item.unlockBy || {};
+  const muts = collectMutationsFor(item);
+  el.classList.remove('hidden');
+  el.innerHTML = `<div class="sheet-panel" data-item="${esc(item.id)}">
+    <p class="sheet-k">${esc(familyLabel(fam))} ${floorChip(item)}</p>
+    <h2>${esc(item.label || item.id)}</h2>
+    ${containedMentionHtml(item)}
+    <form id="sheetForm">
+      <div class="field"><label>Nom</label><input name="label" value="${esc(item.label || '')}" required /></div>
+      <div class="field"><label>Nature / apparence</label>
+        <select name="skin">${skins.map((s) => `<option value="${esc(s.id)}" ${s.id === item.skin ? 'selected' : ''}>${esc(s.label)}</option>`).join('')}</select>
+      </div>
+      <div class="field"><label>Étage</label>
+        <select name="floorHint">
+          <option value="">— non précisé —</option>
+          ${floors.map((f) => `<option value="${f.index}" ${Number(item.floorHint) === f.index || inferFloorOf(item) === f.index ? 'selected' : ''}>Étage ${f.index} — ${esc(f.title || '')}</option>`).join('')}
+        </select>
+      </div>
+      <h3 class="family-head">Contenu</h3>
+      <div class="field"><label>Type de contenu</label>
+        <select name="contentKind">${kinds.map((k) => `<option value="${esc(k.id)}" ${(content?.kind || 'text') === k.id ? 'selected' : ''}>${esc(k.label)}</option>`).join('')}</select>
+      </div>
+      <div class="field"><label>Modifier le contenu (texte / note / code visuel)</label>
+        <textarea name="contentBody" rows="4" placeholder="Texte, description d’image, script vidéo…">${esc(content?.body || '')}</textarea>
+      </div>
+      ${fam === 'recoverable' ? `
+      <h3 class="family-head">Condition de déblocage</h3>
+      <div class="field"><label>Type</label>
+        <select name="unlockKind">
+          <option value="">— aucune —</option>
+          <option value="code" ${ub.kind === 'code' ? 'selected' : ''}>Code</option>
+          <option value="zone" ${ub.kind === 'zone' ? 'selected' : ''}>Lieu</option>
+          <option value="beacon" ${ub.kind === 'beacon' ? 'selected' : ''}>Balise</option>
+        </select>
+      </div>
+      <div class="field" data-unlock="code"><label>Code</label><input name="unlockCode" value="${esc(ub.code || '')}" /></div>
+      <div class="field" data-unlock="zone"><label>Lieu existant</label>
+        <select name="unlockZoneId"><option value="">— choisir ou créer —</option>${zones.map((z) => `<option value="${esc(z.id)}" ${ub.zoneId === z.id ? 'selected' : ''}>${esc(z.label || z.id)}</option>`).join('')}</select>
+      </div>
+      <div class="field" data-unlock="zone"><label>Ou créer un lieu</label>
+        <input name="newZoneLabel" placeholder="Nom du lieu" />
+        <input name="newZoneLat" placeholder="Latitude" style="margin-top:6px" />
+        <input name="newZoneLng" placeholder="Longitude" style="margin-top:6px" />
+        <input name="newZoneRadius" value="100" placeholder="Rayon m" style="margin-top:6px" />
+      </div>
+      <div class="field" data-unlock="beacon"><label>Balise existante</label>
+        <select name="unlockBeaconId"><option value="">— choisir ou créer —</option>${beacons.map((b) => `<option value="${esc(b.id)}" ${ub.beaconId === b.id ? 'selected' : ''}>${esc(b.label || b.id)}</option>`).join('')}</select>
+      </div>
+      <div class="field" data-unlock="beacon"><label>Ou créer une balise</label>
+        <input name="newBeaconLabel" placeholder="Nom de la balise" />
+        <select name="newBeaconChannel" style="margin-top:6px"><option value="qr">QR</option><option value="nfc">NFC</option></select>
+      </div>` : ''}
+      <h3 class="family-head">Analyses contextuelles (joueur)</h3>
+      <p style="color:var(--muted);font-size:0.78rem">Fenêtre d’observation = éphémère. Note du journal = permanente, consultable dans le tableau de bord.</p>
+      <div id="sheetAnalyses">${(item.analyses || []).map((an, i) => analysisRowHtml(an, i)).join('')}</div>
+      <button type="button" class="btn sm" id="btnAddAnalysis">+ Ajouter une analyse contextuelle</button>
+      <h3 class="family-head">Détails de l’objet (mémo créateur)</h3>
+      <p style="color:var(--muted);font-size:0.78rem">Pour toi uniquement — ex. « c’est dans cette vidéo que le joueur trouve le code… »</p>
+      <div class="detail-list">${(item.details || []).map((d) => `
+        <div class="detail-item" data-det="${esc(d.id)}">
+          <p>${esc(d.text)}</p>
+          <button type="button" class="btn sm" data-edit-det="${esc(d.id)}">Modifier un détail</button>
+          <button type="button" class="btn sm danger" data-del-det="${esc(d.id)}">Supprimer un détail</button>
+        </div>`).join('') || '<p class="empty">Aucun détail pour l’instant.</p>'}</div>
+      <div class="field"><label>Voir les détails / ajouter</label>
+        <textarea id="newDetail" rows="3" placeholder="Précisez un mémo sur cet objet…"></textarea>
+      </div>
+      <button type="button" class="btn sm" id="btnAddDetail">Valider les détails</button>
+      <h3 class="family-head">Modifications d’état</h3>
+      ${muts.length
+        ? muts.map((m) => `<p class="mut-line">modification de l’objet à l’étage ${m.floorIndex ?? '—'} par le bouton « ${esc(m.buttonLabel || '')} »${m.source ? ' · ' + esc(m.source) : ''}</p>`).join('')
+        : '<p class="empty">Aucune modification d’état déclarée.</p>'}
+      <div class="field"><label>Ajouter une modification (bouton)</label><input id="mutLabel" placeholder="Décoller l’illustration" /></div>
+      <div class="field"><label>À l’étage</label>
+        <select id="mutFloor">${floors.map((f) => `<option value="${f.index}">${f.index} — ${esc(f.title || '')}</option>`).join('')}</select>
+      </div>
+      <button type="button" class="btn sm" id="btnAddMut">+ Enregistrer la modification</button>
+      <div style="margin-top:16px;display:flex;gap:8px;flex-wrap:wrap">
+        <button type="submit" class="btn primary">Enregistrer l’objet</button>
+        <button type="button" class="btn" id="btnCloseSheet">Fermer</button>
+      </div>
+    </form>
+  </div>`;
+  bindObjectSheet(item);
+}
+
+function analysisRowHtml(an, i) {
+  return `<div class="field" data-an-row="${i}">
+    <label>Analyse ${i + 1}</label>
+    <select name="anKind_${i}">
+      <option value="observe" ${an.kind === 'observe' ? 'selected' : ''}>Fenêtre d’observation (éphémère)</option>
+      <option value="journal" ${an.kind === 'journal' ? 'selected' : ''}>Note dans le journal (permanente)</option>
+    </select>
+    <textarea name="anText_${i}" rows="2" placeholder="Texte affiché au joueur">${esc(an.text || '')}</textarea>
+  </div>`;
+}
+
+function bindObjectSheet(item) {
+  const root = document.querySelector('#objectSheet .sheet-panel');
+  const form = document.getElementById('sheetForm');
+  const unlockSel = root.querySelector('[name="unlockKind"]');
+  const applyUnlock = () => {
+    if (!unlockSel) return;
+    root.querySelectorAll('[data-unlock]').forEach((el) => {
+      el.style.display = el.dataset.unlock === unlockSel.value ? '' : 'none';
+    });
+  };
+  if (unlockSel) unlockSel.onchange = applyUnlock;
+  applyUnlock();
+  document.getElementById('btnCloseSheet').onclick = closeObjectSheet;
+  document.getElementById('objectSheet').onclick = (e) => {
+    if (e.target.id === 'objectSheet') closeObjectSheet();
+  };
+  document.getElementById('btnAddAnalysis').onclick = () => {
+    item.analyses = item.analyses || [];
+    item.analyses.push({ kind: 'observe', text: '' });
+    openObjectSheet(item.id);
+  };
+  document.getElementById('btnAddDetail').onclick = () => {
+    const t = document.getElementById('newDetail').value.trim();
+    if (!t) return;
+    item.details = item.details || [];
+    item.details.push({ id: 'det_' + Date.now().toString(36), text: t });
+    saveObjectSheet(item, form);
+  };
+  root.querySelectorAll('[data-del-det]').forEach((b) => {
+    b.onclick = () => {
+      item.details = (item.details || []).filter((d) => d.id !== b.dataset.delDet);
+      saveObjectSheet(item, form);
+    };
+  });
+  root.querySelectorAll('[data-edit-det]').forEach((b) => {
+    b.onclick = () => {
+      const d = (item.details || []).find((x) => x.id === b.dataset.editDet);
+      if (!d) return;
+      const next = prompt('Modifier le détail', d.text);
+      if (next == null) return;
+      d.text = next.trim();
+      if (!d.text) item.details = item.details.filter((x) => x.id !== d.id);
+      saveObjectSheet(item, form);
+    };
+  });
+  document.getElementById('btnAddMut').onclick = () => {
+    const label = document.getElementById('mutLabel').value.trim();
+    if (!label) return;
+    item.mutations = item.mutations || [];
+    item.mutations.push({
+      id: 'mut_' + Date.now().toString(36),
+      buttonLabel: label,
+      floorIndex: Number(document.getElementById('mutFloor').value),
+      newState: 'changed',
+    });
+    saveObjectSheet(item, form);
+  };
+  form.onsubmit = (e) => {
+    e.preventDefault();
+    saveObjectSheet(item, form);
+  };
+}
+
+function closeObjectSheet() {
+  state.sheetId = null;
+  const el = document.getElementById('objectSheet');
+  el.classList.add('hidden');
+  el.innerHTML = '';
+}
+
+async function resolveUnlockBy(get) {
+  const unlockKind = get('unlockKind');
+  if (!unlockKind) return null;
+  if (unlockKind === 'code' && get('unlockCode')) return { kind: 'code', code: get('unlockCode') };
+  if (unlockKind === 'zone') {
+    let zoneId = get('unlockZoneId');
+    if (!zoneId && get('newZoneLabel')) {
+      const lat = Number(get('newZoneLat'));
+      const lng = Number(get('newZoneLng'));
+      if (Number.isNaN(lat) || Number.isNaN(lng)) throw new Error('Latitude et longitude requises pour créer un lieu');
+      const out = await api('/creator/inventory/add', {
+        method: 'POST',
+        body: JSON.stringify({
+          adventure: state.adventure,
+          kind: 'zone',
+          payload: {
+            label: get('newZoneLabel'),
+            kind: 'circle',
+            lat,
+            lng,
+            radiusM: Number(get('newZoneRadius') || 100),
+          },
+        }),
+      });
+      state.adventure = out.adventure;
+      zoneId = out.added.id;
+    }
+    return zoneId ? { kind: 'zone', zoneId } : null;
+  }
+  if (unlockKind === 'beacon') {
+    let beaconId = get('unlockBeaconId');
+    if (!beaconId && get('newBeaconLabel')) {
+      const out = await api('/creator/inventory/add', {
+        method: 'POST',
+        body: JSON.stringify({
+          adventure: state.adventure,
+          kind: 'beacon',
+          payload: { label: get('newBeaconLabel'), channel: get('newBeaconChannel') || 'qr' },
+        }),
+      });
+      state.adventure = out.adventure;
+      beaconId = out.added.id;
+    }
+    return beaconId ? { kind: 'beacon', beaconId } : null;
+  }
+  return null;
+}
+
+async function saveObjectSheet(item, form) {
+  const fd = new FormData(form);
+  const get = (k) => String(fd.get(k) || '').trim();
+  const analyses = [];
+  form.querySelectorAll('[data-an-row]').forEach((row) => {
+    const i = row.dataset.anRow;
+    const text = get('anText_' + i);
+    if (!text) return;
+    analyses.push({ kind: get('anKind_' + i) || 'observe', text });
+  });
+  const unlockBy = await resolveUnlockBy(get);
+  const kind = familyOf(item) === 'imposed' ? 'imposed' : familyOf(item) === 'bureau' ? 'bureau' : familyOf(item) === 'container' ? 'container' : 'recoverable';
+  try {
+    const out = await api('/creator/inventory/update', {
+      method: 'POST',
+      body: JSON.stringify({
+        adventure: state.adventure,
+        kind,
+        payload: {
+          id: item.id,
+          label: get('label'),
+          skin: get('skin'),
+          floorHint: get('floorHint') || null,
+          contentKind: get('contentKind') || 'text',
+          contentBody: get('contentBody'),
+          code: get('code') || undefined,
+          lockWithCode: get('lockWithCode'),
+          unlockBy,
+          details: item.details,
+          analyses,
+          mutations: item.mutations,
+        },
+      }),
+    });
+    state.adventure = out.adventure;
+    await refreshViewsFromAdventure();
+    openObjectSheet(item.id);
+  } catch (e) { alert(e.message); }
+}
+
+async function submitWorldForm(tab, form) {
+  const fd = new FormData(form);
+  const get = (k) => String(fd.get(k) || '').trim();
+  try {
+    if (state.worldAddMode === 'box') {
+      const placement = get('placement') || (tab === 'bureau' ? 'bureau' : 'recoverable');
+      const containerKind = get('containerKind') || 'box';
+      const out = await api('/creator/inventory/add', {
+        method: 'POST',
+        body: JSON.stringify({
+          adventure: state.adventure,
+          kind: 'container',
+          payload: {
+            label: get('label') || 'Nouveau contenant',
+            containerKind,
+            code: get('code') || '',
+            placement,
+            floorHint: get('floorHint') || (placement === 'bureau' ? 1 : null),
+          },
+        }),
+      });
+      state.adventure = out.adventure;
+      state.boxViewId = out.added.id;
+      state.worldAddMode = 'create';
+      await refreshViewsFromAdventure();
+      renderWorld();
+      return;
+    }
+    if (tab === 'imposed') {
+      let contentId = get('contentId') || null;
+      if (get('alsoContent') === 'yes' && !contentId) {
+        const c = await api('/creator/inventory/add', {
+          method: 'POST',
+          body: JSON.stringify({
+            adventure: state.adventure,
+            kind: 'content',
+            payload: { label: get('label') || 'Média imposé', kind: 'text' },
+          }),
+        });
+        state.adventure = c.adventure;
+        contentId = c.added.id;
+      }
+      const out = await api('/creator/inventory/add', {
+        method: 'POST',
+        body: JSON.stringify({
+          adventure: state.adventure,
+          kind: 'imposed',
+          payload: { label: get('label') || 'Média imposé', skin: get('skin') || 'vhs', contentId },
+        }),
+      });
+      state.adventure = out.adventure;
+    } else if (tab === 'bureau') {
+      const editId = get('editId');
+      let contentId = get('contentId') || null;
+      if (!editId && get('alsoContent') === 'yes' && !contentId) {
+        const c = await api('/creator/inventory/add', {
+          method: 'POST',
+          body: JSON.stringify({
+            adventure: state.adventure,
+            kind: 'content',
+            payload: { label: get('label') || 'Objet du bureau', kind: 'text' },
+          }),
+        });
+        state.adventure = c.adventure;
+        contentId = c.added.id;
+      }
+      const out = await api(editId ? '/creator/inventory/update' : '/creator/inventory/add', {
+        method: 'POST',
+        body: JSON.stringify({
+          adventure: state.adventure,
+          kind: 'bureau',
+          payload: {
+            id: editId || undefined,
+            label: get('label') || 'Objet du bureau',
+            skin: get('skin') || 'letter',
+            contentId,
+          },
+        }),
+      });
+      state.adventure = out.adventure;
+      state.worldEditId = null;
+    } else if (tab === 'recoverable' || tab === 'resume') {
+      const objectKind = get('objectKind') || 'recoverable';
+      if (objectKind === 'imposed') {
+        const out = await api('/creator/inventory/add', {
+          method: 'POST',
+          body: JSON.stringify({
+            adventure: state.adventure,
+            kind: 'imposed',
+            payload: { label: get('label') || 'Média imposé', skin: get('skin') || 'vhs', contentId: get('contentId') || null, floorHint: get('floorHint') || 0 },
+          }),
+        });
+        state.adventure = out.adventure;
+      } else if (objectKind === 'bureau') {
+        const out = await api('/creator/inventory/add', {
+          method: 'POST',
+          body: JSON.stringify({
+            adventure: state.adventure,
+            kind: 'bureau',
+            payload: { label: get('label') || 'Objet du bureau', skin: get('skin') || 'letter', contentId: get('contentId') || null, floorHint: get('floorHint') || 1 },
+          }),
+        });
+        state.adventure = out.adventure;
+      } else if (objectKind === 'container') {
+        const out = await api('/creator/inventory/add', {
+          method: 'POST',
+          body: JSON.stringify({
+            adventure: state.adventure,
+            kind: 'container',
+            payload: {
+              label: get('label'),
+              containerKind: get('containerKind') || 'box',
+              code: get('code') || '',
+              placement: get('placement') || 'recoverable',
+              floorHint: get('floorHint') || null,
+            },
+          }),
+        });
+        state.adventure = out.adventure;
+        state.boxViewId = out.added.id;
+        state.worldAddMode = 'create';
+        await refreshViewsFromAdventure();
+        renderWorld();
+        return;
+      } else {
+        const unlockBy = await resolveUnlockBy(get);
+        const out = await api('/creator/inventory/add', {
+          method: 'POST',
+          body: JSON.stringify({
+            adventure: state.adventure,
+            kind: 'recoverable',
+            payload: {
+              label: get('label'),
+              skin: get('skin'),
+              contentId: get('contentId') || null,
+              floorHint: get('floorHint') || null,
+              unlockBy,
+            },
+          }),
+        });
+        state.adventure = out.adventure;
+      }
+    }
+    await refreshViewsFromAdventure();
+  } catch (e) { alert(e.message); }
+}
+
+function deleteWorldItem(kind, id) {
+  if (!state.adventure || !confirm('Supprimer cet élément du matériel ?')) return;
+  if (kind === 'container') {
+    const box = findBox(id);
+    const mid = box?.mediaItemId || id;
+    const codeId = box?.codeChoiceId;
+    state.adventure.containers = (state.adventure.containers || []).filter((c) => c.id !== id && c.mediaItemId !== id);
+    state.adventure.mediaItems = (state.adventure.mediaItems || []).filter((x) => x.id !== mid);
+    if (codeId) {
+      state.adventure.interactions = (state.adventure.interactions || []).filter((x) => x.id !== codeId);
+    }
+    if (state.boxViewId === id || state.boxViewId === mid) {
+      state.boxViewId = null;
+      state.worldAddMode = 'create';
+    }
+  }
+  if (kind === 'item') {
+    state.adventure.mediaItems = (state.adventure.mediaItems || []).filter((x) => x.id !== id);
+    (state.adventure.containers || []).forEach((c) => {
+      c.contains = (c.contains || []).filter((x) => x !== id);
+    });
+  }
+  if (kind === 'content') state.adventure.mediaContents = (state.adventure.mediaContents || []).filter((x) => x.id !== id);
+  if (kind === 'zone') state.adventure.zones = (state.adventure.zones || []).filter((x) => x.id !== id);
+  if (kind === 'beacon') state.adventure.beacons = (state.adventure.beacons || []).filter((x) => x.id !== id);
+  if (kind === 'interaction') state.adventure.interactions = (state.adventure.interactions || []).filter((x) => x.id !== id);
+  refreshViewsFromAdventure();
+}
+
+/* ── Block editor helpers ─────────────────────────────────────────── */
+
+function optionsForField(field) {
+  if (field.type === 'mediaItem') {
+    return mediaItemOptionsHtml();
+  }
+  if (field.type === 'mediaContent') {
+    return (state.adventure.mediaContents || []).map((m) => `<option value="${esc(m.id)}">${esc(m.label || m.id)}</option>`).join('');
+  }
+  if (field.type === 'zone') {
+    return (state.adventure.zones || []).map((z) => `<option value="${esc(z.id)}">${esc(z.label || z.id)}</option>`).join('');
+  }
+  if (field.type === 'beacon') {
+    return (state.adventure.beacons || []).map((b) => `<option value="${esc(b.id)}">${esc(b.label || b.id)}</option>`).join('');
+  }
+  if (field.type === 'variable') {
+    return (state.adventure.variables || []).map((v) => `<option value="${esc(v.id)}">${esc(v.label || v.id)}</option>`).join('');
+  }
+  if (field.type === 'enum') {
+    return (field.options || []).map((o) => `<option value="${esc(o)}">${esc(o)}</option>`).join('');
+  }
+  return '';
+}
+
+function fieldControl(field, value, dataKey) {
+  const v = value ?? field.default ?? '';
+  if (['mediaItem', 'mediaContent', 'zone', 'beacon', 'variable', 'enum'].includes(field.type)) {
+    let opts = '';
+    if (field.type === 'mediaItem') opts = mediaItemOptionsHtml(v);
+    else if (field.type === 'mediaContent') opts = (state.adventure.mediaContents || []).map((m) => `<option value="${esc(m.id)}" ${m.id === v ? 'selected' : ''}>${esc(m.label || m.id)}</option>`).join('');
+    else if (field.type === 'zone') opts = (state.adventure.zones || []).map((z) => `<option value="${esc(z.id)}" ${z.id === v ? 'selected' : ''}>${esc(z.label || z.id)}</option>`).join('');
+    else if (field.type === 'beacon') opts = (state.adventure.beacons || []).map((b) => `<option value="${esc(b.id)}" ${b.id === v ? 'selected' : ''}>${esc(b.label || b.id)}</option>`).join('');
+    else if (field.type === 'variable') opts = (state.adventure.variables || []).map((vr) => `<option value="${esc(vr.id)}" ${vr.id === v ? 'selected' : ''}>${esc(vr.label || vr.id)}</option>`).join('');
+    else opts = (field.options || []).map((o) => `<option value="${esc(o)}" ${o === v ? 'selected' : ''}>${esc(o)}</option>`).join('');
+    return `<select data-k="${esc(field.key)}" data-dk="${esc(dataKey || '')}">
+      <option value="">— ${esc(field.label)} —</option>${opts}</select>`;
+  }
+  const t = field.type === 'number' ? 'number' : 'text';
+  if (field.key === 'choiceId') {
+    const inter = clientInteractions();
+    if (inter.length) {
+      const opts = inter.map((it) => `<option value="${esc(it.id)}" ${it.id === v ? 'selected' : ''}>${esc(it.label || it.id)}</option>`).join('');
+      return `<select data-k="${esc(field.key)}" data-dk="${esc(dataKey || '')}">
+        <option value="">— ${esc(field.label)} —</option>${opts}</select>`;
+    }
+  }
+  return `<input type="${t}" data-k="${esc(field.key)}" data-dk="${esc(dataKey || '')}" value="${esc(v)}" placeholder="${esc(field.label)}" />`;
+}
+
+function syncFieldsFromRow(row, obj) {
+  row.querySelectorAll('[data-k]').forEach((inp) => {
+    let val = inp.value;
+    if (inp.type === 'number' && val !== '') val = Number(val);
+    if (val === 'true') val = true;
+    if (val === 'false') val = false;
+    if (val !== '') obj[inp.dataset.k] = val;
+    else delete obj[inp.dataset.k];
+  });
+}
+
+function renderKindSelect(kinds, current, className) {
+  return `<select class="${className}">
+    ${kinds.map((k) => `<option value="${esc(k.kind)}" ${k.kind === current ? 'selected' : ''}>${esc(k.icon || '')} ${esc(k.label)}</option>`).join('')}
+  </select>`;
+}
+
+function renderSitPanel() {
+  const el = document.getElementById('sitPanel');
+  if (state.editingUnlockFloor != null) {
+    el.innerHTML = '';
+    return;
+  }
+  const found = findSituation(state.selectedSitId);
+  if (!found) {
+    el.innerHTML = '<p class="empty">Sélectionnez une situation dans la liste ou l’arbre</p>';
+    return;
+  }
+  const { sit, floor } = found;
+  const triggers = state.catalog?.triggers || [];
+  const conditions = state.catalog?.conditions || [];
+  const actions = state.catalog?.actions || [];
+
+  if (!sit.conditions) sit.conditions = [];
+  if (!sit.thenActions) sit.thenActions = [];
+  if (!sit.elseActions) sit.elseActions = [];
+  if (!sit.trigger) sit.trigger = { kind: 'run_started' };
+  if (!sit.analyses) sit.analyses = [];
+
+  const trigMeta = triggers.find((t) => t.kind === sit.trigger.kind) || triggers[0];
+
+  el.innerHTML = `
+    <div class="field"><label>Étage ${floor.index} · Situation ${esc(sit.letter)}</label>
+      <input id="editTitle" value="${esc(sit.title)}" /></div>
+
+    <div class="block-editor" id="edWhen">
+      <div class="role">QUAND</div>
+      <div class="block-row" id="triggerRow">
+        ${renderKindSelect(triggers, sit.trigger.kind, 'trig-kind')}
+        ${(trigMeta?.fields || []).map((f) => fieldControl(f, sit.trigger[f.key], 'trig')).join('')}
+      </div>
+    </div>
+
+    <div class="block-editor" id="edIf">
+      <div class="role">SI / ET / OU</div>
+      <div id="condList"></div>
+      <div style="display:flex;gap:6px;flex-wrap:wrap">
+        <button type="button" class="btn sm" id="btnAddCond">+ Condition (ET)</button>
+        <button type="button" class="btn sm" id="btnAddOrGroup">+ Groupe OU</button>
+      </div>
+    </div>
+
+    <div class="block-editor" id="edThen">
+      <div class="role">ALORS / PUIS</div>
+      <div id="thenList"></div>
+      <button type="button" class="btn sm" id="btnAddThen">+ Action</button>
+    </div>
+
+    <div class="block-editor" id="edElse">
+      <div class="role">SINON</div>
+      <div id="elseList"></div>
+      <button type="button" class="btn sm" id="btnAddElse">+ Action sinon</button>
+    </div>
+
+    <div class="block-editor">
+      <div class="role">ANALYSE CONTEXTUELLE</div>
+      <div id="sitAnalyses">${(sit.analyses || []).map((an, i) => analysisRowHtml(an, i)).join('')}</div>
+      <button type="button" class="btn sm" id="btnAddSitAnalysis">+ Ajouter une analyse contextuelle</button>
+      <p style="color:var(--muted);font-size:0.72rem;margin:8px 0 0">Observation = fenêtre éphémère. Journal = note permanente sur le tableau de bord joueur.</p>
+    </div>
+
+    <div class="block-editor">
+      <div class="role">TRANSITION</div>
+      <div class="field">
+        <label>Débloquer l’étage (optionnel)</label>
+        <input type="number" id="editUnlockFloor" value="${sit.transition?.unlockFloor ?? ''}" placeholder="ex. ${floor.index + 1}" />
+      </div>
+    </div>
+
+    <button type="button" class="btn primary" id="btnApplySit" style="width:100%">Appliquer</button>
+    <button type="button" class="btn danger sm" id="btnDelSit" style="margin-top:8px;width:100%">Supprimer la situation</button>
+  `;
+
+  function paintConds() {
+    const list = document.getElementById('condList');
+    // Flat conditions + optional OR groups stored as {op:'or', children:[...]}
+    const items = sit.conditions || [];
+    list.innerHTML = items.map((c, i) => {
+      if (c.op === 'or') {
+        return `<div class="block-row" data-ci="${i}" data-or="1">
+          <span class="conn">OU</span>
+          <div style="flex:1">
+            ${(c.children || []).map((ch, j) => {
+              const meta = conditions.find((x) => x.kind === ch.kind) || conditions[0];
+              return `<div class="block-row" data-ci="${i}" data-oj="${j}" style="margin:4px 0">
+                ${renderKindSelect(conditions, ch.kind, 'cond-kind')}
+                ${(meta?.fields || []).map((f) => fieldControl(f, ch[f.key])).join('')}
+                <button type="button" class="btn sm danger btn-rm-or-child">×</button>
+              </div>`;
+            }).join('')}
+            <button type="button" class="btn sm btn-add-or-child">+ branche OU</button>
+          </div>
+          <button type="button" class="btn sm danger btn-rm-cond">×</button>
+        </div>`;
+      }
+      const meta = conditions.find((x) => x.kind === c.kind) || conditions[0];
+      return `<div class="block-row" data-ci="${i}">
+        <span class="conn">${i === 0 ? 'SI' : 'ET'}</span>
+        ${renderKindSelect(conditions, c.kind, 'cond-kind')}
+        ${(meta?.fields || []).map((f) => fieldControl(f, c[f.key])).join('')}
+        <button type="button" class="btn sm danger btn-rm-cond">×</button>
+      </div>`;
+    }).join('') || '<p style="color:var(--muted);font-size:0.8rem">Aucune condition (toujours vrai si QUAND)</p>';
+
+    list.querySelectorAll('.cond-kind').forEach((sel) => {
+      sel.onchange = () => {
+        readCondsFromDom();
+        const i = Number(sel.closest('[data-ci]').dataset.ci);
+        const oj = sel.closest('[data-oj]');
+        if (oj) {
+          sit.conditions[i].children[Number(oj.dataset.oj)] = { kind: sel.value };
+        } else {
+          sit.conditions[i] = { kind: sel.value };
+        }
+        paintConds();
+      };
+    });
+    list.querySelectorAll('.btn-rm-cond').forEach((b) => {
+      b.onclick = () => {
+        const i = Number(b.closest('[data-ci]').dataset.ci);
+        sit.conditions.splice(i, 1);
+        paintConds();
+      };
+    });
+    list.querySelectorAll('.btn-add-or-child').forEach((b) => {
+      b.onclick = () => {
+        const i = Number(b.closest('[data-ci]').dataset.ci);
+        sit.conditions[i].children = sit.conditions[i].children || [];
+        sit.conditions[i].children.push({ kind: conditions[0]?.kind || 'flag_true' });
+        paintConds();
+      };
+    });
+    list.querySelectorAll('.btn-rm-or-child').forEach((b) => {
+      b.onclick = () => {
+        const row = b.closest('[data-oj]');
+        const i = Number(row.dataset.ci);
+        const j = Number(row.dataset.oj);
+        sit.conditions[i].children.splice(j, 1);
+        paintConds();
+      };
+    });
+  }
+
+  function readCondsFromDom() {
+    document.querySelectorAll('#condList > .block-row').forEach((row) => {
+      const i = Number(row.dataset.ci);
+      if (row.dataset.or) {
+        row.querySelectorAll('[data-oj]').forEach((childRow) => {
+          const j = Number(childRow.dataset.oj);
+          const kind = childRow.querySelector('.cond-kind')?.value;
+          const obj = { kind };
+          syncFieldsFromRow(childRow, obj);
+          sit.conditions[i].children[j] = obj;
+        });
+      } else {
+        const kind = row.querySelector('.cond-kind')?.value;
+        const obj = { kind };
+        syncFieldsFromRow(row, obj);
+        sit.conditions[i] = obj;
+      }
+    });
+  }
+
+  function paintActions(listId, arr, addBtnId) {
+    const list = document.getElementById(listId);
+    list.innerHTML = arr.map((a, i) => {
+      const meta = actions.find((x) => x.kind === a.kind) || actions[0];
+      return `<div class="block-row" data-ai="${i}">
+        <span class="conn">${i === 0 ? (listId === 'elseList' ? 'SINON' : 'ALORS') : 'PUIS'}</span>
+        ${renderKindSelect(actions, a.kind, 'act-kind')}
+        ${(meta?.fields || []).map((f) => fieldControl(f, a[f.key])).join('')}
+        <button type="button" class="btn sm danger btn-rm-act">×</button>
+      </div>`;
+    }).join('') || '<p style="color:var(--muted);font-size:0.8rem">Aucune action</p>';
+
+    list.querySelectorAll('.act-kind').forEach((sel) => {
+      sel.onchange = () => {
+        readActsFromDom(listId, arr);
+        const i = Number(sel.closest('[data-ai]').dataset.ai);
+        arr[i] = { kind: sel.value };
+        paintActions(listId, arr, addBtnId);
+      };
+    });
+    list.querySelectorAll('.btn-rm-act').forEach((b) => {
+      b.onclick = () => {
+        const i = Number(b.closest('[data-ai]').dataset.ai);
+        arr.splice(i, 1);
+        paintActions(listId, arr, addBtnId);
+      };
+    });
+  }
+
+  function readActsFromDom(listId, arr) {
+    document.querySelectorAll(`#${listId} > .block-row`).forEach((row) => {
+      const i = Number(row.dataset.ai);
+      const kind = row.querySelector('.act-kind')?.value;
+      const obj = { kind };
+      syncFieldsFromRow(row, obj);
+      arr[i] = obj;
+    });
+  }
+
+  paintConds();
+  paintActions('thenList', sit.thenActions, 'btnAddThen');
+  paintActions('elseList', sit.elseActions, 'btnAddElse');
+
+  document.getElementById('btnAddCond').onclick = () => {
+    readCondsFromDom();
+    sit.conditions.push({ kind: conditions[0]?.kind || 'flag_true' });
+    paintConds();
+  };
+  document.getElementById('btnAddOrGroup').onclick = () => {
+    readCondsFromDom();
+    sit.conditions.push({
+      op: 'or',
+      children: [
+        { kind: conditions[0]?.kind || 'flag_true' },
+        { kind: conditions[0]?.kind || 'flag_true' },
+      ],
+    });
+    paintConds();
+  };
+  document.getElementById('btnAddThen').onclick = () => {
+    readActsFromDom('thenList', sit.thenActions);
+    sit.thenActions.push({ kind: 'notify', message: 'Nouvelle action' });
+    paintActions('thenList', sit.thenActions, 'btnAddThen');
+  };
+  document.getElementById('btnAddElse').onclick = () => {
+    readActsFromDom('elseList', sit.elseActions);
+    sit.elseActions.push({ kind: 'notify', message: 'Sinon…' });
+    paintActions('elseList', sit.elseActions, 'btnAddElse');
+  };
+
+  const trigRow = document.getElementById('triggerRow');
+  trigRow.querySelector('.trig-kind').onchange = () => {
+    const kind = trigRow.querySelector('.trig-kind').value;
+    sit.trigger = { kind };
+    renderSitPanel();
+  };
+
+  document.getElementById('btnAddSitAnalysis').onclick = () => {
+    const kept = [];
+    document.querySelectorAll('#sitAnalyses [data-an-row]').forEach((row) => {
+      const i = row.dataset.anRow;
+      const kind = row.querySelector(`[name="anKind_${i}"]`)?.value || 'observe';
+      const text = row.querySelector(`[name="anText_${i}"]`)?.value || '';
+      kept.push({ kind, text });
+    });
+    sit.analyses = kept;
+    sit.analyses.push({ kind: 'observe', text: '' });
+    renderSitPanel();
+  };
+
+  document.getElementById('btnApplySit').onclick = () => {
+    sit.title = document.getElementById('editTitle').value.trim() || sit.title;
+    const kind = trigRow.querySelector('.trig-kind').value;
+    sit.trigger = { kind };
+    syncFieldsFromRow(trigRow, sit.trigger);
+    readCondsFromDom();
+    // Normalize OR groups into conditionsGroup if any OR present as sole structure — keep flat with OR nodes (compile supports)
+    delete sit.conditionsGroup;
+    if (sit.conditions.some((c) => c.op === 'or') && sit.conditions.length > 1) {
+      sit.conditionsGroup = { op: 'and', children: sit.conditions };
+      // keep conditions for UI; compileSituationConditions merges both — clear flat to avoid double
+      // Actually compile merges conditionsGroup AND conditions — so clear one:
+      sit.conditionsGroup = { op: 'and', children: [...sit.conditions] };
+      sit.conditions = [];
+    } else if (sit.conditions.length === 1 && sit.conditions[0].op === 'or') {
+      sit.conditionsGroup = sit.conditions[0];
+      sit.conditions = [];
+    }
+    readActsFromDom('thenList', sit.thenActions);
+    readActsFromDom('elseList', sit.elseActions);
+    sit.analyses = [];
+    document.querySelectorAll('#sitAnalyses [data-an-row]').forEach((row) => {
+      const i = row.dataset.anRow;
+      const kind = row.querySelector(`[name="anKind_${i}"]`)?.value;
+      const text = row.querySelector(`[name="anText_${i}"]`)?.value?.trim();
+      if (text) sit.analyses.push({ kind: kind || 'observe', text });
+    });
+    const uf = document.getElementById('editUnlockFloor').value;
+    if (uf !== '') sit.transition = { unlockFloor: Number(uf) };
+    else delete sit.transition;
+    refreshViewsFromAdventure();
+  };
+
+  document.getElementById('btnDelSit').onclick = () => {
+    if (!confirm('Supprimer cette situation ?')) return;
+    floor.situations = floor.situations.filter((s) => s.id !== sit.id);
+    state.selectedSitId = null;
+    refreshViewsFromAdventure();
+  };
+}
+
+function renderFloorUnlockPanel() {
+  const el = document.getElementById('floorUnlockPanel');
+  if (state.editingUnlockFloor == null) {
+    el.classList.add('hidden');
+    el.innerHTML = '';
+    return;
+  }
+  const floor = findFloor(state.editingUnlockFloor);
+  if (!floor) { el.classList.add('hidden'); return; }
+  el.classList.remove('hidden');
+  const conditions = state.catalog?.conditions || [];
+  if (!floor.unlockNext) {
+    floor.unlockNext = { op: 'and', children: [] };
+  }
+  // Normalize to and-group
+  if (floor.unlockNext.kind) {
+    floor.unlockNext = { op: 'and', children: [floor.unlockNext] };
+  }
+  if (!floor.unlockNext.children) floor.unlockNext.children = [];
+
+  const children = floor.unlockNext.children;
+
+  if (!floor.analyses) floor.analyses = [];
+
+  el.innerHTML = `
+    <h2>🔗 Transition étage ${floor.index} → ${floor.index + 1}</h2>
+    <div class="block-editor">
+      <div class="role">SI (conditions pour débloquer)</div>
+      <div id="unlockCondList"></div>
+      <button type="button" class="btn sm" id="btnAddUnlockCond">+ Condition ET</button>
+    </div>
+    <div class="field">
+      <label>Message DONC (optionnel)</label>
+      <input id="unlockLabel" value="${esc(floor.unlockNextLabel || '')}" placeholder="Étage ${floor.index + 1} accessible" />
+    </div>
+    <div class="block-editor">
+      <div class="role">ANALYSE CONTEXTUELLE</div>
+      <div id="floorAnalyses">${(floor.analyses || []).map((an, i) => analysisRowHtml(an, i)).join('')}</div>
+      <button type="button" class="btn sm" id="btnAddFloorAnalysis">+ Ajouter une analyse contextuelle</button>
+    </div>
+    <button type="button" class="btn primary" id="btnApplyUnlock" style="width:100%">Appliquer la transition</button>
+    <button type="button" class="btn danger sm" id="btnClearUnlock" style="margin-top:8px;width:100%">Supprimer la transition</button>
+  `;
+
+  function paint() {
+    const list = document.getElementById('unlockCondList');
+    list.innerHTML = children.map((c, i) => {
+      const meta = conditions.find((x) => x.kind === c.kind) || conditions[0];
+      return `<div class="block-row" data-ui="${i}">
+        <span class="conn">${i === 0 ? 'SI' : 'ET'}</span>
+        ${renderKindSelect(conditions, c.kind, 'ucond-kind')}
+        ${(meta?.fields || []).map((f) => fieldControl(f, c[f.key])).join('')}
+        <button type="button" class="btn sm danger btn-rm-u">×</button>
+      </div>`;
+    }).join('') || '<p style="color:var(--muted);font-size:0.8rem">Aucune condition</p>';
+
+    list.querySelectorAll('.ucond-kind').forEach((sel) => {
+      sel.onchange = () => {
+        read();
+        children[Number(sel.closest('[data-ui]').dataset.ui)] = { kind: sel.value };
+        paint();
+      };
+    });
+    list.querySelectorAll('.btn-rm-u').forEach((b) => {
+      b.onclick = () => {
+        children.splice(Number(b.closest('[data-ui]').dataset.ui), 1);
+        paint();
+      };
+    });
+  }
+  function read() {
+    document.querySelectorAll('#unlockCondList > .block-row').forEach((row) => {
+      const i = Number(row.dataset.ui);
+      const obj = { kind: row.querySelector('.ucond-kind').value };
+      syncFieldsFromRow(row, obj);
+      children[i] = obj;
+    });
+  }
+  paint();
+  document.getElementById('btnAddUnlockCond').onclick = () => {
+    read();
+    children.push({ kind: conditions[0]?.kind || 'flag_true' });
+    paint();
+  };
+  document.getElementById('btnAddFloorAnalysis').onclick = () => {
+    const kept = [];
+    document.querySelectorAll('#floorAnalyses [data-an-row]').forEach((row) => {
+      const i = row.dataset.anRow;
+      const kind = row.querySelector(`[name="anKind_${i}"]`)?.value || 'observe';
+      const text = row.querySelector(`[name="anText_${i}"]`)?.value || '';
+      kept.push({ kind, text });
+    });
+    floor.analyses = kept;
+    floor.analyses.push({ kind: 'observe', text: '' });
+    renderFloorUnlockPanel();
+  };
+  document.getElementById('btnApplyUnlock').onclick = () => {
+    read();
+    floor.unlockNextLabel = document.getElementById('unlockLabel').value.trim() || undefined;
+    if (!children.length) delete floor.unlockNext;
+    else floor.unlockNext = { op: 'and', children: [...children] };
+    floor.analyses = [];
+    document.querySelectorAll('#floorAnalyses [data-an-row]').forEach((row) => {
+      const i = row.dataset.anRow;
+      const kind = row.querySelector(`[name="anKind_${i}"]`)?.value;
+      const text = row.querySelector(`[name="anText_${i}"]`)?.value?.trim();
+      if (text) floor.analyses.push({ kind: kind || 'observe', text });
+    });
+    state.editingUnlockFloor = null;
+    refreshViewsFromAdventure();
+  };
+  document.getElementById('btnClearUnlock').onclick = () => {
+    delete floor.unlockNext;
+    delete floor.unlockNextLabel;
+    state.editingUnlockFloor = null;
+    refreshViewsFromAdventure();
+  };
+}
+
+function renderTestPanel() {
+  const el = document.getElementById('testPanel');
+  const found = findSituation(state.selectedSitId);
+  if (!found || !state.adventure) {
+    el.innerHTML = '<p class="empty">Choisissez une situation</p>';
+    return;
+  }
+  const media = state.adventure.mediaItems || [];
+  const zones = state.adventure.zones || [];
+  const beacons = state.adventure.beacons || [];
+  const t = found.sit.trigger || {};
+  el.innerHTML = `
+    <div class="field"><label>Position</label>
+      <select id="testZone"><option value="">— hors zone —</option>
+      ${zones.map((z) => `<option value="${esc(z.id)}">${esc(z.label || z.id)}</option>`).join('')}
+      </select></div>
+    <div class="field"><label>Heure</label><input id="testTime" value="19:42" /></div>
+    <div class="field"><label>Date</label><input id="testDate" value="2026-08-12" /></div>
+    <div class="field checks"><label>Médias consommés</label>
+      ${media.map((m) => `<label><input type="checkbox" class="test-media" value="${esc(m.id)}" /> ${esc(m.label || m.id)}</label>`).join('')}
+    </div>
+    <div class="field checks"><label>Balises</label>
+      ${beacons.map((b) => `<label><input type="checkbox" class="test-beacon" value="${esc(b.id)}" /> ${esc(b.label || b.id)}</label>`).join('')}
+    </div>
+    <div class="field"><label>choiceId / mediaItemId / beaconId</label>
+      <input id="testPayloadId" value="${esc(t.mediaItemId || t.choiceId || t.beaconId || '')}" /></div>
+    <div class="field"><label>Valeur code / choix</label>
+      <input id="testChoiceValue" value="${esc(t.expected || '')}" /></div>
+    <button type="button" class="btn primary" id="btnSim">▶ Simuler</button>
+    <div id="simResult"></div>`;
+  document.getElementById('btnSim').onclick = () => runTest(found);
+}
+
+async function runTest(found) {
+  const zoneId = document.getElementById('testZone').value;
+  const zone = (state.adventure.zones || []).find((z) => z.id === zoneId);
+  let lat = null, lng = null;
+  if (zone?.kind === 'circle') { lat = zone.center.lat; lng = zone.center.lng; }
+  else if (zone?.kind === 'arrondissement') { lat = 48.8845; lng = 2.3219; }
+
+  const mediaStates = {};
+  document.querySelectorAll('.test-media:checked').forEach((cb) => {
+    mediaStates[cb.value] = { discovered: true, unlocked: true, opened: true, consumed: true, visible: true };
+  });
+  const beaconsScanned = [...document.querySelectorAll('.test-beacon:checked')].map((cb) => cb.value);
+  const time = document.getElementById('testTime').value || '12:00';
+  const date = document.getElementById('testDate').value || '2026-08-12';
+  const now = `${date}T${time}:00+02:00`;
+  const t = found.sit.trigger || {};
+  let eventKind = 'geo.heartbeat';
+  if (t.kind === 'media_consumed') eventKind = 'media.consumed';
+  else if (t.kind === 'media_opened') eventKind = 'media.opened';
+  else if (t.kind === 'media_discovered') eventKind = 'media.discovered';
+  else if (t.kind === 'player_choice' || t.kind === 'code_submitted') eventKind = 'choice.made';
+  else if (t.kind === 'beacon_found') eventKind = t.channel === 'nfc' ? 'beacon.nfc' : 'beacon.qr';
+  else if (t.kind === 'time_reached') eventKind = 'time.schedule';
+  else if (t.kind === 'run_started') eventKind = 'run.started';
+
+  const payloadId = document.getElementById('testPayloadId').value.trim();
+  const choiceValue = document.getElementById('testChoiceValue').value;
+  const payload = {};
+  if (eventKind.startsWith('media.')) payload.mediaItemId = payloadId || t.mediaItemId;
+  if (eventKind.startsWith('beacon.')) payload.beaconId = payloadId || t.beaconId;
+  if (eventKind === 'choice.made') {
+    payload.choiceId = payloadId || t.choiceId;
+    payload.value = choiceValue !== '' ? choiceValue : true;
+  }
+  if (eventKind === 'time.schedule') payload.scheduleId = payloadId || t.scheduleId;
+  if (lat != null) { payload.lat = lat; payload.lng = lng; }
+
+  const vars = { etage_0_open: true };
+  for (let i = 1; i <= found.floor.index; i++) vars[`etage_${i}_open`] = true;
+
+  const out = await api('/creator/adventures/test-situation', {
+    method: 'POST',
+    body: JSON.stringify({
+      adventure: state.adventure,
+      situationId: found.sit.id,
+      test: { now, lat, lng, runtime: { vars, mediaStates, beaconsScanned }, event: { type: eventKind, source: 'lab_sim', payload, at: now } },
+    }),
+  });
+  const human = out.humanSteps?.[0]?.human;
+  const ok = human?.status === 'triggered';
+  const box = document.getElementById('simResult');
+  box.className = 'result ' + (ok ? 'ok' : 'bad');
+  box.innerHTML = `
+    <div style="font-weight:700;margin-bottom:8px">${ok ? '🟢 SITUATION DÉCLENCHÉE' : '⚪️ ' + esc((human?.status || 'unknown').toUpperCase())}</div>
+    <div><strong>Étage ${out.floorIndex} · ${esc(out.letter)}</strong> — ${esc(out.title)}</div>
+    ${(human?.why || []).map((w) => `<div>✓ ${esc(w.text || w)}</div>`).join('')}
+    ${(human?.whatHappens || []).map((w) => `<div>→ ${esc(w.text || w)}</div>`).join('') || '<div style="color:var(--muted)">Aucune action</div>'}
+    ${state.mode === 'dev' ? `<pre style="margin-top:10px">${esc(JSON.stringify(out.technical, null, 2).slice(0, 2000))}</pre>` : ''}`;
+}
+
+function refreshViewsFromAdventure() {
+  if (!state.adventure) return Promise.resolve();
+  return api('/creator/adventures/compile', {
+    method: 'POST',
+    body: JSON.stringify({ adventure: state.adventure }),
+  }).then((data) => {
+    state.list = data.list;
+    state.tree = data.tree;
+    state.journey = data.journey || state.journey;
+    state.warnings = data.warnings || [];
+    state.lastCompile = data;
+    // After compile, restore conditions into UI model if conditionsGroup only
+    for (const f of state.adventure.floors || []) {
+      for (const s of f.situations || []) {
+        if ((!s.conditions || !s.conditions.length) && s.conditionsGroup) {
+          if (s.conditionsGroup.op === 'and') s.conditions = [...(s.conditionsGroup.children || [])];
+          else s.conditions = [s.conditionsGroup];
+        }
+      }
+    }
+    renderAll();
+    if (state.mode === 'dev' && data.definition) {
+      document.getElementById('devJson').textContent = JSON.stringify(data.definition, null, 2).slice(0, 8000);
+    }
+  }).catch((e) => {
+    state.warnings = [{ level: 'error', code: 'COMPILE', message: e.message }];
+    renderAll();
+  });
+}
+
+/* ── Journey session ──────────────────────────────────────────────── */
+
+document.getElementById('btnStartJourney').onclick = async () => {
+  if (!state.adventure) return;
+  try {
+    const out = await api('/creator/adventures/journey/start', {
+      method: 'POST',
+      body: JSON.stringify({ adventure: state.adventure }),
+    });
+    state.journeySessionId = out.sessionId;
+    state.journeyFloorsOpen = out.floorsOpen || [0];
+    state.journey = out.journey || state.journey;
+    document.getElementById('journeyStatus').innerHTML =
+      `<div class="result ok">Session ${esc(out.sessionId.slice(0, 8))}… · Étages ouverts : ${(out.floorsOpen || []).join(', ')}</div>`;
+    document.getElementById('journeyLog').innerHTML = '';
+    paintJourneyStepForm();
+    renderPath();
+  } catch (e) { alert(e.message); }
+};
+
+function paintJourneyStepForm() {
+  const el = document.getElementById('journeyStepForm');
+  el.classList.remove('hidden');
+  const zones = state.adventure?.zones || [];
+  const media = state.adventure?.mediaItems || [];
+  el.innerHTML = `
+    <div class="field"><label>Événement</label>
+      <select id="jEvent">
+        <option value="media.consumed">Consommer un média</option>
+        <option value="choice.made">Appuyer / code</option>
+        <option value="geo.heartbeat">Se déplacer</option>
+        <option value="beacon.qr">Scanner balise QR</option>
+        <option value="beacon.nfc">Scanner balise NFC</option>
+        <option value="media.opened">Ouvrir un média</option>
+        <option value="run.started">Démarrer l’aventure</option>
+      </select></div>
+    <div class="field"><label>Id (média / choix / balise)</label><input id="jId" /></div>
+    <div class="field"><label>Valeur (code)</label><input id="jVal" /></div>
+    <div class="field"><label>Zone</label>
+      <select id="jZone"><option value="">—</option>
+      ${zones.map((z) => `<option value="${esc(z.id)}">${esc(z.label || z.id)}</option>`).join('')}
+      </select></div>
+    <div class="field"><label>Heure</label><input id="jTime" value="19:42" /></div>
+    <div class="field"><label>Date</label><input id="jDate" value="2026-08-12" /></div>
+    <div class="field checks"><label>Marquer médias consommés avant l’étape</label>
+      ${media.map((m) => `<label><input type="checkbox" class="j-media" value="${esc(m.id)}" /> ${esc(m.label || m.id)}</label>`).join('')}
+    </div>
+    <button type="button" class="btn primary" id="btnJourneyStep">▶ Étape suivante</button>`;
+  document.getElementById('btnJourneyStep').onclick = runJourneyStep;
+}
+
+async function runJourneyStep() {
+  if (!state.journeySessionId) return;
+  const zoneId = document.getElementById('jZone').value;
+  const zone = (state.adventure.zones || []).find((z) => z.id === zoneId);
+  let lat = null, lng = null;
+  if (zone?.kind === 'circle') { lat = zone.center.lat; lng = zone.center.lng; }
+  const type = document.getElementById('jEvent').value;
+  const id = document.getElementById('jId').value.trim();
+  const val = document.getElementById('jVal').value;
+  const now = `${document.getElementById('jDate').value}T${document.getElementById('jTime').value}:00+02:00`;
+  const payload = {};
+  if (type.startsWith('media.')) payload.mediaItemId = id;
+  if (type.startsWith('beacon.')) payload.beaconId = id;
+  if (type === 'choice.made') { payload.choiceId = id; payload.value = val !== '' ? val : true; }
+  if (lat != null) { payload.lat = lat; payload.lng = lng; }
+
+  const mediaStates = {};
+  document.querySelectorAll('.j-media:checked').forEach((cb) => {
+    mediaStates[cb.value] = { discovered: true, unlocked: true, opened: true, consumed: true, visible: true };
+  });
+
+  try {
+    const out = await api('/creator/adventures/journey/step', {
+      method: 'POST',
+      body: JSON.stringify({
+        sessionId: state.journeySessionId,
+        event: { type, source: 'lab_sim', payload, at: now },
+        now, lat, lng,
+        runtime: Object.keys(mediaStates).length ? { mediaStates } : undefined,
+      }),
+    });
+    state.journeyFloorsOpen = out.floorsOpen || [];
+    const log = document.getElementById('journeyLog');
+    const human = out.humanSteps?.[0]?.human;
+    const ok = human?.status === 'triggered';
+    log.insertAdjacentHTML('afterbegin', `
+      <div class="result ${ok ? 'ok' : 'bad'}" style="margin-bottom:8px">
+        <div style="font-weight:700">${ok ? '🟢' : '⚪️'} ${esc(type)} ${esc(id)}</div>
+        <div>Étages ouverts : ${(out.floorsOpen || []).join(', ')}</div>
+        ${(human?.whatHappens || []).map((w) => `<div>→ ${esc(w.text || w)}</div>`).join('')}
+      </div>`);
+    document.getElementById('journeyStatus').innerHTML =
+      `<div class="result ok">Étages ouverts : ${(out.floorsOpen || []).join(', ')}</div>`;
+    renderPath();
+  } catch (e) { alert(e.message); }
+}
+
+/* ── Toolbar / modes ──────────────────────────────────────────────── */
+
+document.getElementById('btnCompile').onclick = () => refreshViewsFromAdventure();
+document.getElementById('btnValidate').onclick = async () => {
+  try {
+    const data = await api('/creator/adventures/validate', {
+      method: 'POST',
+      body: JSON.stringify({ adventure: state.adventure }),
+    });
+    state.warnings = data.warnings || [];
+    state.journey = data.journey || state.journey;
+    state.list = data.list || state.list;
+    state.tree = data.tree || state.tree;
+    renderAll();
+    alert((data.warnings || []).length
+      ? `${data.warnings.length} alerte(s) — voir le panneau gauche`
+      : 'Aucune alerte : structure OK');
+  } catch (e) { alert(e.message); }
+};
+
+document.getElementById('btnSaveDraft').onclick = async () => {
+  if (!state.adventure) return;
+  try {
+    const saved = await api('/creator/drafts', {
+      method: 'POST',
+      body: JSON.stringify({
+        id: state.draftId || null,
+        title: state.adventure.title,
+        adventure: state.adventure,
+        sourceAdventureId: state.adventure.id,
+      }),
+    });
+    state.draftId = saved.draft.id;
+    const list = await api('/creator/drafts');
+    state.drafts = list.drafts || [];
+    renderDraftList();
+    alert('Brouillon sauvegardé : ' + saved.draft.id);
+  } catch (e) { alert(e.message); }
+};
+
+document.getElementById('storyTitle').addEventListener('input', () => {
+  if (!state.adventure) return;
+  const value = document.getElementById('storyTitle').value;
+  state.adventure.title = value.trim() ? value : 'Nouvelle aventure';
+});
+
+document.getElementById('storyTitle').addEventListener('change', () => {
+  if (!state.adventure) return;
+  state.adventure.title = document.getElementById('storyTitle').value.trim() || 'Nouvelle aventure';
+  document.getElementById('storyTitle').value = state.adventure.title;
+});
+
+function showNewAdvAsk() {
+  const box = document.getElementById('newAdvAsk');
+  const input = document.getElementById('newAdvTitle');
+  box.hidden = false;
+  input.value = '';
+  input.focus();
+}
+
+function hideNewAdvAsk() {
+  document.getElementById('newAdvAsk').hidden = true;
+}
+
+document.getElementById('btnNewAdv').onclick = () => showNewAdvAsk();
+document.getElementById('newAdvCancel').onclick = () => hideNewAdvAsk();
+document.getElementById('newAdvTitle').addEventListener('keydown', (e) => {
+  if (e.key === 'Enter') document.getElementById('newAdvCreate').click();
+  if (e.key === 'Escape') hideNewAdvAsk();
+});
+
+document.getElementById('newAdvCreate').onclick = async () => {
+  const title = document.getElementById('newAdvTitle').value.trim() || 'Nouvelle aventure';
+  hideNewAdvAsk();
+  let adventure = null;
+  let warnings = [];
+  try {
+    const out = await api('/creator/adventures/blank', {
+      method: 'POST',
+      body: JSON.stringify({ title }),
+    });
+    adventure = out.adventure;
+    warnings = out.warnings || [];
+  } catch (e) {
+    adventure = {
+      id: 'aventure_' + Date.now().toString(36).slice(-6),
+      title,
+      status: 'draft',
+      timezone: 'Europe/Paris',
+      mediaItems: [{
+        id: 'media_impose',
+        label: 'Média imposé',
+        skin: 'vhs',
+        contentId: null,
+        policy: 'imposed',
+        role: 'imposed',
+        details: [],
+        analyses: [],
+        mutations: [],
+      }],
+      mediaContents: [],
+      zones: [],
+      beacons: [],
+      interactions: [],
+      variables: [],
+      containers: [],
+      floors: [
+        {
+          index: 0,
+          title: 'Déverrouillage',
+          status: 'designing',
+          analyses: [],
+          situations: [{
+            id: 'f0_a',
+            letter: 'A',
+            title: 'Consommer le média imposé',
+            trigger: { kind: 'media_consumed', mediaItemId: 'media_impose', label: 'Média imposé' },
+            conditions: [],
+            thenActions: [{ kind: 'unlock_bureau' }],
+            analyses: [],
+          }],
+          unlockNext: {
+            op: 'and',
+            children: [{ kind: 'media_consumed', mediaItemId: 'media_impose', label: 'Média imposé' }],
+          },
+          unlockNextLabel: 'Étage 1 — Bureau',
+        },
+        { index: 1, title: 'Bureau', status: 'designing', situations: [], analyses: [] },
+      ],
+    };
+    warnings = [{ level: 'error', code: 'BLANK', message: e.message }];
+  }
+  state.adventure = adventure;
+  state.warnings = warnings;
+  state.draftId = null;
+  state.selectedFloor = 0;
+  state.selectedSitId = adventure.floors?.[0]?.situations?.[0]?.id || null;
+  state.editingUnlockFloor = null;
+  state.list = null;
+  state.tree = null;
+  state.journey = null;
+  renderAll();
+  refreshViewsFromAdventure();
+  const titleEl = document.getElementById('storyTitle');
+  if (titleEl) {
+    titleEl.value = state.adventure.title;
+    titleEl.focus();
+    titleEl.select();
+  }
+};
+
+document.getElementById('btnAddFloor').onclick = () => {
+  if (!state.adventure) return;
+  const floors = state.adventure.floors || [];
+  const next = floors.reduce((m, f) => Math.max(m, f.index), -1) + 1;
+  floors.push({ index: next, title: `Nouvel étage ${next}`, status: 'designing', situations: [] });
+  state.adventure.floors = floors;
+  state.selectedFloor = next;
+  refreshViewsFromAdventure();
+};
+
+document.getElementById('btnAddSit').onclick = () => {
+  if (!state.adventure || state.selectedFloor == null) return;
+  const floor = findFloor(state.selectedFloor);
+  if (!floor) return;
+  const letters = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ';
+  const letter = letters[floor.situations.length] || 'X';
+  const imposed = (state.adventure.mediaItems || []).find(isImposedMedia);
+  const media = (floor.index === 0 && imposed) ? imposed : (imposed || state.adventure.mediaItems?.[0]);
+  const sit = {
+    id: `f${floor.index}_${letter.toLowerCase()}_${Date.now().toString(36).slice(-4)}`,
+    letter,
+    title: `Nouvelle situation ${letter}`,
+    trigger: media
+      ? { kind: 'media_consumed', mediaItemId: media.id, label: media.label }
+      : { kind: 'run_started' },
+    conditions: [],
+    thenActions: floor.index === 0
+      ? [{ kind: 'unlock_bureau' }]
+      : [{ kind: 'notify', message: 'Nouvelle action à définir' }],
+  };
+  floor.situations.push(sit);
+  floor.status = 'designing';
+  state.selectedSitId = sit.id;
+  state.editingUnlockFloor = null;
+  state.sideTab = 'edit';
+  refreshViewsFromAdventure();
+};
+
+document.getElementById('btnEditFloorUnlock').onclick = () => {
+  if (state.selectedFloor == null) return;
+  state.editingUnlockFloor = state.selectedFloor;
+  state.selectedSitId = null;
+  state.sideTab = 'edit';
+  renderAll();
+};
+
+document.getElementById('workspaceNav').onclick = (e) => {
+  const btn = e.target.closest('button[data-workspace]');
+  if (!btn) return;
+  setWorkspace(btn.dataset.workspace);
+};
+
+document.getElementById('viewModes').onclick = (e) => {
+  const btn = e.target.closest('button[data-view]');
+  if (!btn) return;
+  state.view = btn.dataset.view;
+  document.querySelectorAll('#viewModes button').forEach((b) => b.classList.toggle('active', b === btn));
+  applyView();
+};
+
+document.getElementById('uiModes').onclick = (e) => {
+  const btn = e.target.closest('button[data-mode]');
+  if (!btn) return;
+  state.mode = btn.dataset.mode;
+  document.querySelectorAll('#uiModes button').forEach((b) => b.classList.toggle('active', b === btn));
+  applyMode();
+};
+
+document.getElementById('sideTabs').onclick = (e) => {
+  const btn = e.target.closest('button[data-tab]');
+  if (!btn) return;
+  state.sideTab = btn.dataset.tab;
+  document.querySelectorAll('#sideTabs button').forEach((b) => b.classList.toggle('active', b === btn));
+  applySideTab();
+};
+
+function setWorkspace(ws) {
+  state.workspace = ws === 'world' ? 'world' : 'story';
+  if (state.workspace === 'story' && (state.view === 'world' || !state.view)) state.view = 'list';
+  document.querySelectorAll('#workspaceNav button').forEach((b) => {
+    b.classList.toggle('active', b.dataset.workspace === state.workspace);
+  });
+  applyView();
+}
+
+function applyView() {
+  const story = state.workspace !== 'world';
+  document.body.dataset.workspace = story ? 'story' : 'world';
+  document.body.dataset.view = story ? (state.view || 'list') : 'world';
+  const chrome = document.getElementById('storyChrome');
+  const canvas = document.getElementById('storyCanvas');
+  if (chrome) chrome.classList.toggle('hidden', !story);
+  if (canvas) {
+    canvas.classList.toggle('hidden', !story);
+    canvas.classList.toggle('is-onto', story && state.view === 'graph');
+  }
+  document.getElementById('viewList').classList.toggle('hidden', !story || state.view !== 'list');
+  document.getElementById('viewTree').classList.toggle('hidden', !story || state.view !== 'tree');
+  document.getElementById('viewPath').classList.toggle('hidden', !story || state.view !== 'path');
+  const vg = document.getElementById('viewGraph');
+  if (vg) vg.classList.toggle('hidden', !story || state.view !== 'graph');
+  document.getElementById('viewWorld').classList.toggle('hidden', story);
+  const inspStory = document.getElementById('inspectorStory');
+  const inspWorld = document.getElementById('inspectorWorld');
+  if (inspStory) inspStory.classList.toggle('hidden', !story || state.view === 'graph');
+  if (inspWorld) inspWorld.classList.toggle('hidden', story);
+  if (story && state.view === 'graph') renderOntology();
+}
+function applyMode() {
+  document.getElementById('devPanel').classList.toggle('hidden', state.mode !== 'dev');
+  if (state.mode === 'dev' && state.lastCompile?.definition) {
+    document.getElementById('devJson').textContent = JSON.stringify(state.lastCompile.definition, null, 2).slice(0, 8000);
+  }
+}
+function applySideTab() {
+  document.getElementById('tabEdit').classList.toggle('hidden', state.sideTab !== 'edit');
+  document.getElementById('tabTest').classList.toggle('hidden', state.sideTab !== 'test');
+  document.getElementById('tabJourney').classList.toggle('hidden', state.sideTab !== 'journey');
+}
+
+boot().catch((e) => {
+  document.body.insertAdjacentHTML('afterbegin',
+    `<p style="color:#e05a5a;padding:12px">Erreur: ${esc(e.message)} — redémarrez le backend si besoin.</p>`);
+});
+</script>
+</body>
+</html>

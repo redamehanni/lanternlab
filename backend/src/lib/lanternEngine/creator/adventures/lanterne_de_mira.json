@@ -1,0 +1,621 @@
+{
+  "id": "lanterne_de_mira",
+  "slug": "lanterne-de-mira",
+  "title": "Lanterne de Mira",
+  "kind": "main",
+  "status": "draft",
+  "timezone": "Europe/Paris",
+  "contentVersion": 1,
+  "mediaItems": [
+    { "id": "media_impose", "label": "Média imposé", "skin": "vhs", "contentId": "content_impose", "policy": "required" },
+    { "id": "lettre", "label": "Lettre", "skin": "letter", "contentId": "content_lettre", "policy": "unlockable" },
+    { "id": "cle_usb", "label": "Clé USB", "skin": "usb", "contentId": "content_usb_lock", "policy": "unlockable" },
+    { "id": "polaroid", "label": "Polaroid", "skin": "polaroid", "contentId": "content_polaroid", "policy": "unlockable" },
+    { "id": "ordinateur", "label": "Ordinateur", "skin": "phone", "contentId": "content_pc", "policy": "unlockable" },
+    { "id": "usb_video", "label": "Vidéo souvenir", "skin": "usb", "contentId": "content_video_souvenir", "policy": "unlockable" },
+    { "id": "usb_lettre_mira", "label": "Lettre de Mira", "skin": "letter", "contentId": "content_lettre_mira", "policy": "unlockable" },
+    { "id": "carte_collection", "label": "Carte à collectionner", "skin": "polaroid", "contentId": "content_carte", "policy": "unlockable" },
+    { "id": "papier_cache", "label": "Petit papier caché", "skin": "letter", "contentId": "content_papier", "policy": "unlockable" },
+    { "id": "talkie", "label": "Talkie-walkie", "skin": "talkie", "contentId": "content_talkie", "policy": "unlockable" },
+    { "id": "bureau", "label": "Bureau", "skin": "dictaphone", "contentId": "content_bureau", "policy": "unlockable" }
+  ],
+  "mediaContents": [
+    { "id": "content_impose", "kind": "video", "label": "Média imposé" },
+    { "id": "content_lettre", "kind": "text", "label": "Lettre — odeur / Sainte-Marie / photo" },
+    { "id": "content_usb_lock", "kind": "text", "label": "Clé USB verrouillée" },
+    { "id": "content_polaroid", "kind": "image", "label": "Polaroid Rue de Paradis" },
+    { "id": "content_pc", "kind": "text", "label": "Ordinateur" },
+    { "id": "content_video_souvenir", "kind": "video", "label": "Vidéo souvenir Bâtisseur & Mira" },
+    { "id": "content_lettre_mira", "kind": "text", "label": "Lettre de Mira (cartes)" },
+    { "id": "content_carte", "kind": "image", "label": "Carte à collectionner" },
+    { "id": "content_papier", "kind": "image", "label": "Papier dans la clé" },
+    { "id": "content_talkie", "kind": "audio", "label": "Audio Sacré-Cœur" },
+    { "id": "content_talkie_late", "kind": "audio", "label": "Audio trop tard" },
+    { "id": "content_bureau", "kind": "text", "label": "Contenu du Bureau" }
+  ],
+  "zones": [
+    {
+      "id": "rue_paradis",
+      "label": "Rue de Paradis",
+      "kind": "circle",
+      "center": { "lat": 48.8742, "lng": 2.3548 },
+      "radiusM": 120
+    },
+    {
+      "id": "sacre_coeur",
+      "label": "Sacré-Cœur",
+      "kind": "circle",
+      "center": { "lat": 48.8867, "lng": 2.3431 },
+      "radiusM": 150
+    },
+    {
+      "id": "sainte_marie",
+      "label": "Sainte-Marie (17e)",
+      "kind": "circle",
+      "center": { "lat": 48.8845, "lng": 2.3219 },
+      "radiusM": 100
+    },
+    {
+      "id": "pizzeria_oncle",
+      "label": "Pizzeria de l’oncle",
+      "kind": "circle",
+      "center": { "lat": 48.8745, "lng": 2.3552 },
+      "radiusM": 80
+    },
+    { "id": "arr_17", "label": "Paris 17e", "kind": "arrondissement", "code": 17 }
+  ],
+  "beacons": [
+    { "id": "beacon_sainte_marie", "channel": "qr", "tokenId": "QR_SAINTE_MARIE", "label": "Balise Sainte-Marie" },
+    { "id": "beacon_lanterne_pizza", "channel": "nfc", "tokenId": "NFC_LANTERNE_MIRA", "label": "Balise lanterne pizzeria" }
+  ],
+  "variables": [
+    { "id": "lanterne_deja_prise", "label": "Lanterne déjà trouvée par un autre joueur", "valueType": "boolean", "defaultValue": false, "scope": "run" },
+    { "id": "ordinateur_deverrouille", "label": "Ordinateur déverrouillé (PIZZA)", "valueType": "boolean", "defaultValue": false, "scope": "run" },
+    { "id": "cle_usb_detruite", "label": "Clé USB détruite", "valueType": "boolean", "defaultValue": false, "scope": "run" },
+    { "id": "jplus1_sainte_marie", "label": "Lendemain après balise Sainte-Marie", "valueType": "boolean", "defaultValue": false, "scope": "run" }
+  ],
+  "floors": [
+    {
+      "index": 0,
+      "title": "Déverrouillage",
+      "status": "done",
+      "situations": [
+        {
+          "id": "f0_a",
+          "letter": "A",
+          "title": "Consommer le média imposé",
+          "trigger": { "kind": "media_consumed", "mediaItemId": "media_impose", "label": "Média imposé" },
+          "conditions": [],
+          "thenActions": [
+            { "kind": "unlock_media", "mediaItemId": "bureau", "label": "Bureau" },
+            { "kind": "notify", "message": "Le contenu du Bureau devient accessible." },
+            { "kind": "set_flag", "varId": "bureau_accessible", "value": true, "label": "Bureau accessible" }
+          ]
+        }
+      ],
+      "unlockNext": {
+        "op": "and",
+        "children": [
+          { "kind": "media_consumed", "mediaItemId": "media_impose", "label": "Média imposé" }
+        ]
+      },
+      "unlockNextLabel": "Étage 1 — Premiers indices"
+    },
+    {
+      "index": 1,
+      "title": "Premiers indices",
+      "status": "done",
+      "situations": [
+        {
+          "id": "f1_a",
+          "letter": "A",
+          "title": "Lettre consommée",
+          "trigger": { "kind": "media_consumed", "mediaItemId": "lettre", "label": "Lettre" },
+          "conditions": [],
+          "thenActions": [
+            {
+              "kind": "notify",
+              "message": "J'ai mis comme code de sécurité de la clé USB l'odeur qui régnait le soir dans la rue où Mira et moi avons grandi... Depuis le jour où nous nous sommes rencontrés à la Sainte-Marie, nous ne nous sommes jamais quittés... La photo a été prise un an après notre rencontre... Je peux presque sentir cette odeur qui en émane."
+            }
+          ]
+        },
+        {
+          "id": "f1_b",
+          "letter": "B",
+          "title": "Clé USB consommée",
+          "trigger": { "kind": "media_consumed", "mediaItemId": "cle_usb", "label": "Clé USB" },
+          "conditions": [],
+          "thenActions": [
+            { "kind": "show_code_input", "choiceId": "usb_code", "message": "Fenêtre de saisie de code sur l'ordinateur." },
+            { "kind": "set_flag", "varId": "saisie_code_visible", "value": true, "label": "Saisie code visible" }
+          ]
+        },
+        {
+          "id": "f1_c",
+          "letter": "C",
+          "title": "Polaroid consommé",
+          "trigger": { "kind": "media_consumed", "mediaItemId": "polaroid", "label": "Polaroid" },
+          "conditions": [],
+          "thenActions": [
+            { "kind": "show_item", "mediaItemId": "polaroid", "label": "Polaroid" },
+            { "kind": "notify", "message": "Un homme et une femme — le Bâtisseur et Mira. En arrière-plan : Rue de Paradis." }
+          ]
+        }
+      ],
+      "unlockNext": {
+        "op": "and",
+        "children": [
+          { "kind": "media_consumed", "mediaItemId": "lettre", "label": "Lettre" },
+          { "kind": "media_consumed", "mediaItemId": "polaroid", "label": "Polaroid" },
+          { "kind": "media_consumed", "mediaItemId": "cle_usb", "label": "Clé USB" }
+        ]
+      },
+      "unlockNextLabel": "Étage 2 — Rue de Paradis"
+    },
+    {
+      "index": 2,
+      "title": "Rue de Paradis",
+      "status": "done",
+      "situations": [
+        {
+          "id": "f2_a",
+          "letter": "A",
+          "title": "Sur place — odeur de pizza",
+          "trigger": { "kind": "player_moves" },
+          "conditions": [
+            { "kind": "player_in_place", "zoneId": "rue_paradis", "label": "Rue de Paradis" },
+            { "kind": "media_consumed", "mediaItemId": "media_impose", "label": "Média imposé" },
+            { "kind": "media_consumed", "mediaItemId": "lettre", "label": "Lettre" },
+            { "kind": "media_consumed", "mediaItemId": "polaroid", "label": "Polaroid" },
+            { "kind": "media_consumed", "mediaItemId": "cle_usb", "label": "Clé USB" }
+          ],
+          "thenActions": [
+            { "kind": "notify", "message": "Une nouvelle note vient d'apparaître dans votre journal de bord." },
+            {
+              "kind": "add_journal",
+              "noteId": "paradis_pizza",
+              "message": "Nous avons été dans la rue où a été prise la photo du Bâtisseur avec Mira... En effet, une odeur embaume cette rue... Ça sentait la PIZZA."
+            }
+          ]
+        }
+      ],
+      "unlockNext": {
+        "op": "and",
+        "children": [
+          { "kind": "flag_true", "varId": "journal_paradis_pizza", "label": "Note journal Rue de Paradis" }
+        ]
+      },
+      "unlockNextLabel": "Étage 3 — Le code"
+    },
+    {
+      "index": 3,
+      "title": "Le code",
+      "status": "done",
+      "situations": [
+        {
+          "id": "f3_a",
+          "letter": "A",
+          "title": "Clé USB déverrouillable",
+          "trigger": { "kind": "player_moves" },
+          "conditions": [
+            { "kind": "flag_true", "varId": "journal_paradis_pizza", "label": "Message du journal apparu" }
+          ],
+          "thenActions": [
+            { "kind": "notify", "message": "La clé USB devient déverrouillable avec le code : PIZZA" },
+            { "kind": "show_code_input", "choiceId": "usb_code", "message": "Entrez le code sur l'ordinateur." },
+            { "kind": "set_flag", "varId": "code_pizza_attendu", "value": true, "label": "Code PIZZA attendu" }
+          ]
+        }
+      ],
+      "unlockNext": {
+        "op": "and",
+        "children": [
+          { "kind": "flag_true", "varId": "code_pizza_attendu", "label": "Code PIZZA proposé" }
+        ]
+      }
+    },
+    {
+      "index": 4,
+      "title": "Contenu de la clé",
+      "status": "done",
+      "situations": [
+        {
+          "id": "f4_a",
+          "letter": "A",
+          "title": "Code PIZZA correct",
+          "trigger": { "kind": "code_submitted", "choiceId": "usb_code", "expected": "PIZZA", "label": "Code USB" },
+          "conditions": [
+            { "kind": "flag_true", "varId": "code_pizza_attendu", "label": "Code attendu" }
+          ],
+          "thenActions": [
+            { "kind": "set_flag", "varId": "ordinateur_deverrouille", "value": true, "label": "Ordinateur déverrouillé" },
+            { "kind": "unlock_media", "mediaItemId": "usb_video", "label": "Vidéo souvenir" },
+            { "kind": "unlock_media", "mediaItemId": "usb_lettre_mira", "label": "Lettre de Mira" },
+            { "kind": "unlock_media", "mediaItemId": "carte_collection", "label": "Carte à collectionner" },
+            { "kind": "notify", "message": "La clé USB affiche trois contenus : vidéo souvenir, lettre de Mira, photo d'une carte à collectionner." }
+          ]
+        }
+      ],
+      "unlockNext": {
+        "op": "and",
+        "children": [
+          { "kind": "flag_true", "varId": "ordinateur_deverrouille", "label": "Ordinateur déverrouillé" }
+        ]
+      }
+    },
+    {
+      "index": 5,
+      "title": "Décoller l’illustration",
+      "status": "done",
+      "situations": [
+        {
+          "id": "f5_a",
+          "letter": "A",
+          "title": "Bouton Décoller",
+          "trigger": { "kind": "media_consumed", "mediaItemId": "usb_lettre_mira", "label": "Lettre de Mira" },
+          "conditions": [
+            { "kind": "flag_true", "varId": "ordinateur_deverrouille", "label": "Ordinateur déverrouillé" }
+          ],
+          "thenActions": [
+            { "kind": "show_button", "choiceId": "decolle_illustration", "label": "Décoller l'illustration" },
+            { "kind": "set_flag", "varId": "btn_decolle_dispo", "value": true, "label": "Bouton Décoller disponible" }
+          ]
+        }
+      ],
+      "unlockNext": {
+        "op": "and",
+        "children": [
+          { "kind": "flag_true", "varId": "btn_decolle_dispo", "label": "Bouton Décoller disponible" }
+        ]
+      }
+    },
+    {
+      "index": 6,
+      "title": "Cœur couronné",
+      "status": "done",
+      "situations": [
+        {
+          "id": "f6_a",
+          "letter": "A",
+          "title": "Décoller l’illustration",
+          "trigger": { "kind": "player_choice", "choiceId": "decolle_illustration", "label": "Décoller l'illustration" },
+          "conditions": [],
+          "thenActions": [
+            { "kind": "set_object_state", "objectId": "carte_collection", "value": "illustration_arrachee", "label": "Carte avec illustration arrachée + texte visible" },
+            { "kind": "show_button", "choiceId": "lire_texte_carte", "label": "Lire le texte" },
+            { "kind": "notify", "message": "Tous ces souvenirs... Ceux de notre ancienne vie... Ceux de la vidéo dans la clé USB... Doivent disparaître. Ils doivent rester derrière nous. Tu dois briser le passé pour avancer. ♥ couronné" },
+            { "kind": "set_flag", "varId": "symbole_coeur_couronne", "value": true, "label": "Symbole cœur couronné découvert" }
+          ]
+        },
+        {
+          "id": "f6_b",
+          "letter": "B",
+          "title": "Lire le texte de la carte",
+          "trigger": { "kind": "player_choice", "choiceId": "lire_texte_carte", "label": "Lire le texte" },
+          "conditions": [
+            { "kind": "object_state", "objectId": "carte_collection", "value": "illustration_arrachee" }
+          ],
+          "thenActions": [
+            { "kind": "set_flag", "varId": "texte_carte_lu", "value": true, "label": "Texte de la carte lu" },
+            { "kind": "notify", "message": "Le texte de la carte a été lu. Mira signe avec un petit cœur couronné." }
+          ]
+        }
+      ],
+      "unlockNext": {
+        "op": "and",
+        "children": [
+          { "kind": "flag_true", "varId": "texte_carte_lu", "label": "Texte de la carte lu" }
+        ]
+      }
+    },
+    {
+      "index": 7,
+      "title": "Détruire ?",
+      "status": "done",
+      "situations": [
+        {
+          "id": "f7_a",
+          "letter": "A",
+          "title": "Bouton Détruire la clé USB",
+          "trigger": { "kind": "player_moves" },
+          "conditions": [
+            { "kind": "flag_true", "varId": "texte_carte_lu", "label": "Texte de la carte lu" }
+          ],
+          "thenActions": [
+            { "kind": "show_button", "choiceId": "detruire_cle_usb", "label": "Détruire la clé USB" },
+            { "kind": "set_flag", "varId": "btn_detruire_dispo", "value": true, "label": "Bouton Détruire disponible" }
+          ]
+        }
+      ],
+      "unlockNext": {
+        "op": "and",
+        "children": [
+          { "kind": "flag_true", "varId": "btn_detruire_dispo", "label": "Bouton Détruire disponible" }
+        ]
+      }
+    },
+    {
+      "index": 8,
+      "title": "Branche destruction",
+      "status": "done",
+      "situations": [
+        {
+          "id": "f8_a",
+          "letter": "A",
+          "title": "Détruire trop tôt",
+          "trigger": { "kind": "player_choice", "choiceId": "detruire_cle_usb", "label": "Détruire la clé USB" },
+          "conditionsGroup": {
+            "op": "not",
+            "child": {
+              "op": "and",
+              "children": [
+                { "kind": "media_consumed", "mediaItemId": "usb_video", "label": "Vidéo souvenir" },
+                { "kind": "media_consumed", "mediaItemId": "usb_lettre_mira", "label": "Lettre de Mira" },
+                { "kind": "media_consumed", "mediaItemId": "carte_collection", "label": "Carte" }
+              ]
+            }
+          },
+          "thenActions": [
+            { "kind": "notify", "message": "Assurez-vous d'avoir bien visionné tout ce que contenait la clé avant de la détruire." }
+          ]
+        },
+        {
+          "id": "f8_b",
+          "letter": "B",
+          "title": "Détruire après tout vu",
+          "trigger": { "kind": "player_choice", "choiceId": "detruire_cle_usb", "label": "Détruire la clé USB" },
+          "conditions": [
+            { "kind": "media_consumed", "mediaItemId": "usb_video", "label": "Vidéo souvenir" },
+            { "kind": "media_consumed", "mediaItemId": "usb_lettre_mira", "label": "Lettre de Mira" },
+            { "kind": "media_consumed", "mediaItemId": "carte_collection", "label": "Carte" }
+          ],
+          "thenActions": [
+            { "kind": "set_flag", "varId": "cle_usb_detruite", "value": true, "label": "Clé USB détruite" },
+            { "kind": "set_object_state", "objectId": "cle_usb", "value": "fracassee", "label": "Clé USB fracassée" },
+            { "kind": "notify", "message": "La clé USB est détruite." }
+          ]
+        }
+      ],
+      "unlockNext": {
+        "op": "and",
+        "children": [
+          { "kind": "flag_true", "varId": "cle_usb_detruite", "label": "Clé USB détruite" }
+        ]
+      }
+    },
+    {
+      "index": 9,
+      "title": "Clé fracassée",
+      "status": "done",
+      "situations": [
+        {
+          "id": "f9_a",
+          "letter": "A",
+          "title": "État clé fracassée + Analyser",
+          "trigger": { "kind": "player_moves" },
+          "conditions": [
+            { "kind": "flag_true", "varId": "cle_usb_detruite", "label": "Clé détruite" }
+          ],
+          "thenActions": [
+            { "kind": "set_object_state", "objectId": "cle_usb", "value": "fracassee", "label": "Clé USB fracassée" },
+            { "kind": "show_button", "choiceId": "analyser_cle", "label": "Analyser" },
+            { "kind": "set_flag", "varId": "btn_analyser_dispo", "value": true, "label": "Bouton Analyser" }
+          ]
+        }
+      ],
+      "unlockNext": {
+        "op": "and",
+        "children": [
+          { "kind": "flag_true", "varId": "btn_analyser_dispo", "label": "Analyser disponible" }
+        ]
+      }
+    },
+    {
+      "index": 10,
+      "title": "Papier caché",
+      "status": "done",
+      "situations": [
+        {
+          "id": "f10_a",
+          "letter": "A",
+          "title": "Analyser la clé",
+          "trigger": { "kind": "player_choice", "choiceId": "analyser_cle", "label": "Analyser" },
+          "conditions": [],
+          "thenActions": [
+            { "kind": "notify", "message": "Mira avait caché un petit bout de papier dans la clé USB... Le voici." },
+            { "kind": "unlock_media", "mediaItemId": "papier_cache", "label": "Petit papier" },
+            { "kind": "show_item", "mediaItemId": "papier_cache", "label": "Petit papier" },
+            { "kind": "set_flag", "varId": "papier_revele", "value": true, "label": "Papier révélé" }
+          ]
+        },
+        {
+          "id": "f10_b",
+          "letter": "B",
+          "title": "Lire le papier",
+          "trigger": { "kind": "media_consumed", "mediaItemId": "papier_cache", "label": "Petit papier" },
+          "conditions": [],
+          "thenActions": [
+            { "kind": "set_flag", "varId": "papier_lu", "value": true, "label": "Papier lu" },
+            { "kind": "notify", "message": "Le papier est rangé dans l'item média." }
+          ],
+          "transition": { "unlockFloor": 11, "label": "Accès à l'Étage 11" }
+        }
+      ],
+      "unlockNext": {
+        "op": "and",
+        "children": [
+          { "kind": "flag_true", "varId": "papier_lu", "label": "Papier lu" }
+        ]
+      }
+    },
+    {
+      "index": 11,
+      "title": "Vers Sainte-Marie",
+      "status": "done",
+      "situations": [
+        {
+          "id": "f11_a",
+          "letter": "A",
+          "title": "Indice Sainte-Marie",
+          "trigger": { "kind": "player_moves" },
+          "conditions": [
+            { "kind": "flag_true", "varId": "papier_lu", "label": "Papier analysé" }
+          ],
+          "thenActions": [
+            {
+              "kind": "notify",
+              "message": "Il y avait caché dans le corps de la clé USB un vieux papier écrit à la main... Il disait qu'une balise se trouvait là où Mira et le Bâtisseur se sont rencontrés. Il y avait aussi un dessin griffonné à la main..."
+            },
+            { "kind": "set_flag", "varId": "indice_sainte_marie", "value": true, "label": "Indice Sainte-Marie" }
+          ]
+        }
+      ],
+      "unlockNext": {
+        "op": "and",
+        "children": [
+          { "kind": "flag_true", "varId": "indice_sainte_marie", "label": "Indice donné" }
+        ]
+      }
+    },
+    {
+      "index": 12,
+      "title": "Balise Sainte-Marie",
+      "status": "done",
+      "situations": [
+        {
+          "id": "f12_a",
+          "letter": "A",
+          "title": "Scanner balise Sainte-Marie",
+          "trigger": { "kind": "beacon_found", "beaconId": "beacon_sainte_marie", "channel": "qr", "label": "Sainte-Marie" },
+          "conditions": [],
+          "thenActions": [
+            {
+              "kind": "notify",
+              "message": "Tu restes malgré tout l'homme qui me connaît le mieux au monde... Prends ce talkie-walkie. Il a un rayon de seulement 100 m. Après tout... Si tu me connais si bien, tu devrais savoir exactement où te placer pour capter ma fréquence demain soir à 19h42."
+            },
+            { "kind": "unlock_media", "mediaItemId": "talkie", "label": "Talkie-walkie" },
+            {
+              "kind": "wait_then",
+              "afterMinutes": 1440,
+              "scheduleId": "jplus1_sainte_marie",
+              "label": "Demain (J+1 après la balise)"
+            },
+            { "kind": "set_flag", "varId": "balise_sainte_marie", "value": true, "label": "Balise Sainte-Marie scannée" }
+          ]
+        },
+        {
+          "id": "f12_b",
+          "letter": "B",
+          "title": "J+1 activé",
+          "trigger": { "kind": "time_reached", "scheduleId": "jplus1_sainte_marie" },
+          "conditions": [],
+          "thenActions": [
+            { "kind": "set_flag", "varId": "jplus1_sainte_marie", "value": true, "label": "Lendemain de la balise" },
+            { "kind": "notify", "message": "C'est le lendemain. Rendez-vous à 19h42…" }
+          ]
+        }
+      ],
+      "unlockNext": {
+        "op": "and",
+        "children": [
+          { "kind": "flag_true", "varId": "balise_sainte_marie", "label": "Balise scannée" }
+        ]
+      }
+    },
+    {
+      "index": 13,
+      "title": "Fréquence Sacré-Cœur",
+      "status": "done",
+      "situations": [
+        {
+          "id": "f13_a",
+          "letter": "A",
+          "title": "Audio talkie à 19h42",
+          "trigger": { "kind": "media_opened", "mediaItemId": "talkie", "label": "Talkie-walkie" },
+          "conditionsGroup": {
+            "op": "and",
+            "children": [
+              { "kind": "player_in_place", "zoneId": "sacre_coeur", "label": "Sacré-Cœur" },
+              { "kind": "flag_true", "varId": "jplus1_sainte_marie", "label": "Lendemain de la balise" },
+              { "kind": "clock_is", "at": "19:42" },
+              { "kind": "flag_true", "varId": "balise_sainte_marie", "label": "Balise Sainte-Marie" },
+              {
+                "op": "not",
+                "child": { "kind": "flag_true", "varId": "lanterne_deja_prise", "label": "Lanterne déjà prise" }
+              }
+            ]
+          },
+          "thenActions": [
+            {
+              "kind": "play_media",
+              "mediaContentId": "content_talkie",
+              "label": "Audio Mira — lanterne chez l'oncle"
+            },
+            { "kind": "set_flag", "varId": "audio_sacre_coeur_ecoute", "value": true, "label": "Audio Sacré-Cœur écouté" }
+          ]
+        },
+        {
+          "id": "f13_b",
+          "letter": "B",
+          "title": "Trop tard — lanterne déjà prise",
+          "trigger": { "kind": "media_opened", "mediaItemId": "talkie", "label": "Talkie-walkie" },
+          "conditions": [
+            { "kind": "player_in_place", "zoneId": "sacre_coeur", "label": "Sacré-Cœur" },
+            { "kind": "flag_true", "varId": "jplus1_sainte_marie", "label": "Lendemain" },
+            { "kind": "clock_is", "at": "19:42" },
+            { "kind": "flag_true", "varId": "lanterne_deja_prise", "label": "Lanterne déjà trouvée" }
+          ],
+          "thenActions": [
+            {
+              "kind": "play_media",
+              "mediaContentId": "content_talkie_late",
+              "label": "Bien joué, un peu trop tard…"
+            },
+            { "kind": "notify", "message": "Bien joué, vous êtes juste arrivé un peu trop tard mais vous êtes parvenu au bout. Félicitations." }
+          ]
+        }
+      ],
+      "unlockNext": {
+        "op": "and",
+        "children": [
+          { "kind": "flag_true", "varId": "audio_sacre_coeur_ecoute", "label": "Audio écouté" }
+        ]
+      }
+    },
+    {
+      "index": 14,
+      "title": "La lanterne",
+      "status": "done",
+      "situations": [
+        {
+          "id": "f14_a",
+          "letter": "A",
+          "title": "Balise lanterne + numéro",
+          "trigger": { "kind": "beacon_found", "beaconId": "beacon_lanterne_pizza", "channel": "nfc", "label": "Lanterne pizzeria" },
+          "conditions": [
+            { "kind": "flag_true", "varId": "audio_sacre_coeur_ecoute", "label": "Audio Sacré-Cœur écouté" },
+            { "kind": "flag_false", "varId": "lanterne_deja_prise", "label": "Lanterne encore disponible" }
+          ],
+          "thenActions": [
+            { "kind": "notify", "message": "Numéro de téléphone affiché. Appelez pour devenir le gagnant de la lanterne de Mira." },
+            { "kind": "show_button", "choiceId": "appeler_numero", "label": "Appeler le numéro" },
+            { "kind": "set_flag", "varId": "numero_affiche", "value": true, "label": "Numéro affiché" }
+          ]
+        },
+        {
+          "id": "f14_b",
+          "letter": "B",
+          "title": "Appel gagnant",
+          "trigger": { "kind": "player_choice", "choiceId": "appeler_numero", "label": "Appeler le numéro" },
+          "conditions": [
+            { "kind": "flag_true", "varId": "numero_affiche", "label": "Numéro affiché" }
+          ],
+          "thenActions": [
+            { "kind": "notify", "message": "Vous êtes le gagnant de la lanterne de Mira." },
+            { "kind": "set_flag", "varId": "gagnant_lanterne", "value": true, "label": "Gagnant" }
+          ]
+        }
+      ]
+    }
+  ]
+}

@@ -203,6 +203,24 @@ function createServer({ rateLimiting = true, syncWorkers = true } = {}) {
   app.use('/api/events', eventsRoutes);
   app.use('/api/admin', adminRoutes);
 
+  // Lantern Lab S1 — simulateur API (sandbox) + UI minimale
+  const lanternLab = require('./routes/lanternLab');
+  app.use('/api/admin/lantern-lab', lanternLab.router);
+  app.use(
+    '/lantern-sim',
+    express.static(path.join(__dirname, '../public/lantern-sim'), {
+      index: 'index.html',
+      fallthrough: true,
+    })
+  );
+  app.use(
+    '/lantern-lab',
+    express.static(path.join(__dirname, '../public/lantern-lab'), {
+      index: 'index.html',
+      fallthrough: true,
+    })
+  );
+
   // Healthcheck
   app.get('/health', (req, res) => res.json({ status: 'ok', time: new Date().toISOString() }));
 
@@ -213,6 +231,8 @@ function createServer({ rateLimiting = true, syncWorkers = true } = {}) {
       status: 'running',
       message: 'Le backend fonctionne. L\'application mobile se lance via Expo (port 8081), pas ici.',
       health: '/health',
+      lanternSim: '/lantern-sim/',
+      lanternLabApi: '/api/admin/lantern-lab',
       api: {
         // La surface à utiliser est nommée en premier, avec sa fin de vie annoncée pour
         // l'autre : c'est la première page qu'un intégrateur ouvre.

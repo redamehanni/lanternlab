@@ -1,0 +1,79 @@
+{
+  "id": "sit_appel_batisseur",
+  "title": "L'appel du Bâtisseur",
+  "description": "Quand le joueur a consommé la cassette, s'il est au Bureau à 20h17 et que l'appel n'a pas encore été reçu : le téléphone sonne.",
+  "fixtureId": "appel20h17",
+  "trigger": {
+    "kind": "time_reached",
+    "scheduleId": "appel_20h17",
+    "label": "l'heure de l'appel"
+  },
+  "conditions": [
+    {
+      "kind": "media_consumed",
+      "mediaItemId": "cassette",
+      "label": "la cassette"
+    },
+    {
+      "kind": "player_in_place",
+      "zoneId": "bureau",
+      "label": "le Bureau"
+    },
+    {
+      "kind": "clock_is",
+      "at": "20:17"
+    },
+    {
+      "kind": "flag_false",
+      "varId": "appel_20h17_deja_recu",
+      "label": "L'appel n'a pas encore été reçu"
+    }
+  ],
+  "thenActions": [
+    {
+      "kind": "ring_phone",
+      "label": "Appel 20h17"
+    },
+    {
+      "kind": "play_media",
+      "mediaContentId": "audio_appel_20h17",
+      "label": "Appel 20h17"
+    },
+    {
+      "kind": "set_flag",
+      "varId": "appel_20h17_deja_recu",
+      "value": true,
+      "label": "Marquer l'appel comme reçu"
+    }
+  ],
+  "elseActions": [
+    {
+      "kind": "set_flag",
+      "varId": "phone_call_01_missed",
+      "value": true,
+      "label": "Marquer l'appel comme manqué"
+    }
+  ],
+  "occurrence": { "once": true, "missExpire": true },
+  "testDefaults": {
+    "lat": 48.8606,
+    "lng": 2.3376,
+    "now": "2026-08-09T18:17:00.000Z",
+    "event": {
+      "type": "time.schedule",
+      "at": "2026-08-09T18:17:00.000Z",
+      "payload": { "scheduleId": "appel_20h17" }
+    },
+    "runtime": {
+      "mediaStates": {
+        "cassette": {
+          "discovered": true,
+          "unlocked": true,
+          "opened": true,
+          "consumed": true,
+          "visible": true
+        }
+      }
+    }
+  }
+}

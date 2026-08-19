@@ -1,0 +1,409 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Lantern Sim — Ma Zone</title>
+  <style>
+    :root {
+      --bg: #14111a;
+      --panel: #1e1826;
+      --line: #3a3145;
+      --ink: #f3ead2;
+      --muted: #a89bb0;
+      --accent: #e8a830;
+      --ok: #3dba7a;
+      --bad: #e05a5a;
+      --mono: "IBM Plex Mono", Menlo, Consolas, monospace;
+      --sans: "IBM Plex Sans", "Helvetica Neue", Arial, sans-serif;
+    }
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      font-family: var(--sans);
+      background: var(--bg);
+      color: var(--ink);
+      font-size: 14px;
+      line-height: 1.4;
+    }
+    header {
+      border-bottom: 1px solid var(--line);
+      padding: 14px 20px;
+      display: flex;
+      gap: 16px;
+      align-items: baseline;
+      flex-wrap: wrap;
+    }
+    header h1 { margin: 0; font-size: 18px; font-weight: 600; }
+    header .meta { color: var(--muted); font-size: 12px; }
+    .layout {
+      display: grid;
+      grid-template-columns: 360px 1fr;
+      min-height: calc(100vh - 54px);
+    }
+    @media (max-width: 900px) {
+      .layout { grid-template-columns: 1fr; }
+    }
+    aside, main { padding: 16px 18px; }
+    aside { border-right: 1px solid var(--line); background: var(--panel); }
+    label { display: block; font-size: 11px; letter-spacing: 0.06em; text-transform: uppercase; color: var(--muted); margin: 12px 0 4px; }
+    input, select, textarea, button {
+      font: inherit;
+      border-radius: 6px;
+      border: 1px solid var(--line);
+      background: #121018;
+      color: var(--ink);
+      padding: 8px 10px;
+      width: 100%;
+    }
+    textarea { min-height: 90px; font-family: var(--mono); font-size: 12px; }
+    button {
+      cursor: pointer;
+      background: var(--accent);
+      color: #1a1208;
+      border: none;
+      font-weight: 600;
+      margin-top: 8px;
+    }
+    button.secondary { background: transparent; color: var(--ink); border: 1px solid var(--line); }
+    button.ghost { background: #2a2233; color: var(--ink); margin-top: 4px; font-weight: 500; font-size: 12px; text-align: left; }
+    .row { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+    .pill {
+      display: inline-block;
+      padding: 2px 8px;
+      border-radius: 999px;
+      font-size: 11px;
+      background: #2a2233;
+      color: var(--muted);
+    }
+    .pill.ok { background: #1a3d2c; color: var(--ok); }
+    .pill.bad { background: #3d1a1a; color: var(--bad); }
+    .section { margin-bottom: 18px; }
+    .section h2 {
+      margin: 0 0 8px;
+      font-size: 13px;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+      color: var(--accent);
+      border-bottom: 1px solid var(--line);
+      padding-bottom: 6px;
+    }
+    .card {
+      background: var(--panel);
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      padding: 12px;
+      margin-bottom: 10px;
+    }
+    .mono { font-family: var(--mono); font-size: 12px; }
+    .cond { display: flex; gap: 8px; align-items: flex-start; margin: 4px 0; }
+    .cond .mark { width: 16px; flex: none; font-weight: 700; }
+    .cond .mark.ok { color: var(--ok); }
+    .cond .mark.bad { color: var(--bad); }
+    pre {
+      margin: 0;
+      white-space: pre-wrap;
+      word-break: break-word;
+      font-family: var(--mono);
+      font-size: 11px;
+      color: #d8cbb0;
+      max-height: 280px;
+      overflow: auto;
+    }
+    .err { color: var(--bad); margin: 8px 0; }
+    .empty { color: var(--muted); padding: 24px 0; }
+  </style>
+</head>
+<body>
+  <header>
+    <h1>Lantern Sim</h1>
+    <span class="meta">S1 · même moteur que le Lantern Engine · sandbox</span>
+    <span class="pill" id="healthPill">…</span>
+    <a href="/lantern-lab/" style="margin-left:auto;color:#e8a830;text-decoration:none;font-size:13px">Lantern Lab Créateur →</a>
+  </header>
+  <div class="layout">
+    <aside>
+      <div class="section">
+        <h2>Auth</h2>
+        <label>Clé lab (X-Lantern-Sim-Key)</label>
+        <input id="simKey" value="mazone-lantern-sim" />
+        <label>Ou token admin Bearer</label>
+        <input id="adminToken" placeholder="optionnel" />
+      </div>
+
+      <div class="section">
+        <h2>Session</h2>
+        <label>Fixture</label>
+        <select id="fixtureId"></select>
+        <button id="btnNewSession">Nouvelle session</button>
+        <p class="meta" id="sessionInfo">Aucune session</p>
+      </div>
+
+      <div class="section">
+        <h2>Presets</h2>
+        <div id="presets"></div>
+      </div>
+
+      <div class="section">
+        <h2>Injecter</h2>
+        <label>Événement (JSON)</label>
+        <textarea id="eventJson" spellcheck="false">{
+  "type": "media.discovered",
+  "at": "2026-08-09T15:07:00.000Z",
+  "payload": { "mediaItemId": "talkie_magellan" }
+}</textarea>
+        <div class="row">
+          <div>
+            <label>Lat</label>
+            <input id="lat" value="48.8322" />
+          </div>
+          <div>
+            <label>Lng</label>
+            <input id="lng" value="2.3561" />
+          </div>
+        </div>
+        <label>Now (ISO) — horloge simulée</label>
+        <input id="now" value="2026-08-09T15:07:00.000Z" />
+        <label>Tick to (ISO) — avance schedules E0b</label>
+        <input id="tickTo" placeholder="ex. 2026-08-09T16:20:00.000Z" />
+        <button id="btnSimulate">Simuler</button>
+        <button class="secondary" id="btnTickOnly">Tick horloge seulement</button>
+      </div>
+    </aside>
+
+    <main>
+      <div id="error" class="err" hidden></div>
+      <div id="results" class="empty">Lance une session puis un preset (Magellan / Appel 20h17 / relatif).</div>
+    </main>
+  </div>
+
+  <script>
+    const API = '/api/admin/lantern-lab';
+    let sessionId = null;
+    let lastFixtureId = 'magellan';
+
+    function headers() {
+      const h = { 'Content-Type': 'application/json' };
+      const key = document.getElementById('simKey').value.trim();
+      const tok = document.getElementById('adminToken').value.trim();
+      if (key) h['X-Lantern-Sim-Key'] = key;
+      if (tok) h['Authorization'] = 'Bearer ' + tok;
+      return h;
+    }
+
+    async function api(method, path, body) {
+      const res = await fetch(API + path, {
+        method,
+        headers: headers(),
+        body: body ? JSON.stringify(body) : undefined,
+      });
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok) throw new Error(data.error || ('HTTP ' + res.status));
+      return data;
+    }
+
+    function showError(msg) {
+      const el = document.getElementById('error');
+      if (!msg) { el.hidden = true; el.textContent = ''; return; }
+      el.hidden = false;
+      el.textContent = msg;
+    }
+
+    function mark(ok) {
+      return `<span class="mark ${ok ? 'ok' : 'bad'}">${ok ? '✓' : '✗'}</span>`;
+    }
+
+    function renderTrace(trace) {
+      if (!trace) return '';
+      const cands = (trace.candidates || []).map((c) => {
+        const conds = (c.conditions || []).map((x) =>
+          `<div class="cond">${mark(x.ok)}<div><strong>${x.type}</strong> <span class="mono">${escapeHtml(JSON.stringify(x.params || {}))}</span></div></div>`
+        ).join('');
+        return `<div class="card">
+          <div><strong>${escapeHtml(c.ruleId)}</strong> ${c.match ? '<span class="pill ok">MATCH</span>' : '<span class="pill bad">NO</span>'}
+          <span class="meta">${escapeHtml(c.title || '')}</span></div>
+          ${conds}
+        </div>`;
+      }).join('');
+
+      const fired = (trace.fired || []).map((f) => {
+        const acts = (f.actions || []).map((a) =>
+          `<li class="mono">${escapeHtml(a.type)} ${a.ok ? '✓' : '✗'} ${escapeHtml(JSON.stringify(a.effect || a.ui || a.schedule || {}))}</li>`
+        ).join('');
+        const sched = (f.scheduled || []).map((s) =>
+          `<li class="mono">schedule ${escapeHtml(s.scheduleId)} due ${escapeHtml(s.dueAt)}</li>`
+        ).join('');
+        return `<div class="card">
+          <div><span class="pill ok">FIRED</span> <strong>${escapeHtml(f.ruleId)}</strong></div>
+          <ul>${acts}${sched}</ul>
+        </div>`;
+      }).join('');
+
+      const misses = (trace.misses || []).map((m) =>
+        `<div class="card"><span class="pill bad">MISS</span> ${escapeHtml(m.ruleId)} · ${escapeHtml(m.missPolicy || '')}</div>`
+      ).join('');
+
+      return `
+        <div class="section"><h2>Événement injecté</h2>
+          <pre>${escapeHtml(JSON.stringify(trace.event, null, 2))}</pre>
+        </div>
+        <div class="section"><h2>Rules candidates</h2>${cands || '<p class="meta">aucune</p>'}</div>
+        <div class="section"><h2>Rules fired</h2>${fired || '<p class="meta">aucune</p>'}</div>
+        <div class="section"><h2>Misses</h2>${misses || '<p class="meta">aucun</p>'}</div>
+      `;
+    }
+
+    function renderStep(step) {
+      if (step.kind === 'tick') {
+        const parts = (step.tick.processed || []).map((p) => `
+          <div class="card">
+            <div><strong>${escapeHtml(p.scheduleId)}</strong> <span class="pill">${escapeHtml(p.status)}</span></div>
+            ${renderTrace(p.trace)}
+          </div>
+        `).join('');
+        return `<div class="section"><h2>Tick horloge → ${escapeHtml(step.tick.now)}</h2>
+          ${parts || '<p class="meta">aucun job dû</p>'}
+          <h2>État</h2><pre>${escapeHtml(JSON.stringify(step.state, null, 2))}</pre>
+        </div>`;
+      }
+      return `
+        ${renderTrace(step.trace)}
+        <div class="section"><h2>UI Plan</h2>
+          <pre>${escapeHtml(JSON.stringify(step.uiPlan || [], null, 2))}</pre>
+        </div>
+        <div class="section"><h2>Nouvel état</h2>
+          <pre>${escapeHtml(JSON.stringify(step.state, null, 2))}</pre>
+        </div>
+      `;
+    }
+
+    function renderResult(data) {
+      const steps = (data.steps || []).map(renderStep).join('<hr style="border-color:#3a3145">');
+      document.getElementById('results').innerHTML = steps || '<p class="empty">Pas de résultat</p>';
+      if (data.sessionId) {
+        sessionId = data.sessionId;
+        document.getElementById('sessionInfo').textContent =
+          `Session ${sessionId.slice(0, 8)}… · fixture ${data.fixtureId || lastFixtureId}`;
+      }
+    }
+
+    function escapeHtml(s) {
+      return String(s)
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;');
+    }
+
+    async function newSession(fixtureId, runtime) {
+      lastFixtureId = fixtureId || document.getElementById('fixtureId').value;
+      const data = await api('POST', '/sessions', {
+        fixtureId: lastFixtureId,
+        runtime: runtime || {},
+      });
+      sessionId = data.sessionId;
+      document.getElementById('sessionInfo').textContent =
+        `Session ${sessionId.slice(0, 8)}… · ${data.label}`;
+      return data;
+    }
+
+    async function runSimulate(body) {
+      showError('');
+      if (!sessionId) await newSession(body.fixtureId);
+      const data = await api('POST', `/sessions/${sessionId}/simulate`, body);
+      renderResult(data);
+    }
+
+    document.getElementById('btnNewSession').onclick = async () => {
+      try {
+        showError('');
+        await newSession();
+        document.getElementById('results').innerHTML = '<p class="empty">Session prête — lance un preset ou Simuler.</p>';
+      } catch (e) { showError(e.message); }
+    };
+
+    document.getElementById('btnSimulate').onclick = async () => {
+      try {
+        const event = JSON.parse(document.getElementById('eventJson').value);
+        const tickTo = document.getElementById('tickTo').value.trim() || null;
+        await runSimulate({
+          event,
+          lat: Number(document.getElementById('lat').value),
+          lng: Number(document.getElementById('lng').value),
+          now: document.getElementById('now').value.trim() || null,
+          tickTo,
+        });
+      } catch (e) { showError(e.message); }
+    };
+
+    document.getElementById('btnTickOnly').onclick = async () => {
+      try {
+        const tickTo = document.getElementById('tickTo').value.trim();
+        if (!tickTo) throw new Error('Renseigne Tick to');
+        await runSimulate({
+          tickTo,
+          lat: Number(document.getElementById('lat').value),
+          lng: Number(document.getElementById('lng').value),
+          now: tickTo,
+        });
+      } catch (e) { showError(e.message); }
+    };
+
+    async function boot() {
+      try {
+        const health = await api('GET', '/health');
+        document.getElementById('healthPill').textContent = 'engine ok · ' + health.stage;
+        document.getElementById('healthPill').classList.add('ok');
+
+        const { fixtures } = await api('GET', '/fixtures');
+        const sel = document.getElementById('fixtureId');
+        sel.innerHTML = fixtures.map((f) =>
+          `<option value="${f.id}">${escapeHtml(f.title)}</option>`
+        ).join('');
+
+        const { presets } = await api('GET', '/presets');
+        const box = document.getElementById('presets');
+        box.innerHTML = presets.map((p) =>
+          `<button class="ghost" data-preset="${p.id}">${escapeHtml(p.title)}</button>`
+        ).join('');
+
+        box.onclick = async (ev) => {
+          const btn = ev.target.closest('[data-preset]');
+          if (!btn) return;
+          const preset = presets.find((x) => x.id === btn.dataset.preset);
+          if (!preset) return;
+          try {
+            showError('');
+            document.getElementById('fixtureId').value = preset.fixtureId;
+            if (preset.event) {
+              document.getElementById('eventJson').value = JSON.stringify(preset.event, null, 2);
+            }
+            if (preset.lat != null) document.getElementById('lat').value = preset.lat;
+            if (preset.lng != null) document.getElementById('lng').value = preset.lng;
+            if (preset.now) document.getElementById('now').value = preset.now;
+            if (preset.tickTo) document.getElementById('tickTo').value = preset.tickTo;
+            else document.getElementById('tickTo').value = '';
+
+            if (!preset.requiresSession || !sessionId || lastFixtureId !== preset.fixtureId) {
+              await newSession(preset.fixtureId, preset.runtime || {});
+            }
+            await runSimulate({
+              event: preset.event || null,
+              tickTo: preset.tickTo || null,
+              lat: preset.lat,
+              lng: preset.lng,
+              now: preset.now,
+              runtimePatch: preset.runtime || null,
+            });
+          } catch (e) { showError(e.message); }
+        };
+      } catch (e) {
+        document.getElementById('healthPill').textContent = 'hors ligne';
+        document.getElementById('healthPill').classList.add('bad');
+        showError(e.message + ' — démarre le backend (sandbox) et recharge.');
+      }
+    }
+
+    boot();
+  </script>
+</body>
+</html>

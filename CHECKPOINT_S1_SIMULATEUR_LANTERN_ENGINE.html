@@ -1,0 +1,328 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="utf-8" />
+<title>Checkpoint S1 — Simulateur Lantern Engine</title>
+<style>
+  @page { size: A4; margin: 16mm 14mm; }
+  :root {
+    --ink: #1a1520;
+    --muted: #5c5366;
+    --line: #d8d0c4;
+    --accent: #b45309;
+    --bg: #faf7f2;
+    --card: #ffffff;
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0;
+    font-family: "Iowan Old Style", "Palatino Linotype", Palatino, Georgia, serif;
+    color: var(--ink);
+    background: var(--bg);
+    font-size: 10.5pt;
+    line-height: 1.42;
+  }
+  .page { max-width: 720px; margin: 0 auto; padding: 24px 8px 40px; }
+  header.doc-head {
+    border-bottom: 2px solid var(--ink);
+    padding-bottom: 12px;
+    margin-bottom: 18px;
+  }
+  .eyebrow {
+    font-family: "IBM Plex Sans", "Helvetica Neue", Arial, sans-serif;
+    font-size: 10px;
+    letter-spacing: 0.14em;
+    text-transform: uppercase;
+    color: var(--accent);
+    margin: 0 0 8px;
+  }
+  h1 { font-size: 21pt; line-height: 1.15; margin: 0 0 8px; font-weight: 700; }
+  .subtitle { margin: 0; color: var(--muted); font-size: 10.5pt; }
+  .meta {
+    margin-top: 10px;
+    font-family: "IBM Plex Sans", "Helvetica Neue", Arial, sans-serif;
+    font-size: 9pt;
+    color: var(--muted);
+  }
+  h2 {
+    font-size: 13pt;
+    margin: 22px 0 8px;
+    padding-top: 6px;
+    border-top: 1px solid var(--line);
+    page-break-after: avoid;
+  }
+  h3 { font-size: 11pt; margin: 14px 0 6px; page-break-after: avoid; }
+  p { margin: 0 0 8px; }
+  ul, ol { margin: 0 0 10px; padding-left: 1.2em; }
+  li { margin-bottom: 3px; }
+  strong { font-weight: 700; }
+  code {
+    font-family: "IBM Plex Mono", Menlo, Consolas, monospace;
+    font-size: 8.5pt;
+    background: #efe9df;
+    padding: 1px 4px;
+    border-radius: 3px;
+  }
+  table {
+    width: 100%;
+    border-collapse: collapse;
+    margin: 8px 0 12px;
+    font-size: 8.5pt;
+    font-family: "IBM Plex Sans", "Helvetica Neue", Arial, sans-serif;
+    page-break-inside: avoid;
+  }
+  th, td {
+    border: 1px solid var(--line);
+    padding: 5px 6px;
+    text-align: left;
+    vertical-align: top;
+  }
+  th { background: #efe9df; font-weight: 600; }
+  .callout {
+    background: var(--card);
+    border: 1px solid var(--line);
+    border-left: 4px solid var(--accent);
+    padding: 10px 12px;
+    margin: 10px 0 12px;
+    page-break-inside: avoid;
+  }
+  .flow {
+    font-family: "IBM Plex Sans", "Helvetica Neue", Arial, sans-serif;
+    font-size: 9.5pt;
+    background: #efe9df;
+    padding: 10px 12px;
+    margin: 8px 0 12px;
+    border-radius: 4px;
+    page-break-inside: avoid;
+  }
+  .flow .arrow { color: var(--accent); font-weight: 700; }
+  .diagram {
+    font-family: "IBM Plex Mono", Menlo, Consolas, monospace;
+    font-size: 7.6pt;
+    line-height: 1.32;
+    background: #1a1520;
+    color: #f3ead2;
+    padding: 12px 14px;
+    margin: 8px 0 12px;
+    white-space: pre;
+    overflow: hidden;
+    page-break-inside: avoid;
+  }
+  .verdict {
+    background: #1a1520;
+    color: #f3ead2;
+    padding: 14px 16px;
+    margin: 16px 0;
+    page-break-inside: avoid;
+  }
+  .verdict h2 { border: none; color: #e8a830; margin-top: 0; padding-top: 0; }
+  .verdict p { color: #f3ead2; }
+  footer {
+    margin-top: 24px;
+    padding-top: 8px;
+    border-top: 1px solid var(--line);
+    font-family: "IBM Plex Sans", "Helvetica Neue", Arial, sans-serif;
+    font-size: 8.5pt;
+    color: var(--muted);
+  }
+  @media print { body { background: white; } .page { padding: 0; max-width: none; } }
+</style>
+</head>
+<body>
+<div class="page">
+  <header class="doc-head">
+    <p class="eyebrow">Ma Zone · Lantern Engine · Checkpoint livré</p>
+    <h1>S1 — Simulateur API &amp; interface</h1>
+    <p class="subtitle">Ce qui a été construit, ce que vous pouvez faire maintenant, comment lancer Magellan et l’Appel 20h17 — avant l’étape suivante.</p>
+    <p class="meta">
+      Date : 10 août 2026 · Statut : livré (E0 + E0b + S1) · Destinataires : Reda / Adam<br />
+      Prérequis : backend sandbox · URL UI <code>http://localhost:4000/lantern-sim/</code>
+    </p>
+  </header>
+
+  <h2>1. Où nous en sommes dans le plan</h2>
+  <table>
+    <thead><tr><th>Étape</th><th>Statut</th><th>Contenu</th></tr></thead>
+    <tbody>
+      <tr><td><strong>E0</strong></td><td>Fait</td><td>Moteur générique Event → Conditions → Actions + Golden Magellan / 20h17</td></tr>
+      <tr><td><strong>E0b</strong></td><td>Fait</td><td><code>schedule.after</code> + <code>tickSchedules</code> (délais relatifs)</td></tr>
+      <tr><td><strong>S1</strong></td><td>Fait (ce document)</td><td>API simulateur + page UI · même moteur · horloge simulée</td></tr>
+      <tr><td>J1 / GPS1 / QR / NFC / Test Terrain / EAS</td><td>Pas commencé</td><td>En attente de votre GO</td></tr>
+    </tbody>
+  </table>
+  <div class="callout">
+    <strong>Principe respecté :</strong> le simulateur n’évalue jamais les conditions en local.
+    Il envoie des événements au <strong>même</strong> <code>StoryStateEngine.handleEvent</code> (et <code>tickSchedules</code> pour E0b).
+    Aucune deuxième logique de simulation.
+  </div>
+
+  <h2>2. Ce qui a été construit concrètement (S1)</h2>
+  <h3>2.1 Couche service</h3>
+  <ul>
+    <li><code>backend/src/lib/lanternEngine/simulate.js</code> — sessions in-memory, injection d’état, exécution d’étapes, formatage de la trace</li>
+    <li><code>backend/src/lib/lanternEngine/fixtureCatalog.js</code> — catalogue des fixtures Golden / E0b</li>
+  </ul>
+  <h3>2.2 API HTTP (sandbox)</h3>
+  <p>Base : <code>/api/admin/lantern-lab/</code></p>
+  <table>
+    <thead><tr><th>Méthode</th><th>Route</th><th>Rôle</th></tr></thead>
+    <tbody>
+      <tr><td>GET</td><td><code>/health</code></td><td>Statut moteur S1</td></tr>
+      <tr><td>GET</td><td><code>/fixtures</code></td><td>Liste Magellan, Appel 20h17, Appel relatif</td></tr>
+      <tr><td>GET</td><td><code>/fixtures/:id</code></td><td>Métadonnées + résumé Definition</td></tr>
+      <tr><td>GET</td><td><code>/presets</code></td><td>Scénarios prêts à lancer</td></tr>
+      <tr><td>POST</td><td><code>/sessions</code></td><td>Créer une session de simulation</td></tr>
+      <tr><td>GET/DELETE</td><td><code>/sessions/:id</code></td><td>État / fermer</td></tr>
+      <tr><td>POST</td><td><code>/sessions/:id/simulate</code></td><td>Injecter event et/ou avancer l’horloge</td></tr>
+      <tr><td>POST</td><td><code>/simulate</code></td><td>One-shot (crée session + exécute)</td></tr>
+    </tbody>
+  </table>
+  <p><strong>Auth sandbox :</strong> header <code>X-Lantern-Sim-Key: mazone-lantern-sim</code> (ou token admin Bearer). Refusé hors Bac à Sable / en production.</p>
+
+  <h3>2.3 Interface utilisable</h3>
+  <ul>
+    <li>Page : <code>http://localhost:4000/lantern-sim/</code></li>
+    <li>Fichier : <code>backend/public/lantern-sim/index.html</code></li>
+    <li>Choix de fixture, nouvelle session, presets cliquables, champs lat/lng/now/tick, affichage trace complète</li>
+  </ul>
+
+  <h3>2.4 Ce que chaque simulation renvoie</h3>
+  <div class="diagram">Événement injecté (type, at, payload, source)
+Rules candidates
+  └── chaque condition ✓ / ✗ (type + params)
+Rules MATCH / FIRED
+  └── actions (ringTalkie, media.play, var.set, schedule.after…)
+Misses (geo / expire)
+UI Plan (ce que le mobile afficherait)
+Nouvel état (vars, médias, occurrenceLedger, pendingSchedules)
+Tick (si horloge avancée) → jobs dus traités via le même moteur</div>
+
+  <h2>3. Rappel du moteur déjà disponible (E0 + E0b)</h2>
+  <p>S1 ne remplace pas E0/E0b : il les expose.</p>
+  <ul>
+    <li><strong>E0</strong> — Rules, ConditionExpr (AND/OR/NOT), predicates geo/time/media/var, actions device/media/état, exclusiveGroup, occurrence once, miss/expire, idempotence <code>clientEventId</code></li>
+    <li><strong>E0b</strong> — Action <code>schedule.after</code> (délai relatif) + <code>tickSchedules(now)</code> pour activer sans attendre réellement 17 minutes</li>
+    <li><strong>Fixtures données</strong> (pas de code aventure) : <code>magellan.json</code>, <code>appel20h17.json</code>, <code>appel_relatif.json</code></li>
+  </ul>
+
+  <h2>4. Ce que vous pouvez faire maintenant</h2>
+  <ol>
+    <li><strong>Vérifier une branche narrative</strong> sans téléphone ni Paris — Magellan X / Y / V selon arrondissement et heure.</li>
+    <li><strong>Tester un appel unique à 20h17</strong> — succès au Bureau, miss hors zone, cassette absente.</li>
+    <li><strong>Tester un délai relatif</strong> — lire la note → planifier +17 min → avancer l’horloge → sonnerie.</li>
+    <li><strong>Lire pourquoi ça a (ou n’a pas) matché</strong> — liste des conditions ✓/✗ par Rule.</li>
+    <li><strong>Enchaîner plusieurs étapes</strong> dans une même session (état conservé en mémoire serveur).</li>
+    <li><strong>Appeler l’API depuis curl / scripts</strong> pour automatiser des scénarios de non-régression.</li>
+  </ol>
+  <div class="flow">
+    Backend démarré (sandbox)
+    <span class="arrow">→</span> ouvrir <code>/lantern-sim/</code>
+    <span class="arrow">→</span> clé <code>mazone-lantern-sim</code>
+    <span class="arrow">→</span> preset ou session + Simuler
+    <span class="arrow">→</span> lire trace + état
+  </div>
+
+  <h2>5. Comment lancer Magellan</h2>
+  <h3>5.1 Via l’interface</h3>
+  <ol>
+    <li>Démarrer le backend (<code>cd backend && npm run dev</code> ou équivalent).</li>
+    <li>Ouvrir <code>http://localhost:4000/lantern-sim/</code>.</li>
+    <li>Clé lab déjà préremplie : <code>mazone-lantern-sim</code>.</li>
+    <li>Cliquer le preset <strong>« Magellan — Paris 13e @ 17:07 → Monsieur X »</strong> (ou 1er → Y, 7e → V).</li>
+    <li>Lire : Rule <code>rule_talkie_magellan_x</code> MATCH, actions ring + play Monsieur X, var <code>talkie_branch = X</code>.</li>
+  </ol>
+  <h3>5.2 Via curl</h3>
+  <div class="diagram">curl -s -X POST http://localhost:4000/api/admin/lantern-lab/simulate \
+  -H 'Content-Type: application/json' \
+  -H 'X-Lantern-Sim-Key: mazone-lantern-sim' \
+  -d '{
+    "fixtureId": "magellan",
+    "event": {
+      "type": "media.discovered",
+      "at": "2026-08-09T15:07:00.000Z",
+      "payload": { "mediaItemId": "talkie_magellan" }
+    },
+    "lat": 48.8322,
+    "lng": 2.3561,
+    "now": "2026-08-09T15:07:00.000Z"
+  }'</div>
+  <p>Attendu : UI plan <code>ring_talkie</code> + média label <strong>Monsieur X</strong>. Hors fenêtre (ex. 16:00) → aucune Rule fired, talkie quand même marqué découvert.</p>
+
+  <h2>6. Comment lancer Appel 20h17</h2>
+  <h3>6.1 Succès (Bureau + cassette consommée)</h3>
+  <ol>
+    <li>UI : preset <strong>« Appel 20h17 — Bureau + cassette → ring »</strong>.</li>
+    <li>Ou API one-shot avec <code>fixtureId: "appel20h17"</code>, runtime cassette consumée, event <code>time.schedule</code> / <code>scheduleId: "appel_20h17"</code>, coords Bureau (~48.8606, 2.3376), at 20:17 Paris (<code>2026-08-09T18:17:00.000Z</code> UTC en août).</li>
+  </ol>
+  <p>Attendu : <code>ring_phone</code>, audio Appel_20h17, <code>appel_20h17_deja_recu = true</code>.</p>
+  <h3>6.2 Miss (hors Bureau)</h3>
+  <p>Preset « hors Bureau → miss » : pas de sonnerie, flag manqué, occurrence expirée — un second passage au Bureau ne récupère pas l’appel unique.</p>
+  <h3>6.3 Variante E0b (délai relatif, sans attendre 17 min)</h3>
+  <ol>
+    <li>Nouvelle session fixture <code>appel_relatif</code>.</li>
+    <li>Preset / event : <code>media.consumed</code> sur <code>note_batisseur</code> → job pending due +17 min.</li>
+    <li>Champ <strong>Tick to</strong> = <code>2026-08-09T16:20:00.000Z</code> (ou bouton Tick) au Bureau → sonnerie.</li>
+  </ol>
+  <div class="callout">
+    L’horloge du simulateur (<code>now</code> / <code>tickTo</code>) est injectée : vous ne dependez pas de l’heure réelle de votre Mac pour tester 20h17 ou +17 minutes.
+  </div>
+
+  <h2>7. Tests automatisés exécutés</h2>
+  <div class="diagram">cd backend && node --test \
+  test/lantern-lab-s1.test.js \
+  test/lantern-engine.test.js \
+  test/lantern-engine-golden.test.js \
+  test/lantern-engine-e0b.test.js
+
+Résultat au livrable S1 : 34 / 34 pass — 0 fail</div>
+  <ul>
+    <li>S1 : auth, fixtures, Magellan HTTP, Appel 20h17 HTTP, session + tick relatif, page UI servie</li>
+    <li>E0 / Golden / E0b : non-régression moteur</li>
+  </ul>
+
+  <h2>8. Fichiers clés (carte rapide)</h2>
+  <table>
+    <thead><tr><th>Chemin</th><th>Rôle</th></tr></thead>
+    <tbody>
+      <tr><td><code>backend/src/lib/lanternEngine/</code></td><td>Moteur E0/E0b + simulate S1</td></tr>
+      <tr><td><code>…/fixtures/*.json</code></td><td>Aventures-données Golden</td></tr>
+      <tr><td><code>backend/src/routes/lanternLab.js</code></td><td>Routes HTTP simulateur</td></tr>
+      <tr><td><code>backend/public/lantern-sim/</code></td><td>Interface navigateur</td></tr>
+      <tr><td><code>backend/test/lantern-*.test.js</code></td><td>Tests E0 / E0b / S1</td></tr>
+    </tbody>
+  </table>
+
+  <h2>9. Limites assumées (avant Test Terrain)</h2>
+  <ul>
+    <li>Sessions <strong>en mémoire</strong> — perdues au restart du backend.</li>
+    <li>Pas de GPS / QR / NFC / notifications / audio réels sur téléphone.</li>
+    <li>Pas d’EAS / Development Build / Internal Preview.</li>
+    <li>Pas de vue « Test Terrain » live branchée sur un device Paris.</li>
+    <li>Pas d’éditeur de Lanterne (Lab créateur) — seulement exécution de fixtures.</li>
+    <li>Pas encore d’endpoint « Pourquoi ? » dédié (J1) — la trace candidates/fired suffit pour analyser.</li>
+    <li>Zones Paris = approximations cercle (suffisant Golden, pas cadastre officiel).</li>
+  </ul>
+
+  <h2>10. Prochaines étapes possibles (après votre GO)</h2>
+  <p>Selon le plan Test Terrain / narratif, l’ordre typique reste :</p>
+  <ol>
+    <li><strong>J1</strong> — endpoint « Pourquoi ? » / debug narratif affiné</li>
+    <li><strong>GPS1</strong> — reports device + geoStabilizer</li>
+    <li><strong>QR1 / NFC1</strong> — beacons réels</li>
+    <li><strong>T1</strong> — vue Test Terrain live</li>
+    <li><strong>B1</strong> — EAS Internal / fix API URL device</li>
+  </ol>
+  <p>Aucune de ces étapes n’est démarrée tant que vous n’avez pas validé S1 et donné le GO.</p>
+
+  <div class="verdict">
+    <h2>11. Synthèse</h2>
+    <p>Vous disposez maintenant d’un <strong>laboratoire virtuel</strong> branché sur le vrai Lantern Engine : Magellan, Appel 20h17 et délais relatifs sont testables depuis le navigateur ou curl, avec trace condition par condition, sans code spécifique par aventure et sans attendre l’heure réelle.</p>
+    <p>Le chemin vers le laboratoire réel (Paris, téléphones, GPS/QR/NFC) commence après votre analyse de ce checkpoint et votre GO explicite.</p>
+  </div>
+
+  <footer>
+    Ma Zone — Checkpoint S1 Simulateur Lantern Engine · 10 août 2026 · Complète PLAN_TEST_TERRAIN + ANALYSE narratif V2 · Ne remplace pas une fiche FD validée
+  </footer>
+</div>
+</body>
+</html>
