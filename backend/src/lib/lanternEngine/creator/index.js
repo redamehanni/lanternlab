@@ -24,6 +24,7 @@ const {
 const drafts = require('./drafts');
 const { validateAdventureCreator } = require('./validateAdventure');
 const inventory = require('./inventory');
+const e6 = require('./e6');
 const { explainSimulation, explainTick } = require('./explain');
 const simulate = require('../simulate');
 
@@ -337,6 +338,7 @@ function getAdventureBundle(id) {
     },
     definition: compiled.definition,
     initialRuntime: compiled.initialRuntime,
+    e6: e6.buildE6(adventure),
   };
 }
 
@@ -347,6 +349,63 @@ function validateAdventureOnly(adventure) {
     journey: compiled.journey,
     list: listViewModel(adventure, compiled),
     tree: compiled.tree,
+    enginePreview: {
+      rulesCount: compiled.definition.rules.length,
+      floors: compiled.floors.length,
+    },
+    e6: e6.buildE6(adventure),
+  };
+}
+
+function simulateAdventure(adventure, testInput = {}) {
+  if (!adventure) {
+    const err = new Error('adventure requise');
+    err.status = 400;
+    throw err;
+  }
+  const compiled = compileAdventure(adventure);
+  const runtime = {
+    ...(compiled.initialRuntime || {}),
+    ...(testInput.runtime || {}),
+    vars: {
+      ...(compiled.initialRuntime?.vars || {}),
+      ...(testInput.runtime?.vars || {}),
+    },
+    mediaStates: testInput.runtime?.mediaStates || {},
+    objectStates: testInput.runtime?.objectStates || {},
+    choices: testInput.runtime?.choices || {},
+    beaconsScanned: testInput.runtime?.beaconsScanned || [],
+  };
+  const raw = simulate.simulateOnce({
+    definition: compiled.definition,
+    runtime,
+    event: testInput.event || null,
+    tickTo: testInput.tickTo || null,
+    lat: testInput.lat ?? null,
+    lng: testInput.lng ?? null,
+    now: testInput.now || null,
+  });
+  const humanSteps = (raw.steps || []).map((step) => {
+    if (step.kind === 'tick') {
+      return { kind: 'tick', human: explainTick(step), technical: step };
+    }
+    return {
+      kind: step.kind || 'event',
+      human: explainSimulation(
+        {
+          trace: step.trace,
+          rulesFired: step.rulesFired,
+          uiPlan: step.uiPlan,
+          actions: step.actions,
+        },
+        { situation: null }
+      ),
+      technical: step,
+    };
+  });
+  return {
+    ...raw,
+    humanSteps,
     enginePreview: {
       rulesCount: compiled.definition.rules.length,
       floors: compiled.floors.length,
@@ -391,41 +450,74 @@ function applyInventoryAdd(adventure, kind, payload = {}) {
       throw err;
     }
   }
-  return { adventure: a, added, summary: inventory.inventorySummary(a) };
+  return packInventory(a, { added });
+}
+
+function packInventory(a, extra = {}) {
+  return {
+    adventure: a,
+    summary: inventory.inventorySummary(a),
+    e6: e6.buildE6(a),
+    ...extra,
+  };
 }
 
 function applyInventoryUpdate(adventure, kind, payload = {}) {
   const a = inventory.ensureInventory(structuredClone(adventure || {}));
+  if (kind === 'cue') {
+    const out = e6.applyCuePatch(a, payload);
+    return packInventory(out.adventure, { updated: out.situation });
+  }
   const id = payload.id;
   if (!id) {
     const err = new Error('id requis pour modifier un objet');
     err.status = 400;
     throw err;
   }
+  if (kind === 'zone') {
+    const updated = e6.updateZone(a, id, payload);
+    return packInventory(a, { updated });
+  }
+  if (kind === 'beacon') {
+    const updated = e6.updateBeacon(a, id, payload);
+    return packInventory(a, { updated });
+  }
+  if (kind === 'content') {
+    const updated = e6.updateMediaContent(a, id, payload);
+    return packInventory(a, { updated });
+  }
+  if (kind === 'bindContent') {
+    const updated = e6.bindItemContent(a, id, payload.contentId);
+    return packInventory(a, { updated });
+  }
+  if (kind === 'ensureContent') {
+    const updated = e6.ensureContentForItem(a, id, payload);
+    return packInventory(a, { updated });
+  }
   if (kind === 'assign' || payload.assignFamily) {
     const family = payload.family || payload.assignFamily;
     const updated = inventory.assignMediaItemFamily(a, id, family);
-    return { adventure: a, updated, summary: inventory.inventorySummary(a) };
+    return packInventory(a, { updated });
   }
   if (kind === 'stash') {
     const updated = inventory.stashInContainer(a, id, payload.itemId);
-    return { adventure: a, updated, summary: inventory.inventorySummary(a) };
+    return packInventory(a, { updated });
   }
   if (kind === 'unstash') {
     const updated = inventory.unstashFromContainer(a, id, payload.itemId);
-    return { adventure: a, updated, summary: inventory.inventorySummary(a) };
+    return packInventory(a, { updated });
   }
   if (kind === 'containerLock') {
     const updated = inventory.setContainerCode(a, id, payload.code);
-    return { adventure: a, updated, summary: inventory.inventorySummary(a) };
+    return packInventory(a, { updated });
   }
   if (kind === 'addLink') {
     const updated = inventory.addContainerLink(a, id, payload);
-    return { adventure: a, updated, summary: inventory.inventorySummary(a) };
+    return packInventory(a, { updated });
   }
   if (kind === 'removeLink') {
     const updated = inventory.removeContainerLink(a, id, payload.linkId);
-    return { adventure: a, updated, summary: inventory.inventorySummary(a) };
+    return packInventory(a, { updated });
   }
   if (!['item', 'bureau', 'imposed', 'recoverable', 'container'].includes(kind)) {
     const err = new Error(`Modification non supportée pour: ${kind}`);
@@ -433,7 +525,7 @@ function applyInventoryUpdate(adventure, kind, payload = {}) {
     throw err;
   }
   const updated = inventory.updateMediaItem(a, id, payload);
-  return { adventure: a, updated, summary: inventory.inventorySummary(a) };
+  return packInventory(a, { updated });
 }
 
 module.exports = {
@@ -466,5 +558,7 @@ module.exports = {
   inventory,
   applyInventoryAdd,
   applyInventoryUpdate,
+  simulateAdventure,
+  e6,
   newBlankAdventure: drafts.newBlankAdventure,
 };

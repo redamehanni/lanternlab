@@ -76,9 +76,10 @@
     display: flex; justify-content: center; gap: 0;
     border: 1px solid var(--line); background: var(--panel);
   }
+  .workspace { flex-wrap: wrap; }
   .workspace button {
     border: 0; background: transparent; color: var(--muted);
-    padding: 8px 22px; font-size: 0.8rem; letter-spacing: 0.08em;
+    padding: 7px 12px; font-size: 0.7rem; letter-spacing: 0.06em;
     text-transform: uppercase; font-family: var(--mono); cursor: pointer;
   }
   .workspace button + button { border-left: 1px solid var(--line); }
@@ -447,6 +448,50 @@
     background: transparent; border: 1px solid var(--line); color: var(--ink); font-size: 0.78rem;
   }
   .onto-link:hover { border-color: var(--phos); color: var(--phos); }
+
+  #viewE6 { flex: 1; min-height: 0; overflow: auto; padding: 16px 18px 28px; }
+  .e6-head { margin: 0 0 14px; }
+  .e6-head h2 { margin: 0 0 4px; font-size: 1.05rem; }
+  .e6-head p { margin: 0; color: var(--muted); font-size: 0.82rem; }
+  .tl-axis {
+    position: relative; height: 64px; margin: 8px 0 18px;
+    background: #07140e; border: 1px solid var(--line);
+  }
+  .tl-hour {
+    position: absolute; top: 0; bottom: 0; width: 1px; background: var(--line);
+    font-family: var(--mono); font-size: 0.62rem; color: var(--muted);
+  }
+  .tl-hour span { position: absolute; bottom: 4px; left: 4px; }
+  .tl-cue {
+    position: absolute; top: 8px; height: 22px; min-width: 8px;
+    background: var(--glow); border: 1px solid var(--phos); cursor: pointer;
+    font-size: 0.65rem; color: var(--phos); overflow: hidden; white-space: nowrap;
+    padding: 2px 6px;
+  }
+  .tl-cue.sel, .e6-card.sel, .map-pin.sel { outline: 1px solid var(--phos); box-shadow: 0 0 10px var(--glow); }
+  .tl-cue.family-call { border-color: #6ec8ff; color: #6ec8ff; }
+  .tl-cue.family-talkie { border-color: #e8d45c; color: #e8d45c; }
+  .tl-cue.family-expiry { border-color: #ff8a96; color: #ff8a96; }
+  .e6-list { display: flex; flex-direction: column; gap: 8px; }
+  .e6-card {
+    border: 1px solid var(--line); background: var(--card); padding: 10px 12px; cursor: pointer;
+  }
+  .e6-card .meta { font-family: var(--mono); font-size: 0.68rem; color: var(--muted); }
+  .e6-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+  @media (max-width: 900px) { .e6-grid { grid-template-columns: 1fr; } }
+  .paris-map {
+    width: 100%; height: min(62vh, 560px); background: #06110c;
+    border: 1px solid var(--line); display: block; cursor: crosshair;
+  }
+  .map-legend { display: flex; gap: 14px; flex-wrap: wrap; font-size: 0.75rem; color: var(--muted); margin: 8px 0 14px; }
+  .map-legend i { display: inline-block; width: 8px; height: 8px; margin-right: 4px; background: var(--phos); }
+  .map-legend i.b { background: #6ec8ff; }
+  .media-preview { max-width: 100%; max-height: 220px; margin-top: 8px; border: 1px solid var(--line); }
+  .sim-log { font-size: 0.82rem; }
+  .sim-log .ok { color: var(--ok); }
+  .sim-log .bad { color: var(--muted); }
+  .e6-form label { display: block; font-size: 0.72rem; color: var(--muted); margin: 8px 0 4px; text-transform: uppercase; letter-spacing: 0.06em; font-family: var(--mono); }
+  .e6-form input, .e6-form select, .e6-form textarea { width: 100%; margin-bottom: 4px; }
 </style>
 </head>
 <body data-workspace="story">
@@ -461,6 +506,10 @@
   <nav class="workspace" id="workspaceNav" aria-label="Espace de travail">
     <button type="button" data-workspace="story" class="active">Aventure</button>
     <button type="button" data-workspace="world">Matériel</button>
+    <button type="button" data-workspace="timeline">Timeline</button>
+    <button type="button" data-workspace="map">Carte</button>
+    <button type="button" data-workspace="media">Médias</button>
+    <button type="button" data-workspace="sim">Simuler</button>
   </nav>
   <div class="header-actions">
     <button type="button" class="btn primary" id="btnCompile">Compiler</button>
@@ -470,7 +519,7 @@
       <button type="button" data-mode="creator" class="active">Mode Créateur</button>
       <button type="button" data-mode="dev">Mode Développeur</button>
     </div>
-    <a class="btn" href="/lantern-sim/">Simulateur S1</a>
+    <a class="btn" href="/lantern-sim/" title="Simulateur fixtures S1">S1</a>
   </div>
 </header>
 
@@ -526,6 +575,7 @@
       <div id="viewGraph" class="hidden"></div>
     </div>
     <div id="viewWorld" class="hidden"></div>
+    <div id="viewE6" class="hidden"></div>
   </main>
 
   <div class="side">
@@ -557,6 +607,10 @@
         <h2>Moteur (JSON)</h2>
         <pre id="devJson">—</pre>
       </div>
+    </div>
+    <div id="inspectorE6" class="hidden">
+      <h2>Inspecteur</h2>
+      <div id="e6Inspect"><p class="empty">Sélectionnez un élément dans la vue</p></div>
     </div>
     <div id="inspectorWorld" class="hidden legend">
       <h2>Chaîne du matériel</h2>
@@ -595,6 +649,17 @@ const state = {
   stashConfirm: null,
   resumeGroup: 'family',
   sheetId: null,
+  e6: null,
+  e6Sel: { type: null, id: null },
+  simForm: {
+    now: '2026-08-09T18:07:00',
+    lat: '48.8742',
+    lng: '2.3548',
+    eventType: 'geo.heartbeat',
+    mediaItemId: '',
+    beaconId: '',
+    result: null,
+  },
 };
 
 async function api(path, opts = {}) {
@@ -695,7 +760,8 @@ function applyBundle(adventure, data, draftId) {
   state.selectedFloor = state.adventure.floors?.[0]?.index ?? null;
   state.selectedSitId = null;
   state.editingUnlockFloor = null;
-  state.lastCompile = { enginePreview: data.enginePreview, definition: null };
+  state.lastCompile = { enginePreview: data.enginePreview, definition: data.definition || null };
+  state.e6 = data.e6 || null;
   renderAdvList();
   renderDraftList();
   renderAll();
@@ -707,6 +773,7 @@ function renderAll() {
   renderTree();
   renderPath();
   renderWorld();
+  if (window.LanternE6) window.LanternE6.render();
   renderSitPanel();
   renderFloorUnlockPanel();
   renderTestPanel();
@@ -3090,6 +3157,7 @@ function refreshViewsFromAdventure() {
     state.journey = data.journey || state.journey;
     state.warnings = data.warnings || [];
     state.lastCompile = data;
+    state.e6 = data.e6 || state.e6;
     // After compile, restore conditions into UI model if conditionsGroup only
     for (const f of state.adventure.floors || []) {
       for (const s of f.situations || []) {
@@ -3435,18 +3503,24 @@ document.getElementById('sideTabs').onclick = (e) => {
 };
 
 function setWorkspace(ws) {
-  state.workspace = ws === 'world' ? 'world' : 'story';
+  const e6ws = ['timeline', 'map', 'media', 'sim'];
+  if (ws === 'world') state.workspace = 'world';
+  else if (e6ws.includes(ws)) state.workspace = ws;
+  else state.workspace = 'story';
   if (state.workspace === 'story' && (state.view === 'world' || !state.view)) state.view = 'list';
   document.querySelectorAll('#workspaceNav button').forEach((b) => {
     b.classList.toggle('active', b.dataset.workspace === state.workspace);
   });
   applyView();
+  if (window.LanternE6) window.LanternE6.render();
 }
 
 function applyView() {
-  const story = state.workspace !== 'world';
-  document.body.dataset.workspace = story ? 'story' : 'world';
-  document.body.dataset.view = story ? (state.view || 'list') : 'world';
+  const story = state.workspace === 'story';
+  const world = state.workspace === 'world';
+  const e6on = ['timeline', 'map', 'media', 'sim'].includes(state.workspace);
+  document.body.dataset.workspace = state.workspace;
+  document.body.dataset.view = story ? (state.view || 'list') : (world ? 'world' : state.workspace);
   const chrome = document.getElementById('storyChrome');
   const canvas = document.getElementById('storyCanvas');
   if (chrome) chrome.classList.toggle('hidden', !story);
@@ -3459,11 +3533,15 @@ function applyView() {
   document.getElementById('viewPath').classList.toggle('hidden', !story || state.view !== 'path');
   const vg = document.getElementById('viewGraph');
   if (vg) vg.classList.toggle('hidden', !story || state.view !== 'graph');
-  document.getElementById('viewWorld').classList.toggle('hidden', story);
+  document.getElementById('viewWorld').classList.toggle('hidden', !world);
+  const ve = document.getElementById('viewE6');
+  if (ve) ve.classList.toggle('hidden', !e6on);
   const inspStory = document.getElementById('inspectorStory');
   const inspWorld = document.getElementById('inspectorWorld');
+  const inspE6 = document.getElementById('inspectorE6');
   if (inspStory) inspStory.classList.toggle('hidden', !story || state.view === 'graph');
-  if (inspWorld) inspWorld.classList.toggle('hidden', story);
+  if (inspWorld) inspWorld.classList.toggle('hidden', !world);
+  if (inspE6) inspE6.classList.toggle('hidden', !e6on);
   if (story && state.view === 'graph') renderOntology();
 }
 function applyMode() {
@@ -3478,10 +3556,21 @@ function applySideTab() {
   document.getElementById('tabJourney').classList.toggle('hidden', state.sideTab !== 'journey');
 }
 
+window.state = state;
+window.api = api;
+window.esc = esc;
+window.KEY = KEY;
+window.API = API;
+window.setWorkspace = setWorkspace;
+window.findSituation = findSituation;
+window.renderAll = renderAll;
+window.refreshViewsFromAdventure = refreshViewsFromAdventure;
+
 boot().catch((e) => {
   document.body.insertAdjacentHTML('afterbegin',
-    `<p style="color:#e05a5a;padding:12px">Erreur: ${esc(e.message)} — redémarrez le backend si besoin.</p>`);
+    `<p style="color:#e05a6a;padding:12px">Erreur: ${esc(e.message)} — redémarrez le backend si besoin.</p>`);
 });
 </script>
+<script src="e6.js"></script>
 </body>
 </html>

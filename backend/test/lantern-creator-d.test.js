@@ -724,7 +724,7 @@ describe('Creator Phase D — API HTTP', () => {
   it('health stage CreatorD', async () => {
     const res = await h.api.get('/api/admin/lantern-lab/health', simOpts());
     assert.equal(res.status, 200);
-    assert.match(res.body.stage, /CreatorD/);
+    assert.match(res.body.stage, /E6|CreatorD/);
   });
 
   it('UI contient la vue Matériel', async () => {

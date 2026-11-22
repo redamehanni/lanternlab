@@ -6,9 +6,11 @@
 
 const express = require('express');
 const path = require('path');
+const multer = require('multer');
 const { verifyAdmin } = require('../middleware/adminAuth');
 const { isSandbox } = require('../lib/sandbox');
 const simulate = require('../lib/lanternEngine/simulate');
+const mediaStore = require('../lib/lanternEngine/creator/mediaStore');
 
 const router = express.Router();
 
@@ -57,7 +59,7 @@ router.get('/health', authSim, (_req, res) => {
   res.json({
     ok: true,
     engine: 'lanternEngine',
-    stage: 'S1+CreatorD-contenants',
+    stage: 'S1+E6',
     sandbox: isSandbox(),
   });
 });
@@ -229,6 +231,7 @@ router.get('/creator/adventures/:id', authSim, (req, res) => {
       humanSummary: bundle.humanSummary,
       enginePreview: bundle.enginePreview,
       initialRuntime: bundle.initialRuntime,
+      e6: bundle.e6,
     };
   });
 });
@@ -257,6 +260,7 @@ router.post('/creator/adventures/compile', authSim, (req, res) => {
       // Mode développeur uniquement côté client
       definition: compiled.definition,
       initialRuntime: compiled.initialRuntime,
+      e6: creator.e6.buildE6(adventure),
     };
   });
 });
@@ -330,6 +334,7 @@ router.get('/creator/drafts/:id', authSim, (req, res) => {
       tree: compiled.tree,
       journey: compiled.journey,
       warnings: compiled.warnings,
+      e6: compiled.e6 || creator.e6.buildE6(draft.adventure),
     };
   });
 });
@@ -374,6 +379,70 @@ router.post('/creator/inventory/update', authSim, (req, res) => {
     }
     return creator.applyInventoryUpdate(adventure, kind, req.body.payload || {});
   });
+});
+
+// ── E6 — Timeline / Carte / Médias / Simulateur ──────────────────────────────
+
+const labUpload = multer({
+  storage: multer.memoryStorage(),
+  limits: { fileSize: mediaStore.MAX_BYTES },
+});
+
+function acceptLabFile(req, res, next) {
+  labUpload.single('file')(req, res, (err) => {
+    if (err) return res.status(400).json({ error: err.message || 'Upload refusé' });
+    next();
+  });
+}
+
+router.post('/creator/e6/views', authSim, (req, res) => {
+  handle(res, () => {
+    const adventure = req.body?.adventure;
+    if (!adventure) {
+      const err = new Error('adventure requise');
+      err.status = 400;
+      throw err;
+    }
+    return creator.e6.buildE6(adventure);
+  });
+});
+
+router.post('/creator/adventures/simulate', authSim, (req, res) => {
+  handle(res, () => {
+    const adventure = req.body?.adventure;
+    if (!adventure) {
+      const err = new Error('adventure requise');
+      err.status = 400;
+      throw err;
+    }
+    return creator.simulateAdventure(adventure, req.body || {});
+  });
+});
+
+router.post('/creator/media/upload', authSim, acceptLabFile, (req, res) => {
+  handle(res, () => {
+    if (!req.file) {
+      const err = new Error('Fichier requis');
+      err.status = 400;
+      throw err;
+    }
+    return mediaStore.saveBuffer({
+      buffer: req.file.buffer,
+      mime: req.file.mimetype,
+      originalName: req.file.originalname,
+      adventureId: req.body?.adventureId || null,
+      contentId: req.body?.contentId || null,
+    });
+  });
+});
+
+router.get('/creator/media/file/:fileId', authSim, (req, res) => {
+  const rec = mediaStore.resolveFile(req.params.fileId);
+  if (!rec) return res.status(404).json({ error: 'Fichier introuvable' });
+  res.setHeader('X-Content-Type-Options', 'nosniff');
+  res.setHeader('Cache-Control', 'private, max-age=120');
+  res.setHeader('Content-Type', rec.mime);
+  return res.sendFile(rec.abs);
 });
 
 module.exports = {

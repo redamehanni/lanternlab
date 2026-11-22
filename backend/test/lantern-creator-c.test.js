@@ -249,7 +249,7 @@ describe('Creator Phase C — UI', () => {
   it('health stage CreatorC', async () => {
     const res = await h.api.get('/api/admin/lantern-lab/health', simOpts());
     assert.equal(res.status, 200);
-    assert.match(res.body.stage, /Creator[CD]/);
+    assert.match(res.body.stage, /Creator[CD]|E6/);
   });
 });
 
